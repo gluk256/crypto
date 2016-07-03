@@ -79,9 +79,9 @@ func printSpaced(s string) {
 }
 
 func readSafeInput() string {
-	//fmt.Println("version 13")
+	//fmt.Println("version 14")
 	printSpaced(alphabet)
-	fmt.Print("\n")
+	fmt.Println()
 	var s string
 	var b []byte = make([]byte, 1)
 	for {
@@ -102,6 +102,7 @@ func readSafeInput() string {
 			s += res
 		}
 	}
+	fmt.Println()
 	return s
 }
 
