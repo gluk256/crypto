@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"../SecureInput"
+	"github.com/gluk256/crypto/SecureInput"
 )
 
 func main() {
