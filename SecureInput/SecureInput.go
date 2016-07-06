@@ -10,10 +10,11 @@ import (
 )
 
 const alphabet string = "abcdefghijklmnopqrstuvwxyz 0123456789"
-const alphabetShift string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ )!@#$%^&*("
+//const alphabetShift string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ )!@#$%^&*("
 const sz = len(alphabet)
 
-var rndAlphabet, rndAlphabetShift string
+var rndAlphabet string
+//var rndAlphabetShift string
 
 func randNum() int {
 	sum := time.Now().Nanosecond()
@@ -34,18 +35,18 @@ func randomizeAlphabet() {
 		panic("weird error in randomizeAlphabet()")
 	}
 	rndAlphabet = alphabet[rnd:] + alphabet[:rnd]
-	rndAlphabetShift = alphabetShift[rnd:] + alphabetShift[:rnd]
+	////rndAlphabetShift = alphabetShift[rnd:] + alphabetShift[:rnd]
 
 	// shuffle
 	var x []byte = []byte(rndAlphabet)
-	var xshift []byte = []byte(rndAlphabetShift)
+	////var xshift []byte = []byte(rndAlphabetShift)
 	perm := mrand.Perm(sz)
 	for j, v := range perm {
 		x[j] = rndAlphabet[v]
-		xshift[j] = rndAlphabetShift[v]
+		////xshift[j] = rndAlphabetShift[v]
 	}
 	rndAlphabet = string(x)
-	rndAlphabetShift = string(xshift)
+	////rndAlphabetShift = string(xshift)
 }
 
 func recoverRandomizedByte(c byte) string {
@@ -56,15 +57,15 @@ func recoverRandomizedByte(c byte) string {
 				return string(r)
 			}
 		}
-		for i := 0; i < sz; i++ {
-			if rndAlphabetShift[i] == c {
-				r := alphabet[i]
-				if r >= 97 && r <= 122 {
-					r -= 32
-				}
-				return string(r)
-			}
-		}
+		//for i := 0; i < sz; i++ {
+		//	if rndAlphabetShift[i] == c {
+		//		r := alphabet[i]
+		//		if r >= 97 && r <= 122 {
+		//			r -= 32
+		//		}
+		//		return string(r)
+		//	}
+		//}
 	}
 	return ""
 }
@@ -79,7 +80,7 @@ func printSpaced(s string) {
 }
 
 func readSafeInput() string {
-	//fmt.Println("version 14")
+	//fmt.Println("version 15")
 	printSpaced(alphabet)
 	fmt.Println()
 	var s string
