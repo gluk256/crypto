@@ -10,11 +10,10 @@ import (
 )
 
 const alphabet string = "abcdefghijklmnopqrstuvwxyz 0123456789"
-//const alphabetShift string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ )!@#$%^&*("
+const alphabetShift string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ )!@#$%^&*("
 const sz = len(alphabet)
-
-var rndAlphabet string
-//var rndAlphabetShift string
+const isCapsEnabled bool = false
+var rndAlphabet, rndAlphabetShift string
 
 func randNum() int {
 	sum := time.Now().Nanosecond()
@@ -35,39 +34,41 @@ func randomizeAlphabet() {
 		panic("weird error in randomizeAlphabet()")
 	}
 	rndAlphabet = alphabet[rnd:] + alphabet[:rnd]
-	////rndAlphabetShift = alphabetShift[rnd:] + alphabetShift[:rnd]
+	rndAlphabetShift = alphabetShift[rnd:] + alphabetShift[:rnd]
 
 	// shuffle
 	var x []byte = []byte(rndAlphabet)
-	////var xshift []byte = []byte(rndAlphabetShift)
+	var xshift []byte = []byte(rndAlphabetShift)
 	perm := mrand.Perm(sz)
 	for j, v := range perm {
 		x[j] = rndAlphabet[v]
-		////xshift[j] = rndAlphabetShift[v]
+		xshift[j] = rndAlphabetShift[v]
 	}
 	rndAlphabet = string(x)
-	////rndAlphabetShift = string(xshift)
+	rndAlphabetShift = string(xshift)
 }
 
-func recoverRandomizedByte(c byte) string {
+func recoverRandomizedByte(c byte) (string, bool) {
 	if c >= 32 && c <= 122 {
 		for i := 0; i < sz; i++ {
 			if rndAlphabet[i] == c {
 				r := alphabet[i]
-				return string(r)
+				return string(r), false
 			}
 		}
-		//for i := 0; i < sz; i++ {
-		//	if rndAlphabetShift[i] == c {
-		//		r := alphabet[i]
-		//		if r >= 97 && r <= 122 {
-		//			r -= 32
-		//		}
-		//		return string(r)
-		//	}
-		//}
+		if isCapsEnabled {
+			for i := 0; i < sz; i++ {
+				if rndAlphabetShift[i] == c {
+					r := alphabet[i]
+					if r >= 97 && r <= 122 {
+						r -= 32
+					}
+					return string(r), false
+				}
+			}
+		}
 	}
-	return ""
+	return "", true
 }
 
 func printSpaced(s string) {
@@ -80,26 +81,28 @@ func printSpaced(s string) {
 }
 
 func readSafeInput() string {
-	//fmt.Println("version 15")
+	//fmt.Println("SecureInput version 19")
 	printSpaced(alphabet)
 	fmt.Println()
-	var s string
+	var s, res string
 	var b []byte = make([]byte, 1)
-	for {
+	done := false
+	for !done {
 		randomizeAlphabet()
 		fmt.Print("\r")
 		printSpaced(rndAlphabet)
+
 		os.Stdin.Read(b)
 
-		if 127 == b[0] {
-			if cur := len(s); cur > 0 {
-				s = s[:cur - 1]
+		switch b[0] {
+		case  96: // '~': reshuffle
+		case 126: // shift + '~': reshuffle
+		case 127: // backspace
+			if i := len(s); i > 0 {
+				s = s[:i-1]
 			}
-		} else {
-			res := recoverRandomizedByte(b[0])
-			if len(res) == 0 {
-				break
-			}
+		default:
+			res, done = recoverRandomizedByte(b[0])
 			s += res
 		}
 	}
@@ -114,7 +117,7 @@ func ReadFromTerminal() string {
 	return readSafeInput()
 }
 
-func ReadFromTerminalTst() {
+func ReadFromTerminalTst() string {
 	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
 	exec.Command("stty", "-F", "/dev/tty", "-echo").Run()
 	defer exec.Command("stty", "-F", "/dev/tty", "echo").Run()
@@ -123,5 +126,6 @@ func ReadFromTerminalTst() {
 		os.Stdin.Read(b)
 		fmt.Println("I got the byte", b, "(" + string(b) + ")")
 	}
+	return "test complete"
 }
 
