@@ -15,7 +15,6 @@ func main() {
 		x = crutils.XHash()
 	}
 
-	fmt.Println()
 	fmt.Println(x)
 }
 

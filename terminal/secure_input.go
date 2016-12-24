@@ -7,6 +7,9 @@ import (
 	"time"
 	"os"
 	"os/exec"
+	"runtime"
+	"syscall"
+	sshterm "golang.org/x/crypto/ssh/terminal"
 )
 
 // you can always arbitrary extend the alphabet (add capital letters, special characters, etc.)
@@ -96,7 +99,7 @@ func secureRead() string {
 	return s
 }
 
-func SecureInput() string {
+func SecureInputLinux() string {
 	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run() // disable input buffering
 	exec.Command("stty", "-F", "/dev/tty", "-echo").Run() // do not display entered characters on the screen
 	defer exec.Command("stty", "-F", "/dev/tty", "echo").Run() // restore the echoing state when exiting
@@ -113,4 +116,24 @@ func SecureInputTest() string {
 		fmt.Println("I got the byte", b, "(" + string(b) + ")")
 	}
 	return "test finished"
+}
+
+
+func SecureInputWin() string {
+	fmt.Printf("Please enter the key: ")
+	key, err := sshterm.ReadPassword(int(syscall.Stdin))
+	fmt.Println()
+	if err != nil {
+		fmt.Printf("Error: %s \n", err)
+		os.Exit(0)
+	}
+	return string(key)
+}
+
+func SecureInput() string {
+	if runtime.GOOS == "linux" {
+		return SecureInputLinux()
+	} else {
+		return SecureInputWin()
+	}
 }
