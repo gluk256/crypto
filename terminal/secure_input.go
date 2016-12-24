@@ -21,7 +21,7 @@ func printSpaced(s string) {
 	x := make([]byte, sz * 2)
 	for i, c := range s {
 		x[i*2] = byte(c)
-		x[i*2 + 1] = ' '
+		x[i*2 + 1] = '|'
 	}
 	fmt.Print(string(x))
 }
@@ -40,11 +40,11 @@ func randNum() int {
 }
 
 func randomizeAlphabet() {
-	// shift
+	// shift with crand
 	rnd := randNum()
 	rndAlphabet = alphabet[rnd:] + alphabet[:rnd]
 
-	// shuffle
+	// shuffle with mrand
 	var x []byte = []byte(rndAlphabet)
 	perm := mrand.Perm(sz)
 	for j, v := range perm {
@@ -90,6 +90,8 @@ func secureRead() string {
 		}
 	}
 
+	fmt.Print("\r")
+	printSpaced(alphabet)
 	fmt.Println()
 	return s
 }
