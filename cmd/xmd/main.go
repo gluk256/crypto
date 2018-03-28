@@ -4,17 +4,15 @@ import (
 	"fmt"
 	"os"
 	"github.com/gluk256/crypto/terminal"
-//	"github.com/gluk256/crypto/crutils"
+	"github.com/gluk256/crypto/crutils"
 )
 
 
 func main() {
 	var x string
 	if len(os.Args) <= 1 {
-		// no parameters
-		x = terminal.SecureInput()
-		fmt.Println()
-		fmt.Println(x)
+		crutils.Misctest()
+		fmt.Println("test passed")
 		return
 	}
 
@@ -24,5 +22,10 @@ func main() {
 	case 't':
 		x = terminal.SecureInputTest()
 		fmt.Println(x)
+	case 'i':
+		x = terminal.SecureInput()
+		fmt.Println(x)
+	case 'm':
+		crutils.Misctest()
 	}
 }

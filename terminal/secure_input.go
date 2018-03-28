@@ -21,12 +21,13 @@ var rndAlphabet string
 
 
 func printSpaced(s string) {
-	x := make([]byte, sz * 2)
-	for i, c := range s {
-		x[i*2] = byte(c)
-		x[i*2 + 1] = '|'
+	var x string
+	r := string("│")
+	for _, c := range s {
+		x += string(c)
+		x += r
 	}
-	fmt.Print(string(x))
+	fmt.Print(x)
 }
 
 func randNum() int {
