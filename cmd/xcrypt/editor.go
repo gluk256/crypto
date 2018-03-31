@@ -6,13 +6,17 @@ import (
 	"container/list"
 	"strconv"
 	"sort"
+
+	"github.com/gluk256/crypto/crutils"
+	"github.com/gluk256/crypto/terminal"
 )
 
-func prompt() (string, bool) { // todo: rename
-	//if len(info) > 0 {
-	//	fmt.Print(info, ": ")
-	//}
-	fmt.Print("Enter text: ")
+var Bar = "   │—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
+var defaultPrompt = "Enter text: "
+
+// todo: rename
+func prompt(p string) (string, bool) {
+	fmt.Print(p)
 	txt, err := input.ReadString('\n')
 	if err != nil {
 		fmt.Printf(">>> Error: %s \n", err)
@@ -26,9 +30,12 @@ func prepareContentForDisplay() {
 	if !items[cur].prepared {
 		s := string(items[cur].raw)
 		if strings.Count(s, "\r") > 0 {
+			fmt.Printf("Returns found: %d \n", strings.Count(s, "\r")) // todo: delete
 			s = strings.Replace(s, "\n\r", "\n", -1)
 			s = strings.Replace(s, "\r\n", "\n", -1)
 			s = strings.Replace(s, "\r", "\n", -1)
+		} else {
+			fmt.Printf("Returns not found \n") // todo: delete
 		}
 
 		arr := strings.Split(s, "\n")
@@ -47,22 +54,60 @@ func cat() {
 }
 
 func displayContent() {
-	delimiter := "   │—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
-	fmt.Println(delimiter)
+	fmt.Println(Bar)
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		fmt.Printf("%03d│ %s\n", i, x.Value)
 		i++
 	}
-	fmt.Println(delimiter)
+	fmt.Println(Bar)
 }
 
-func appendLine() {
-	s, ok := prompt()
-	if ok {
-		items[cur].console.PushBack(s)
-		cat()
+func grep(arg []string, cryptic bool) {
+	var ok bool
+	var pattern string
+	if cryptic {
+		pattern = terminal.SecureInputLinux()
+	} else if len(arg) > 1 {
+		pattern = arg[1]
+	} else {
+		pattern, ok = prompt("Enter pattern for search: ")
+		if !ok {
+			return
+		}
 	}
+
+	found := false
+	i := 0
+	fmt.Println(Bar)
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		s, _ := x.Value.(string)
+		if strings.Contains(s, pattern) {
+			fmt.Printf("%03d│ %s\n", i, x.Value)
+			found = true
+		}
+		i++
+	}
+	fmt.Println(Bar)
+	if !found {
+		fmt.Println(">>> not found <<<")
+	}
+}
+
+func appendLine(cryptic bool) {
+	var ok bool
+	var s string
+	if cryptic {
+		s = terminal.SecureInput()
+	} else {
+		s, ok = prompt(defaultPrompt)
+		if !ok {
+			return
+		}
+	}
+
+	items[cur].console.PushBack(s)
+	cat()
 }
 
 func insertLine(ln int, s string) bool {
@@ -84,20 +129,35 @@ func insertLine(ln int, s string) bool {
 	return false
 }
 
-func textLineInsert(arg []string, delimiter bool) {
+func textLineInsertSpace(arg []string) {
 	if len(arg) < 2 {
-		fmt.Println(">>> Error: line number is missing \n")
+		fmt.Println(">>> Error: line number is missing")
+	} else {
+		i, ok := a2i(arg[1], 0, items[cur].console.Len())
+		if ok {
+			if insertLine(i, "") {
+				cat()
+			}
+		}
+	}
+}
+
+func textLineInsert(arg []string, cryptic bool) {
+	if len(arg) < 2 {
+		fmt.Println(">>> Error: line number is missing")
 		return
 	}
 
-	i, ok := a2i(arg[1], 0, 1000000)
+	i, ok := a2i(arg[1], 0, items[cur].console.Len())
 	if !ok {
 		return
 	}
 
-	s := ""
-	if !delimiter {
-		s, ok = prompt()
+	var s string
+	if cryptic {
+		s = terminal.SecureInput()
+	} else {
+		s, ok = prompt(defaultPrompt)
 		if !ok {
 			return
 		}
@@ -108,37 +168,50 @@ func textLineInsert(arg []string, delimiter bool) {
 	}
 }
 
-func textLineDelete(arg []string) {
+func textLinesDelete(arg []string) {
+	indexes := parseIndexes(arg)
+	if indexes != nil {
+		crutils.Reverse(indexes)
+		for _, x := range indexes {
+			deleteSingleLine(x)
+		}
+		cat()
+	}
+}
+
+func linesPrint(arg []string) {
+	indexes := parseIndexes(arg)
+	if indexes != nil {
+		var i, j int
+		fmt.Println(Bar)
+		for x := items[cur].console.Front(); x != nil; x = x.Next() {
+			if indexes[j] == i {
+				fmt.Printf("%03d│ %s\n", i, x.Value)
+				j++
+			}
+			i++
+		}
+		fmt.Println(Bar)
+	}
+}
+
+func parseIndexes(arg []string) []int {
 	if len(arg) < 2 {
-		fmt.Println(">>> Error: line number is missing \n")
-		return
+		fmt.Println(">>> Error: line number is missing")
+		return nil
 	}
 
 	var indexes []int
 	for _, s := range arg[1:] {
 		num, ok := a2i(s, 0, items[cur].console.Len())
 		if !ok {
-			return
+			return nil
 		}
 		indexes = append(indexes, num)
 	}
 
 	sort.Ints(indexes)
-	reverse(indexes)
-
-	for _, x := range indexes {
-		deleteSingleLine(x)
-	}
-
-	cat()
-}
-
-func reverse(a []int) {
-	i := 0
-	j := len(a) - 1
-	for i < j {
-		a[i], a[j] = a[j], a[i]
-	}
+	return indexes
 }
 
 func deleteSingleLine(ln int) {
@@ -177,7 +250,7 @@ func mergeLines(ln int) bool {
 
 func textLinesMerge(arg []string) {
 	if len(arg) < 2 {
-		fmt.Println(">>> Error: line number is missing \n")
+		fmt.Println(">>> Error: line number is missing ")
 		return
 	}
 
@@ -228,20 +301,29 @@ func split(ln, pos int) bool {
 	return false
 }
 
-func extendLine(arg []string) {
+func extendLine(arg []string, cryptic bool) {
 	if len(arg) < 2 {
 		fmt.Printf(">>> Error: three params expected, got %d \n", len(arg))
 		return
 	}
 
 	ln, ok := a2i(arg[1], 0, items[cur].console.Len())
-	if ok {
-		s, ok := prompt()
-		if ok {
-			if extendLn(ln, s) {
-				cat()
-			}
+	if !ok {
+		return
+	}
+
+	var s string
+	if cryptic {
+		s = terminal.SecureInput()
+	} else {
+		s, ok = prompt(defaultPrompt)
+		if !ok {
+			return
 		}
+	}
+
+	if extendLn(ln, s) {
+		cat()
 	}
 }
 
@@ -274,4 +356,27 @@ func a2i(s string, lowerBound int, upperBound int) (int, bool) {
 		return 0, false
 	}
 	return num, true
+}
+
+func content2raw() bool {
+	var res string
+	last := items[cur].console.Len() - 1
+	i := 0
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		s, _ := x.Value.(string)
+		if i != last {
+			res += s + "\n"
+		} else {
+			res += s
+		}
+		i++
+	}
+
+	if len(res) == 0 {
+		fmt.Println(">>> Error: nothing to save")
+		return false
+	}
+
+	items[cur].raw = []byte(res)
+	return true
 }
