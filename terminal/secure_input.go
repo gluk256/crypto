@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"runtime"
 	"syscall"
-	sshterm "golang.org/x/crypto/ssh/terminal"
+	shell "golang.org/x/crypto/ssh/terminal"
 )
 
 // you can always arbitrary extend the alphabet (add capital letters, special characters, etc.)
@@ -122,7 +122,7 @@ func SecureInputTest() string {
 
 func SecureInputWin() string {
 	fmt.Printf("Please enter the key: ")
-	key, err := sshterm.ReadPassword(int(syscall.Stdin))
+	key, err := shell.ReadPassword(int(syscall.Stdin))
 	fmt.Println()
 	if err != nil {
 		fmt.Printf("Error: %s \n", err)

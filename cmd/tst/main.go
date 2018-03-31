@@ -1,8 +1,9 @@
-package main
+package tst
 
 import (
 	"fmt"
 	"os"
+
 	"github.com/gluk256/crypto/terminal"
 	"github.com/gluk256/crypto/crutils"
 )

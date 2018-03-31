@@ -6,19 +6,19 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
-func Hash(s string) []byte {
+func Sha2(s string) []byte {
 	h := sha256.New()
 	h.Write([]byte(s))
 	return h.Sum(nil)
 }
 
-func SHash(s string) string {
-	h := Hash(s)
+func SSha2(s string) string {
+	h := Sha2(s)
 	x := fmt.Sprintf("%x", h)
 	return x
 }
 
-func XHash() string {
+func XSha2() string {
 	s := terminal.SecureInput()
-	return SHash(s)
+	return SSha2(s)
 }

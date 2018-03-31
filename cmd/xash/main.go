@@ -11,9 +11,9 @@ func main() {
 	if len(os.Args) > 1 {
 		//x = os.Args[1]
 		fmt.Scanf("%s", &x)
-		x = crutils.SHash(x)
+		x = crutils.SSha2(x)
 	} else {
-		x = crutils.XHash()
+		x = crutils.XSha2()
 	}
 
 	fmt.Println(x)
