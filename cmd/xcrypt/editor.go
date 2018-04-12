@@ -11,31 +11,18 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
-var Bar = "   │—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
+var BarCol = "   │—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
+var BarNorm = "   │———————————————————————————————————————————————————————————————————————————————————————————————————"
+var Bar = BarNorm
 var defaultPrompt = "Enter text: "
-
-// todo: rename
-func prompt(p string) (string, bool) {
-	fmt.Print(p)
-	txt, err := input.ReadString('\n')
-	if err != nil {
-		fmt.Printf(">>> Error: %s \n", err)
-		return "", false
-	}
-	txt = strings.TrimRight(txt, " \n\r")
-	return txt, true
-}
 
 func prepareContentForDisplay() {
 	if !items[cur].prepared {
 		s := string(items[cur].raw)
 		if strings.Count(s, "\r") > 0 {
-			fmt.Printf("Returns found: %d \n", strings.Count(s, "\r")) // todo: delete
 			s = strings.Replace(s, "\n\r", "\n", -1)
 			s = strings.Replace(s, "\r\n", "\n", -1)
 			s = strings.Replace(s, "\r", "\n", -1)
-		} else {
-			fmt.Printf("Returns not found \n") // todo: delete
 		}
 
 		arr := strings.Split(s, "\n")
@@ -107,6 +94,7 @@ func appendLine(cryptic bool) {
 	}
 
 	items[cur].console.PushBack(s)
+	items[cur].changed = true
 	cat()
 }
 
@@ -120,6 +108,7 @@ func insertLine(ln int, s string) bool {
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
 			items[cur].console.InsertBefore(s, x)
+			items[cur].changed = true
 			return true
 		}
 		i++
@@ -169,7 +158,7 @@ func textLineInsert(arg []string, cryptic bool) {
 }
 
 func textLinesDelete(arg []string) {
-	indexes := parseIndexes(arg)
+	indexes := parseAndSortInts(arg)
 	if indexes != nil {
 		crutils.Reverse(indexes)
 		for _, x := range indexes {
@@ -180,22 +169,30 @@ func textLinesDelete(arg []string) {
 }
 
 func linesPrint(arg []string) {
-	indexes := parseIndexes(arg)
-	if indexes != nil {
-		var i, j int
-		fmt.Println(Bar)
-		for x := items[cur].console.Front(); x != nil; x = x.Next() {
-			if indexes[j] == i {
-				fmt.Printf("%03d│ %s\n", i, x.Value)
-				j++
-			}
-			i++
-		}
-		fmt.Println(Bar)
+	prepareContentForDisplay()
+
+	indexes := parseAndSortInts(arg)
+	sz := len(indexes)
+	if sz == 0 {
+		fmt.Println("Nothing to print")
 	}
+
+	var ln, i int
+	fmt.Println(Bar)
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		if indexes[i] == ln {
+			fmt.Printf("%03d│ %s\n", ln, x.Value)
+			i++
+			if sz == i {
+				break
+			}
+		}
+		ln++
+	}
+	fmt.Println(Bar)
 }
 
-func parseIndexes(arg []string) []int {
+func parseAndSortInts(arg []string) []int {
 	if len(arg) < 2 {
 		fmt.Println(">>> Error: line number is missing")
 		return nil
@@ -219,6 +216,7 @@ func deleteSingleLine(ln int) {
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
 			items[cur].console.Remove(x)
+			items[cur].changed = true
 		}
 		i++
 	}
@@ -239,6 +237,7 @@ func mergeLines(ln int) bool {
 			items[cur].console.InsertBefore(s1+s2, x)
 			items[cur].console.Remove(y)
 			items[cur].console.Remove(x)
+			items[cur].changed = true
 			return true
 		}
 		i++
@@ -292,6 +291,7 @@ func split(ln, pos int) bool {
 			items[cur].console.InsertBefore(s[:pos], x)
 			items[cur].console.InsertBefore(s[pos:], x)
 			items[cur].console.Remove(x)
+			items[cur].changed = true
 			return true
 		}
 		i++
@@ -334,6 +334,7 @@ func extendLn(ln int, s string) bool {
 			old, _ := x.Value.(string)
 			items[cur].console.InsertAfter(old+s, x)
 			items[cur].console.Remove(x)
+			items[cur].changed = true
 			return true
 		}
 		i++

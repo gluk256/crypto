@@ -7,15 +7,13 @@ import (
 	"bufio"
 	"io/ioutil"
 	"container/list"
-
-	"github.com/gluk256/crypto/terminal"
-	"github.com/gluk256/crypto/crutils"
 )
 
 type Content struct {
 	raw []byte
 	console *list.List
 	prepared bool
+	changed bool
 }
 
 const (
@@ -31,39 +29,39 @@ var (
 
 func main() {
 	if len(os.Args) > 1 {
-		arg := os.Args[1]
-		a := arg[0]
-		switch a {
-		case 't':
-			x := terminal.SecureInputTest()
-			fmt.Println(x)
-		case 'i':
-			x := terminal.SecureInput()
-			fmt.Println(x)
-		case 'm':
-			crutils.Misctest()
-		}
+		collectEntropy()
+		// todo: this should be interpreted as decrypt cmd
+		//filename := os.Args[1]
+		//processCommand("decrypt " + filename)
 	}
 
-	run()
-	// todo: cleanup()
-}
-
-func run() {
 	for {
-		fmt.Print("> ")
-		s, err := input.ReadString('\n')
-		if err == nil {
-			s = strings.TrimRight(s, " \n\r")
+		collectEntropy()
+		s, ok := prompt("Enter command: ")
+		if ok {
 			if s == "q" {
-				return
+				if checkQuit() {
+					break
+				}
 			} else {
 				processCommand(s)
 			}
-		} else {
-			fmt.Printf("Input Error: %s", err)
 		}
 	}
+
+	// todo: cleanup()
+}
+
+func prompt(p string) (string, bool) {
+	fmt.Print(p)
+	txt, err := input.ReadString('\n')
+	if err != nil {
+		fmt.Printf(">>> Input Error: %s \n", err)
+		return "", false
+	}
+	txt = strings.TrimRight(txt, " \n\r")
+	collectEntropy()
+	return txt, true
 }
 
 func processCommand(cmd string) {
@@ -73,8 +71,10 @@ func processCommand(cmd string) {
 	}
 
 	switch arg[0] {
-	case "q":
-		return
+	case "sc": // style columns
+		Bar = BarCol
+	case "ss": // style normal
+		Bar = BarNorm
 	////////////////////////////////////////////
 	case "cat": // content display as text
 		cat()
@@ -154,6 +154,7 @@ func loadFile(arg []string) bool {
 	}
 
 	items[cur].raw = b
+	items[cur].console = list.New()
 	items[cur].prepared = false
 	return true
 }
@@ -178,6 +179,8 @@ func saveFile(arg []string) {
 	err := ioutil.WriteFile(filename, items[cur].raw, 0777)
 	if err != nil {
 		fmt.Printf(">>> Error: %s \n", err)
+	} else {
+		items[cur].changed = false
 	}
 }
 
@@ -193,4 +196,19 @@ func saveFilePlainText(arg []string) {
 	if content2raw() {
 		saveFile(arg)
 	}
+}
+
+func collectEntropy() {
+	// todo
+}
+
+func checkQuit() bool {
+	if items[cur].changed {
+		s, ok := prompt("The file is not saved. Do you really want to quit and lose the changes? ")
+		if !ok {
+			return false
+		}
+		return (s == "y" || s == "yes")
+	}
+	return true
 }
