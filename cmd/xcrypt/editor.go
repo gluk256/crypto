@@ -362,15 +362,15 @@ func a2i(s string, lowerBound int, upperBound int) (int, bool) {
 func getCurrentConsoleSize() (res int) {
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		s, _ := x.Value.(string)
-		res += len(s) + 1
+		res += len(s) + 1 // implicit '\n' character at the end of line
 	}
-	return res * 4 // to accommodate different encoding methods
+	return res
 }
 
 func content2raw() bool {
 	// todo: shred prev
 
-	capacity := getCurrentConsoleSize()
+	capacity := getCurrentConsoleSize() * 4 // to accommodate different encoding methods
 	b := make([]byte, 0, capacity)
 
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
