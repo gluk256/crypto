@@ -15,7 +15,6 @@ type Content struct {
 	console  *list.List
 	prepared bool
 	changed  bool
-	// todo: add func reset
 }
 
 const (
@@ -53,7 +52,8 @@ func main() {
 		}
 	}
 
-	// todo: cleanup()
+	deleteAll()
+	testify()
 }
 
 func prompt(p string) (string, bool) {
@@ -75,8 +75,10 @@ func processCommand(cmd string) {
 	}
 
 	switch arg[0] {
-	case "frame":
+	case "frame": // second param: "col" or "norm"
 		changeFrameStyle(arg[1])
+	case "clear":
+		deleteAll()
 	////////////////////////////////////////////
 	case "cat": // content display as text
 		cat()
@@ -104,7 +106,7 @@ func processCommand(cmd string) {
 		saveFile(arg)
 	case "cs": // content save
 		saveFile(arg)
-	case "fsp": // content save plain text // todo: rename to explicit "csplain"
+	case "fsp": // content save plain text
 		saveFilePlainText(arg)
 	////////////////////////////////////////////
 	case "grep":
@@ -142,7 +144,8 @@ func processCommand(cmd string) {
 }
 
 func loadFile(arg []string) bool {
-	// todo: shred prev
+	deleteContent(cur)
+
 	if len(arg) < 2 {
 		fmt.Println(">>> Error: filename is missing")
 		return false
@@ -211,7 +214,20 @@ func checkQuit() bool {
 	return true
 }
 
-
 func collectEntropy() {
+	// todo
+}
+
+func deleteContent(i int) {
+	// todo
+}
+
+func deleteAll() {
+	for i := 0; i < MaxItems; i++ {
+		deleteContent(i)
+	}
+}
+
+func testify() {
 	// todo
 }

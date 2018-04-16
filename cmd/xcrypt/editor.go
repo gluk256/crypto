@@ -368,8 +368,6 @@ func getCurrentConsoleSize() (res int) {
 }
 
 func content2raw() bool {
-	// todo: shred prev
-
 	capacity := getCurrentConsoleSize() * 4 // to accommodate different encoding methods
 	b := make([]byte, 0, capacity)
 
@@ -395,6 +393,10 @@ func changeFrameStyle(s string) {
 	case "col":
 		Bar = BarCol
 	case "norm":
+		Bar = BarNorm
+	case "c":
+		Bar = BarCol
+	case "n":
 		Bar = BarNorm
 	}
 }
