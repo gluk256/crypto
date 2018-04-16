@@ -1,19 +1,16 @@
-package tst
+package main
 
 import (
 	"fmt"
 	"os"
 
 	"github.com/gluk256/crypto/terminal"
-	"github.com/gluk256/crypto/crutils"
 )
-
 
 func main() {
 	var x string
-	if len(os.Args) <= 1 {
-		crutils.Misctest()
-		fmt.Println("test passed")
+	if len(os.Args) < 2 {
+		test()
 		return
 	}
 
@@ -26,7 +23,9 @@ func main() {
 	case 'i':
 		x = terminal.SecureInput()
 		fmt.Println(x)
-	case 'm':
-		crutils.Misctest()
 	}
+}
+
+func test() {
+
 }

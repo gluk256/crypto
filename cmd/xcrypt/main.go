@@ -10,24 +10,28 @@ import (
 )
 
 type Content struct {
-	raw []byte
-	console *list.List
+	src      []byte
+	dst      []byte
+	console  *list.List
 	prepared bool
-	changed bool
+	changed  bool
+	// todo: add func reset
 }
 
 const (
-	MaxItems = 4
-	Steg = 1
+	MaxItems = 2
 )
 
 var (
 	input = bufio.NewReader(os.Stdin)
 	items [MaxItems]Content
 	cur int
+	steg int
 )
 
 func main() {
+	steg = 1
+	// initEntropy() // collect comp-specific data
 	if len(os.Args) > 1 {
 		collectEntropy()
 		// todo: this should be interpreted as decrypt cmd
@@ -71,17 +75,13 @@ func processCommand(cmd string) {
 	}
 
 	switch arg[0] {
-	case "sc": // style columns
-		Bar = BarCol
-	case "ss": // style normal
-		Bar = BarNorm
+	case "frame":
+		changeFrameStyle(arg[1])
 	////////////////////////////////////////////
 	case "cat": // content display as text
 		cat()
-	case "cd": // content display as text
+	case "cc": // content display as text
 		cat()
-	case "cc": // content load
-		loadFile(arg)
 	case "fl": // file load
 		loadFile(arg)
 	case "cl": // content load
@@ -142,6 +142,7 @@ func processCommand(cmd string) {
 }
 
 func loadFile(arg []string) bool {
+	// todo: shred prev
 	if len(arg) < 2 {
 		fmt.Println(">>> Error: filename is missing")
 		return false
@@ -153,14 +154,15 @@ func loadFile(arg []string) bool {
 		return false
 	}
 
-	items[cur].raw = b
+	items[cur].src = b
+	items[cur].dst = nil
 	items[cur].console = list.New()
 	items[cur].prepared = false
 	return true
 }
 
 func saveFile(arg []string) {
-	if len(items[cur].raw) == 0 {
+	if len(items[cur].dst) == 0 {
 		fmt.Println(">>> Error: content is not found")
 		return
 	}
@@ -176,7 +178,7 @@ func saveFile(arg []string) {
 		}
 	}
 
-	err := ioutil.WriteFile(filename, items[cur].raw, 0777)
+	err := ioutil.WriteFile(filename, items[cur].dst, 0777)
 	if err != nil {
 		fmt.Printf(">>> Error: %s \n", err)
 	} else {
@@ -198,10 +200,6 @@ func saveFilePlainText(arg []string) {
 	}
 }
 
-func collectEntropy() {
-	// todo
-}
-
 func checkQuit() bool {
 	if items[cur].changed {
 		s, ok := prompt("The file is not saved. Do you really want to quit and lose the changes? ")
@@ -211,4 +209,9 @@ func checkQuit() bool {
 		return (s == "y" || s == "yes")
 	}
 	return true
+}
+
+
+func collectEntropy() {
+	// todo
 }

@@ -11,14 +11,14 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
-var BarCol = "   │—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
+var BarCol  = "   │—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
 var BarNorm = "   │———————————————————————————————————————————————————————————————————————————————————————————————————"
 var Bar = BarNorm
 var defaultPrompt = "Enter text: "
 
 func prepareContentForDisplay() {
 	if !items[cur].prepared {
-		s := string(items[cur].raw)
+		s := string(items[cur].src)
 		if strings.Count(s, "\r") > 0 {
 			s = strings.Replace(s, "\n\r", "\n", -1)
 			s = strings.Replace(s, "\r\n", "\n", -1)
@@ -359,25 +359,42 @@ func a2i(s string, lowerBound int, upperBound int) (int, bool) {
 	return num, true
 }
 
-func content2raw() bool {
-	var res string
-	last := items[cur].console.Len() - 1
-	i := 0
+func getCurrentConsoleSize() (res int) {
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		s, _ := x.Value.(string)
-		if i != last {
-			res += s + "\n"
-		} else {
-			res += s
-		}
-		i++
+		res += len(s) + 1
+	}
+	return res * 4 // to accommodate different encoding methods
+}
+
+func content2raw() bool {
+	// todo: shred prev
+
+	capacity := getCurrentConsoleSize()
+	b := make([]byte, 0, capacity)
+
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		s, _ := x.Value.(string)
+		b = append(b, []byte(s)...)
+		b = append(b, byte('\n'))
 	}
 
-	if len(res) == 0 {
-		fmt.Println(">>> Error: nothing to save")
+	sz := len(b)
+	if sz > 1 {
+		b = b[:sz-1]
+		items[cur].dst = b
+		return true
+	} else {
+		fmt.Println(">>> Error: no content")
 		return false
 	}
+}
 
-	items[cur].raw = []byte(res)
-	return true
+func changeFrameStyle(s string) {
+	switch s {
+	case "col":
+		Bar = BarCol
+	case "norm":
+		Bar = BarNorm
+	}
 }
