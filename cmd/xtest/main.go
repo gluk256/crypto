@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
+	"strings"
+	"bufio"
 
 	"github.com/gluk256/crypto/terminal"
+	"github.com/gluk256/crypto/algo/keccak"
 )
 
 func main() {
@@ -28,8 +30,14 @@ func main() {
 }
 
 func test() {
+	input := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Printf("%x \n", time.Now().Nanosecond())
-		time.Sleep(500 * time.Millisecond)
+		s, _ := input.ReadString('\n')
+		s = strings.TrimRight(s, " \n\r")
+		h := keccak.Digest([]byte(s), nil, 64)
+		fmt.Printf("%x \n", h)
+		if s == "q" {
+			break
+		}
 	}
 }
