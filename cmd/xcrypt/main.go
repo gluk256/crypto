@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"container/list"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
-	"bufio"
-	"io/ioutil"
-	"container/list"
 
 	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/crutils"
@@ -25,24 +25,23 @@ const (
 )
 
 var (
-	rand keccak.Keccak512
 	witness keccak.Keccak512
-	input = bufio.NewReader(os.Stdin)
-	items [MaxItems]Content
-	cur int
-	steg int
+	input   = bufio.NewReader(os.Stdin)
+	items   [MaxItems]Content
+	cur     int
+	steg    int
 )
 
 func main() {
 	if len(os.Args) > 1 {
-		updateEntropy()
+		crutils.CollectEntropy()
 		// todo: this should be interpreted as decrypt cmd
 		//filename := os.Args[1]
 		//processCommand("decrypt " + filename)
 	}
 
 	for {
-		updateEntropy()
+		crutils.CollectEntropy()
 		s, ok := prompt("Enter command: ")
 		if ok {
 			if s == "q" {
@@ -67,7 +66,7 @@ func prompt(p string) (string, bool) {
 		return "", false
 	}
 	txt = strings.TrimRight(txt, " \n\r")
-	updateEntropy()
+	crutils.CollectEntropy()
 	return txt, true
 }
 
@@ -164,6 +163,7 @@ func loadFile(arg []string) bool {
 	items[cur].dst = nil
 	items[cur].console = list.New()
 	items[cur].prepared = false
+	items[cur].changed = false
 	return true
 }
 
@@ -217,12 +217,23 @@ func checkQuit() bool {
 	return true
 }
 
-func updateEntropy() {
-	crutils.UpdateEntropy(&rand)
+func destroyData(b []byte) {
+	crutils.Rand(b, len(b))
+	witness.Write(b)
 }
 
 func deleteContent(i int) {
-	// todo: randomize and feed to witness
+	for {
+		x := items[i].console.Front()
+		if x == nil {
+			break
+		} else {
+			items[i].console.Remove(x)
+		}
+	}
+
+	destroyData(items[cur].src)
+	destroyData(items[cur].dst)
 }
 
 func deleteAll() {

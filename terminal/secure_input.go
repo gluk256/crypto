@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"syscall"
 	shell "golang.org/x/crypto/ssh/terminal"
+	"github.com/gluk256/crypto/crutils"
 )
 
 // you can always arbitrary extend the alphabet (add capital letters, special characters, etc.)
@@ -92,6 +93,8 @@ func secureRead() string {
 			res, done = decryptByte(b[0])
 			s += res
 		}
+
+		crutils.CollectEntropy()
 	}
 
 	fmt.Print("\r")
@@ -128,6 +131,7 @@ func SecureInputWin() string {
 		fmt.Printf("Error: %s \n", err)
 		os.Exit(0)
 	}
+	crutils.CollectEntropy()
 	return string(key)
 }
 

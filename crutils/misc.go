@@ -7,6 +7,8 @@ import (
 	"github.com/gluk256/crypto/algo/keccak"
 )
 
+var Entropy keccak.Keccak512
+
 func Reverse(a []int) {
 	i := 0
 	j := len(a) - 1
@@ -17,14 +19,13 @@ func Reverse(a []int) {
 	}
 }
 
-func CollectEntropy() []byte {
+func CollectEntropy() {
 	b := make([]byte, 8)
 	i := time.Now().UnixNano()
 	binary.LittleEndian.PutUint64(b, uint64(i))
-	return b
+	Entropy.Write(b)
 }
 
-func UpdateEntropy(h *keccak.Keccak512) {
-	b := CollectEntropy()
-	h.Write(b)
+func Rand(out []byte, sz int) {
+	Entropy.Read(out, sz)
 }
