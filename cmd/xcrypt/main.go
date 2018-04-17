@@ -7,6 +7,9 @@ import (
 	"bufio"
 	"io/ioutil"
 	"container/list"
+
+	"github.com/gluk256/crypto/algo/keccak"
+	"github.com/gluk256/crypto/crutils"
 )
 
 type Content struct {
@@ -22,6 +25,8 @@ const (
 )
 
 var (
+	rand keccak.Keccak512
+	witness keccak.Keccak512
 	input = bufio.NewReader(os.Stdin)
 	items [MaxItems]Content
 	cur int
@@ -29,17 +34,15 @@ var (
 )
 
 func main() {
-	steg = 1
-	// initEntropy() // collect comp-specific data
 	if len(os.Args) > 1 {
-		collectEntropy()
+		updateEntropy()
 		// todo: this should be interpreted as decrypt cmd
 		//filename := os.Args[1]
 		//processCommand("decrypt " + filename)
 	}
 
 	for {
-		collectEntropy()
+		updateEntropy()
 		s, ok := prompt("Enter command: ")
 		if ok {
 			if s == "q" {
@@ -64,7 +67,7 @@ func prompt(p string) (string, bool) {
 		return "", false
 	}
 	txt = strings.TrimRight(txt, " \n\r")
-	collectEntropy()
+	updateEntropy()
 	return txt, true
 }
 
@@ -214,12 +217,12 @@ func checkQuit() bool {
 	return true
 }
 
-func collectEntropy() {
-	// todo
+func updateEntropy() {
+	crutils.UpdateEntropy(&rand)
 }
 
 func deleteContent(i int) {
-	// todo
+	// todo: randomize and feed to witness
 }
 
 func deleteAll() {
@@ -229,5 +232,7 @@ func deleteAll() {
 }
 
 func testify() {
-	// todo
+	b := make([]byte, 32)
+	witness.Read(b, 32)
+	fmt.Printf("Proof of data destruction: [%x]\n", b)
 }
