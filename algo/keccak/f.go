@@ -1,9 +1,9 @@
+//This file is a copy of the of the golang implementation of Keccak.
+//Below is the copy of the original license file.
 //Copyright (c) 2009 The Go Authors. All rights reserved.
-//
 //Redistribution and use in source and binary forms, with or without
 //modification, are permitted provided that the following conditions are
 //met:
-//
 //* Redistributions of source code must retain the above copyright
 //notice, this list of conditions and the following disclaimer.
 //* Redistributions in binary form must reproduce the above
@@ -28,8 +28,7 @@
 
 package keccak
 
-// rc stores the round constants for use in the ι step.
-var rc = [24]uint64{
+var roundconst = [24]uint64{
 	0x0000000000000001,
 	0x0000000000008082,
 	0x800000000000808A,
@@ -86,7 +85,7 @@ func keccakF1600(a *[25]uint64) {
 		bc3 = t<<21 | t>>(64-21)
 		t = a[24] ^ d4
 		bc4 = t<<14 | t>>(64-14)
-		a[0] = bc0 ^ (bc2 &^ bc1) ^ rc[i]
+		a[0] = bc0 ^ (bc2 &^ bc1) ^ roundconst[i]
 		a[6] = bc1 ^ (bc3 &^ bc2)
 		a[12] = bc2 ^ (bc4 &^ bc3)
 		a[18] = bc3 ^ (bc0 &^ bc4)
@@ -177,7 +176,7 @@ func keccakF1600(a *[25]uint64) {
 		bc3 = t<<21 | t>>(64-21)
 		t = a[14] ^ d4
 		bc4 = t<<14 | t>>(64-14)
-		a[0] = bc0 ^ (bc2 &^ bc1) ^ rc[i+1]
+		a[0] = bc0 ^ (bc2 &^ bc1) ^ roundconst[i+1]
 		a[16] = bc1 ^ (bc3 &^ bc2)
 		a[7] = bc2 ^ (bc4 &^ bc3)
 		a[23] = bc3 ^ (bc0 &^ bc4)
@@ -268,7 +267,7 @@ func keccakF1600(a *[25]uint64) {
 		bc3 = t<<21 | t>>(64-21)
 		t = a[19] ^ d4
 		bc4 = t<<14 | t>>(64-14)
-		a[0] = bc0 ^ (bc2 &^ bc1) ^ rc[i+2]
+		a[0] = bc0 ^ (bc2 &^ bc1) ^ roundconst[i+2]
 		a[11] = bc1 ^ (bc3 &^ bc2)
 		a[22] = bc2 ^ (bc4 &^ bc3)
 		a[8] = bc3 ^ (bc0 &^ bc4)
@@ -359,7 +358,7 @@ func keccakF1600(a *[25]uint64) {
 		bc3 = t<<21 | t>>(64-21)
 		t = a[4] ^ d4
 		bc4 = t<<14 | t>>(64-14)
-		a[0] = bc0 ^ (bc2 &^ bc1) ^ rc[i+3]
+		a[0] = bc0 ^ (bc2 &^ bc1) ^ roundconst[i+3]
 		a[1] = bc1 ^ (bc3 &^ bc2)
 		a[2] = bc2 ^ (bc4 &^ bc3)
 		a[3] = bc3 ^ (bc0 &^ bc4)

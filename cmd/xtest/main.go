@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gluk256/crypto/terminal"
 )
@@ -27,5 +28,8 @@ func main() {
 }
 
 func test() {
-
+	for {
+		fmt.Printf("%x \n", time.Now().Nanosecond())
+		time.Sleep(500 * time.Millisecond)
+	}
 }
