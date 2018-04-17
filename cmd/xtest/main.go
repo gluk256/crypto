@@ -7,7 +7,7 @@ import (
 	"bufio"
 
 	"github.com/gluk256/crypto/algo/keccak"
-	"github.com/gluk256/crypto/crutils"
+//	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
 )
 
@@ -44,23 +44,5 @@ func testHash() {
 }
 
 func test() {
-	var h keccak.Keccak512
-	input := bufio.NewReader(os.Stdin)
-	for {
-		s, _ := input.ReadString('\n')
-		s = strings.TrimRight(s, " \n\r")
-		crutils.UpdateEntropy(&h)
-		if s == "q" {
-			break
-		}
-	}
 
-	//var t, t2 time.Time
-	//j := t.UnixNano()
-	//fmt.Printf("%x \n", j)
-	//t = t.Add(time.Second)
-	//fmt.Printf("%x \n", t.UnixNano())
-	//d := t.Sub(t2)
-	////z := t.Sub(t2).Nanoseconds()
-	//fmt.Printf("%d \n", int64(d))
 }

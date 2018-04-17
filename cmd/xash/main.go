@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"github.com/gluk256/crypto/crutils"
+
+	"github.com/gluk256/crypto/terminal"
 )
 
 func main() {
@@ -11,9 +12,9 @@ func main() {
 	if len(os.Args) > 1 {
 		//x = os.Args[1]
 		fmt.Scanf("%s", &x)
-		x = crutils.SSha2(x)
+		x = terminal.SSha2(x)
 	} else {
-		x = crutils.XSha2()
+		x = terminal.XSha2()
 	}
 
 	fmt.Println(x)

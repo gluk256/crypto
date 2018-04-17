@@ -1,9 +1,9 @@
-package crutils
+package terminal
 
 import (
 	"fmt"
 	"crypto/sha256"
-	"github.com/gluk256/crypto/terminal"
+	//"github.com/gluk256/crypto/terminal"
 )
 
 func Sha2(s string) []byte {
@@ -19,6 +19,6 @@ func SSha2(s string) string {
 }
 
 func XSha2() string {
-	s := terminal.SecureInput()
+	s := SecureInput()
 	return SSha2(s)
 }
