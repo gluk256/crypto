@@ -29,7 +29,7 @@ func TestHash(t *testing.T) {
 	for i, text := range input {
 		hash := Digest([]byte(text), nil, sz)
 		hex.Decode(exp, []byte(expected[i]))
-		if bytes.Compare(hash, exp) != 0 {
+		if !bytes.Equal(hash, exp) {
 			t.Fatalf("failed test number %d, result: \n[%x]", i, hash)
 		}
 	}
@@ -41,17 +41,90 @@ func TestHash(t *testing.T) {
 		k.Write([]byte(input[i]))
 		k.Read(res, sz)
 		hex.Decode(exp, []byte(expected[i]))
-		if bytes.Compare(res, exp) != 0 {
+		if !bytes.Equal(res, exp) {
 			t.Fatalf("failed advanced test number %d, result: \n[%x]", i, res)
 		}
 	}
 }
 
-func BenchmarkKeccak512(b *testing.B) {
+func BenchmarkHash(b *testing.B) {
 	buf := make([]byte, sz)
 	var k Keccak512
 	k.Write([]byte(input[3]))
 	for i := 0; i < b.N; i++ {
 		k.Read(buf, sz)
 	}
+}
+
+func TestXorInplace(t *testing.T) {
+	gamma := []byte(expected[4])
+	xx := []byte(expected[3])
+	sz := len(xx)
+	b1 := make([]byte, sz)
+	b2 := make([]byte, sz)
+	copy(b1, xx)
+	copy(b2, xx)
+	if !bytes.Equal(b1, b2) || !bytes.Equal(b1, xx) {
+		t.Fatal("copy failed")
+	}
+
+	XorInplace(b1, gamma, sz)
+	if bytes.Equal(b1, b2) {
+		t.Fatal("xor failed")
+	}
+	checkDeepNotEqual(t, b1, b2, sz)
+
+	XorInplace(b1, gamma, sz)
+	if !bytes.Equal(b1, b2) {
+		t.Fatal("decrypt failed")
+	}
+}
+
+func TestEncrypt(t *testing.T) {
+	const sz = 1024 * 16
+	key := []byte(input[4])
+	b1 := Digest([]byte(expected[0]), nil, sz)
+	b2 := Digest([]byte(expected[0]), nil, sz)
+	xx := Digest([]byte(expected[0]), nil, sz)
+	if !bytes.Equal(b1, b2) || !bytes.Equal(b1, xx) {
+		t.Fatal("copy failed")
+	}
+
+	gamma := Encrypt(key, b1, sz)
+	if bytes.Equal(b1, xx) {
+		t.Fatal("xor failed")
+	}
+	checkDeepNotEqual(t, b1, xx, sz)
+
+	Encrypt(key, b2, sz)
+	if bytes.Equal(b2, xx) {
+		t.Fatal("xor failed")
+	}
+	checkDeepNotEqual(t, b2, xx, sz)
+
+	XorInplace(b2, gamma, sz)
+	if !bytes.Equal(xx, b2) {
+		t.Fatal("b2 did not return to previous state")
+	}
+
+	Encrypt(key, b1, sz)
+	if !bytes.Equal(b1, xx) {
+		t.Fatal("b1 did not return to previous state")
+	}
+}
+
+func checkDeepNotEqual(t *testing.T, a []byte, b []byte, sz int) {
+	const block = 4
+	for i := 0; i < sz - block; i += 2 {
+		checkBlockNotEqual(t, a, b, i, block)
+	}
+}
+
+func checkBlockNotEqual(t *testing.T, a []byte, b []byte, off int, block int) {
+	for i := off; i < off + block; i++ {
+		if a[i] != b[i] {
+			return
+		}
+	}
+	t.Fatalf("checkDeepNotEqual failed, offset = %d", off)
 }

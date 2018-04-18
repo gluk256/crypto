@@ -2,16 +2,13 @@ package keccak
 
 import "unsafe"
 
-const (
-	Rate = 72
-//	maxrate = 168
-)
+const Rate = 72
 
 type Keccak512 struct {
 	a    [25]uint64
-	buf  []byte // points into storage
 	storage [Rate]byte
 	absorbing bool
+	buf  []byte // points into storage
 }
 
 func (d *Keccak512) Reset() {
@@ -126,4 +123,17 @@ func Digest(in []byte, out []byte, sz int) []byte {
 	d.Write(in)
 	d.Read(out, sz)
 	return out
+}
+
+// NB: don't forget to destroy the return value
+func Encrypt(key []byte, data []byte, sz int) []byte {
+	gamma := Digest(key, nil, sz)
+	XorInplace(data, gamma, sz)
+	return gamma
+}
+
+func XorInplace(dst []byte, gamma []byte, sz int) {
+	for i := 0; i < sz; i++ {
+		dst[i] ^= gamma[i]
+	}
 }
