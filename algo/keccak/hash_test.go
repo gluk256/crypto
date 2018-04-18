@@ -78,6 +78,12 @@ func TestXorInplace(t *testing.T) {
 	if !bytes.Equal(b1, b2) {
 		t.Fatal("decrypt failed")
 	}
+
+	XorInplace(b1, b1, sz)
+	zero := make([]byte, sz)
+	if !bytes.Equal(b1, zero) {
+		t.Fatal("self-destruction failed")
+	}
 }
 
 func TestEncrypt(t *testing.T) {

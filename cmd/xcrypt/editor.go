@@ -16,12 +16,10 @@ var BarNorm = "   │———————————————————�
 var Bar = BarNorm
 var defaultPrompt = "Enter text: "
 
-func prepareContentForDisplay() {
+func prepareTextContentForDisplay() {
 	if !items[cur].prepared {
 		s := string(items[cur].src)
 		if strings.Count(s, "\r") > 0 {
-			s = strings.Replace(s, "\n\r", "\n", -1)
-			s = strings.Replace(s, "\r\n", "\n", -1)
 			s = strings.Replace(s, "\r", "\n", -1)
 		}
 
@@ -36,11 +34,11 @@ func prepareContentForDisplay() {
 }
 
 func cat() {
-	prepareContentForDisplay()
-	displayContent()
+	prepareTextContentForDisplay()
+	displayTextContent()
 }
 
-func displayContent() {
+func displayTextContent() {
 	fmt.Println(Bar)
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
@@ -160,7 +158,7 @@ func textLineInsert(arg []string, cryptic bool) {
 func textLinesDelete(arg []string) {
 	indexes := parseAndSortInts(arg)
 	if indexes != nil {
-		crutils.Reverse(indexes)
+		crutils.ReverseInt(indexes)
 		for _, x := range indexes {
 			deleteSingleLine(x)
 		}
@@ -169,7 +167,7 @@ func textLinesDelete(arg []string) {
 }
 
 func linesPrint(arg []string) {
-	prepareContentForDisplay()
+	prepareTextContentForDisplay()
 
 	indexes := parseAndSortInts(arg)
 	sz := len(indexes)
@@ -388,15 +386,10 @@ func content2raw() bool {
 	}
 }
 
-func changeFrameStyle(s string) {
-	switch s {
-	case "col":
-		Bar = BarCol
-	case "norm":
+func changeFrameStyle() {
+	if Bar == BarCol {
 		Bar = BarNorm
-	case "c":
+	} else {
 		Bar = BarCol
-	case "n":
-		Bar = BarNorm
 	}
 }

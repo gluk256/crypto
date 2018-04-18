@@ -33,6 +33,8 @@ var (
 )
 
 func main() {
+	steg = -1
+
 	if len(os.Args) > 1 {
 		crutils.CollectEntropy()
 		// todo: this should be interpreted as decrypt cmd
@@ -77,10 +79,17 @@ func processCommand(cmd string) {
 	}
 
 	switch arg[0] {
-	case "frame": // second param: "col" or "norm"
-		changeFrameStyle(arg[1])
+	case "frame":
+		changeFrameStyle()
 	case "clear":
 		deleteAll()
+	case "steg": // mark/unmark steganographic content
+		markSteg()
+	case "next":
+		cur = (cur + 1) % 2
+		cat()
+	case "info":
+		info()
 	////////////////////////////////////////////
 	case "cat": // content display as text
 		cat()
@@ -218,17 +227,27 @@ func checkQuit() bool {
 }
 
 func destroyData(b []byte) {
-	crutils.Rand(b, len(b))
+	sz := len(b)
+	keccak.XorInplace(b, b, sz)
+	witness.Write(b)
+	crutils.Rand(b, sz)
+	if sz > 64 {
+		crutils.ReverseByte(b[sz/4:sz-sz/4])
+	} else {
+		crutils.ReverseByte(b)
+	}
 	witness.Write(b)
 }
 
 func deleteContent(i int) {
-	for {
-		x := items[i].console.Front()
-		if x == nil {
-			break
-		} else {
-			items[i].console.Remove(x)
+	if items[i].console != nil {
+		for {
+			x := items[i].console.Front()
+			if x == nil {
+				break
+			} else {
+				items[i].console.Remove(x)
+			}
 		}
 	}
 
@@ -246,4 +265,17 @@ func testify() {
 	b := make([]byte, 32)
 	witness.Read(b, 32)
 	fmt.Printf("Proof of data destruction: [%x]\n", b)
+}
+
+func info() {
+	fmt.Printf("cur = %d, steg = %d \n", cur, steg)
+}
+
+func markSteg() {
+	if steg < 0 {
+		steg = cur
+	} else {
+		steg = -1
+	}
+	info()
 }
