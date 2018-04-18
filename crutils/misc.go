@@ -9,7 +9,17 @@ import (
 
 var Entropy keccak.Keccak512
 
-func Reverse(a []int) {
+func ReverseInt(a []int) {
+	i := 0
+	j := len(a) - 1
+	for i < j {
+		a[i], a[j] = a[j], a[i]
+		i++
+		j--
+	}
+}
+
+func ReverseByte(a []byte) {
 	i := 0
 	j := len(a) - 1
 	for i < j {
@@ -26,6 +36,12 @@ func CollectEntropy() {
 	Entropy.Write(b)
 }
 
-func Rand(out []byte, sz int) {
-	Entropy.Read(out, sz)
+func Rand(dst []byte, sz int) {
+	Entropy.Read(dst, sz)
+}
+
+func RandXor(dst []byte, sz int) {
+	rnd := make([]byte, sz)
+	Entropy.Read(rnd, sz)
+	keccak.XorInplace(dst, rnd, sz)
 }
