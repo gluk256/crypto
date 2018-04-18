@@ -48,27 +48,34 @@ func displayTextContent() {
 	fmt.Println(Bar)
 }
 
-func grep(arg []string, cryptic bool) {
-	var ok bool
+func grep(arg []string, cryptic bool, scramble bool) {
 	var pattern string
 	if cryptic {
-		pattern = terminal.SecureInputLinux()
+		if scramble {
+			pattern = terminal.SecureInputLinux()
+		} else {
+			pattern = terminal.PasswordModeInput()
+		}
 	} else if len(arg) > 1 {
 		pattern = arg[1]
 	} else {
+		var ok bool
 		pattern, ok = prompt("Enter pattern for search: ")
 		if !ok {
 			return
 		}
 	}
 
-	found := false
 	i := 0
+	found := false
 	fmt.Println(Bar)
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		s, _ := x.Value.(string)
 		if strings.Contains(s, pattern) {
-			fmt.Printf("%03d│ %s\n", i, x.Value)
+			if cryptic {
+				s = strings.Replace(s, pattern, "XXXXX", -1)
+			}
+			fmt.Printf("%03d│ %s\n", i, s)
 			found = true
 		}
 		i++

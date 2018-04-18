@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"syscall"
 	shell "golang.org/x/crypto/ssh/terminal"
+
 	"github.com/gluk256/crypto/crutils"
 )
 
@@ -123,8 +124,8 @@ func SecureInputTest() string {
 }
 
 
-func SecureInputWin() string {
-	fmt.Printf("Please enter the key: ")
+func PasswordModeInput() string {
+	fmt.Print("Please enter the key: ")
 	key, err := shell.ReadPassword(int(syscall.Stdin))
 	fmt.Println()
 	if err != nil {
@@ -139,6 +140,6 @@ func SecureInput() string {
 	if runtime.GOOS == "linux" {
 		return SecureInputLinux()
 	} else {
-		return SecureInputWin()
+		return PasswordModeInput()
 	}
 }

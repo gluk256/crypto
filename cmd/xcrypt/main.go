@@ -37,7 +37,8 @@ func main() {
 
 	if len(os.Args) > 1 {
 		crutils.CollectEntropy()
-		// todo: this should be interpreted as decrypt cmd
+		// todo: this should be interpreted as encrypt/decrypt file
+		// flags: -e, -d, -x (encrypt with verify password)
 		//filename := os.Args[1]
 		//processCommand("decrypt " + filename)
 	}
@@ -121,11 +122,11 @@ func processCommand(cmd string) {
 		saveFilePlainText(arg)
 	////////////////////////////////////////////
 	case "grep":
-		grep(arg, false)
+		grep(arg, false, false)
 	case "g":
-		grep(arg, false)
+		grep(arg, true, false)
 	case "G":
-		grep(arg, true)
+		grep(arg, true, true)
 	case "a": // editor line append
 		appendLine(false)
 	case "A": // editor line append cryptic
