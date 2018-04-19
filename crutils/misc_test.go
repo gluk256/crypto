@@ -3,7 +3,6 @@ package crutils
 import (
 	"testing"
 	"bytes"
-	"fmt"
 )
 
 func isEqual(a, b []int) bool {
@@ -72,7 +71,6 @@ func TestSubstitute(t *testing.T) {
 	b = []byte(s1)
 	prev = b[i]
 	Substitute(b, prev, next)
-	fmt.Print(b)
 	if b[i] != next {
 		t.Fatal("did not change")
 	} else {
@@ -86,7 +84,6 @@ func TestSubstitute(t *testing.T) {
 	b = []byte(s2)
 	prev = b[i]
 	Substitute(b, prev, next)
-	fmt.Print(b)
 	if b[i] != next {
 		t.Fatal("did not change")
 	} else {

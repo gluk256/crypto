@@ -33,7 +33,6 @@ func main() {
 	initialize()
 
 	if len(os.Args) > 1 {
-		crutils.CollectEntropy()
 		// todo: this should be interpreted as encrypt/decrypt file
 		// flags: -e, -d, -x (encrypt with verify password)
 		//filename := os.Args[1]
@@ -42,7 +41,6 @@ func main() {
 
 	for {
 		fmt.Print("Enter command: ")
-		crutils.CollectEntropy()
 		s := terminal.StandardInput()
 		if s != nil {
 			cmd := string(s)
@@ -61,6 +59,7 @@ func main() {
 }
 
 func initialize() {
+	crutils.CollectEntropy()
 	steg = -1
 	for i := 0; i < MaxItems; i++ {
 		items[i].console = list.New()
@@ -75,11 +74,11 @@ func processCommand(cmd string) {
 
 	switch arg[0] {
 	case "frame":
-		changeFrameStyle()
+		ChangeFrameStyle()
 	case "reset":
-		reset(arg)
+		Reset(arg)
 	case "steg": // mark/unmark steganographic content
-		markSteg()
+		MarkSteg()
 	case "next":
 		cur = (cur + 1) % 2
 		cat()
@@ -90,30 +89,21 @@ func processCommand(cmd string) {
 		cat()
 	case "cc": // content display as text
 		cat()
+	////////////////////////////////////////////
 	case "fl": // file load
-		loadFile(arg)
-	case "cl": // content load
-		loadFile(arg)
-	case "clb": // content load binary
-		loadFile(arg)
-	case "clt": // content load text
-		if loadFile(arg) {
+		FileLoad(arg)
+	case "fo": // file load text
+		if FileLoad(arg) {
 			cat()
 		}
-	case "ct": // content load text
-		if loadFile(arg) {
-			cat()
-		}
-	case "ft": // file load text
-		if loadFile(arg) {
+	case "flt": // file load text
+		if FileLoad(arg) {
 			cat()
 		}
 	case "fs": // file save
-		saveFile(arg)
-	case "cs": // content save
-		saveFile(arg)
-	case "fsp": // content save plain text
-		saveFilePlainText(arg)
+		FileSave(arg)
+	case "fsplain": // file save plain text
+		FileSavePlainText(arg)
 	////////////////////////////////////////////
 	case "grep":
 		grep(arg, false, false)
@@ -121,37 +111,37 @@ func processCommand(cmd string) {
 		grep(arg, true, false)
 	case "G":
 		grep(arg, true, true)
-	case "a": // editor line append
-		appendLine(false)
-	case "A": // editor line append cryptic
-		appendLine(true)
-	case "i": // editor line insert
-		textLineInsert(arg, false)
-	case "I": // editor line insert cryptic
-		textLineInsert(arg, true)
-	case "b": // editor insert line break (space)
-		textLineInsertSpace(arg)
-	case "d": // editor line delete
-		textLinesDelete(arg)
-	case "m": // editor lines merge
-		textLinesMerge(arg)
-	case "s": // editor line split
-		splitLine(arg)
-	case "e": // editor line extend (append to the end of line)
-		extendLine(arg, false)
-	case "E": // editor line extend cryptic (append to the end of line)
-		extendLine(arg, true)
-	case "p": // editor lines print
-		linesPrint(arg)
-	case "r": // editor line resize
-		resizeLine(arg)
+	case "a": // editor: append line to the end
+		LineAppend(false)
+	case "A": // editor: append line with cryptic input
+		LineAppend(true)
+	case "i": // editor: insert line at certain index
+		LineInsert(arg, false)
+	case "I": // editor: insert line cryptic
+		LineInsert(arg, true)
+	case "b": // editor: insert empty line (space)
+		LineInsertSpace(arg)
+	case "d": // editor: delete lines
+		LinesDelete(arg)
+	case "m": // editor: merge lines
+		LinesMerge(arg)
+	case "s": // editor: split lines
+		LineSplit(arg)
+	case "e": // editor: extend line (append to the end of line)
+		LineExtend(arg, false)
+	case "E": // editor: extend line cryptic
+		LineExtend(arg, true)
+	case "p": // editor: print lines
+		LinesPrint(arg)
+	case "c": // editor: cut line (delete from the end)
+		LineCut(arg)
 	////////////////////////////////////////////
 	default:
 		fmt.Printf(">>> Wrong command: '%s' [%x] \n", cmd, []byte(cmd))
 	}
 }
 
-func loadFile(arg []string) bool {
+func FileLoad(arg []string) bool {
 	deleteContent(cur)
 
 	if len(arg) < 2 {
@@ -173,7 +163,7 @@ func loadFile(arg []string) bool {
 	return true
 }
 
-func saveFile(arg []string) {
+func FileSave(arg []string) {
 	if len(items[cur].dst) == 0 {
 		fmt.Println(">>> Error: content is not found")
 		return
@@ -200,7 +190,7 @@ func saveFile(arg []string) {
 	}
 }
 
-func saveFilePlainText(arg []string) {
+func FileSavePlainText(arg []string) {
 	fmt.Print("Do you really want to save plain text? ")
 	s := terminal.StandardInput()
 	if s == nil {
@@ -213,7 +203,7 @@ func saveFilePlainText(arg []string) {
 	}
 
 	if content2raw() {
-		saveFile(arg)
+		FileSave(arg)
 	}
 }
 
@@ -230,7 +220,7 @@ func checkQuit() bool {
 	return true
 }
 
-func destroyData(b []byte) {
+func annihilateData(b []byte) {
 	// overwrite; prevent compiler optimization
 	sz := len(b)
 	crutils.RandXor(b, sz)
@@ -241,15 +231,20 @@ func destroyData(b []byte) {
 }
 
 func deleteContent(i int) {
+	// console must be deleted first
 	if items[i].console != nil {
 		for x := items[i].console.Front(); x != nil; x = items[i].console.Front() {
-			destroyData(x.Value.([]byte))
-			items[i].console.Remove(x)
+			deleteLine(i, x)
 		}
 	}
 
-	destroyData(items[cur].src)
-	destroyData(items[cur].dst)
+	annihilateData(items[cur].src)
+	annihilateData(items[cur].dst)
+}
+
+func deleteLine(i int, e *list.Element) {
+	annihilateData(e.Value.([]byte))
+	items[i].console.Remove(e)
 }
 
 func deleteAll() {
@@ -258,7 +253,7 @@ func deleteAll() {
 	}
 }
 
-func reset(arg []string) {
+func Reset(arg []string) {
 	if len(arg) > 1 && arg[1] == "all" {
 		deleteAll()
 	} else {
@@ -276,7 +271,7 @@ func info() {
 	fmt.Printf("cur = %d, steg = %d \n", cur, steg)
 }
 
-func markSteg() {
+func MarkSteg() {
 	if steg < 0 {
 		steg = cur
 	} else {

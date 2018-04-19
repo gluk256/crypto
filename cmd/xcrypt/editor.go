@@ -17,7 +17,7 @@ var Bar = BarNorm
 var defaultPrompt = "Enter text: "
 const newline = byte('\n')
 
-func changeFrameStyle() {
+func ChangeFrameStyle() {
 	if Bar == BarCol {
 		Bar = BarNorm
 	} else {
@@ -25,15 +25,15 @@ func changeFrameStyle() {
 	}
 }
 
-func prepareTextContentForDisplay() {
+func prepareContentForDisplayAsText() {
 	if !items[cur].prepared {
 		crutils.Substitute(items[cur].src, '\r', newline)
-		createLineList()
+		parseSource()
 		items[cur].prepared = true
 	}
 }
 
-func createLineList() {
+func parseSource() {
 	items[cur].console = list.New()
 	s := items[cur].src
 	beg := 0
@@ -49,11 +49,11 @@ func createLineList() {
 }
 
 func cat() {
-	prepareTextContentForDisplay()
-	displayTextContent()
+	prepareContentForDisplayAsText()
+	displayContentAsText()
 }
 
-func displayTextContent() {
+func displayContentAsText() {
 	fmt.Println(Bar)
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
@@ -106,7 +106,7 @@ func grep(arg []string, cryptic bool, scramble bool) {
 	}
 }
 
-func appendLine(cryptic bool) {
+func LineAppend(cryptic bool) {
 	var s []byte
 	fmt.Println(defaultPrompt)
 	if cryptic {
@@ -122,7 +122,7 @@ func appendLine(cryptic bool) {
 	}
 }
 
-func textLineInsertSpace(arg []string) {
+func LineInsertSpace(arg []string) {
 	if len(arg) < 2 {
 		fmt.Println(">>> Error: line number is missing")
 	} else {
@@ -155,7 +155,7 @@ func insertLine(ln int, s []byte) bool {
 	return false
 }
 
-func textLineInsert(arg []string, cryptic bool) {
+func LineInsert(arg []string, cryptic bool) {
 	if len(arg) < 2 {
 		fmt.Println(">>> Error: line number is missing")
 		return
@@ -181,33 +181,32 @@ func textLineInsert(arg []string, cryptic bool) {
 	}
 }
 
-func textLinesDelete(arg []string) {
-	indexes := parseAndSortInts(arg)
+func LinesDelete(arg []string) {
+	indexes := parseAndSortIntArgs(arg)
 	if indexes != nil {
 		crutils.ReverseInt(indexes)
 		for _, x := range indexes {
-			deleteSingleLine(x)
+			deleteLineAtIndex(x)
 		}
 		cat()
 	}
 }
 
-func deleteSingleLine(ln int) {
+func deleteLineAtIndex(ln int) {
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
-			destroyData(x.Value.([]byte))
-			items[cur].console.Remove(x)
+			deleteLine(cur, x)
 			items[cur].changed = true
 		}
 		i++
 	}
 }
 
-func linesPrint(arg []string) {
-	prepareTextContentForDisplay()
+func LinesPrint(arg []string) {
+	prepareContentForDisplayAsText()
 
-	indexes := parseAndSortInts(arg)
+	indexes := parseAndSortIntArgs(arg)
 	total := len(indexes)
 	if total == 0 {
 		fmt.Println("Nothing to print")
@@ -225,7 +224,7 @@ func linesPrint(arg []string) {
 	fmt.Println(Bar)
 }
 
-func parseAndSortInts(arg []string) []int {
+func parseAndSortIntArgs(arg []string) []int {
 	if len(arg) < 2 {
 		fmt.Println(">>> Error: line number is missing")
 		return nil
@@ -260,10 +259,8 @@ func mergeLines(ln int) bool {
 			copy(res, s1)
 			copy(res[len(s1):], s2)
 			items[cur].console.InsertBefore(res, x)
-			destroyData(s1)
-			destroyData(s2)
-			items[cur].console.Remove(y)
-			items[cur].console.Remove(x)
+			deleteLine(cur, y)
+			deleteLine(cur, x)
 			items[cur].changed = true
 			return true
 		}
@@ -274,7 +271,7 @@ func mergeLines(ln int) bool {
 	return false
 }
 
-func textLinesMerge(arg []string) {
+func LinesMerge(arg []string) {
 	if len(arg) < 2 {
 		fmt.Println(">>> Error: line number is missing ")
 		return
@@ -288,7 +285,7 @@ func textLinesMerge(arg []string) {
 	}
 }
 
-func splitLine(arg []string) {
+func LineSplit(arg []string) {
 	if len(arg) < 3 {
 		fmt.Printf(">>> Error: three params expected, got %d \n", len(arg))
 		return
@@ -298,14 +295,14 @@ func splitLine(arg []string) {
 	if ok {
 		pos, ok := a2i(arg[2], 0, 100000)
 		if ok {
-			if split(ln, pos) {
+			if splitLine(ln, pos) {
 				cat()
 			}
 		}
 	}
 }
 
-func split(ln, pos int) bool {
+func splitLine(ln, pos int) bool {
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
@@ -327,7 +324,7 @@ func split(ln, pos int) bool {
 	return false
 }
 
-func resizeLn(ln, pos int) bool {
+func cutLine(ln, pos int) bool {
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
@@ -337,7 +334,7 @@ func resizeLn(ln, pos int) bool {
 				return false
 			}
 
-			destroyData(s[pos:])
+			annihilateData(s[pos:])
 			s = s[:pos]
 			items[cur].changed = true
 			return true
@@ -349,8 +346,7 @@ func resizeLn(ln, pos int) bool {
 	return false
 }
 
-func resizeLine(arg []string) {
-	// todo;
+func LineCut(arg []string) {
 	if len(arg) < 3 {
 		fmt.Printf(">>> Error: three params expected, got %d \n", len(arg))
 		return
@@ -360,14 +356,14 @@ func resizeLine(arg []string) {
 	if ok {
 		pos, ok := a2i(arg[2], 0, 100000)
 		if ok {
-			if resizeLn(ln, pos) {
+			if cutLine(ln, pos) {
 				cat()
 			}
 		}
 	}
 }
 
-func extendLine(arg []string, cryptic bool) {
+func LineExtend(arg []string, cryptic bool) {
 	if len(arg) < 2 {
 		fmt.Printf(">>> Error: three params expected, got %d \n", len(arg))
 		return
@@ -386,13 +382,13 @@ func extendLine(arg []string, cryptic bool) {
 		s = terminal.StandardInput()
 	}
 	if s != nil {
-		if extendLn(ln, s) {
+		if extendLine(ln, s) {
 			cat()
 		}
 	}
 }
 
-func extendLn(ln int, ext []byte) bool {
+func extendLine(ln int, ext []byte) bool {
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
@@ -401,8 +397,7 @@ func extendLn(ln int, ext []byte) bool {
 			copy(n, prev)
 			copy(n[len(prev):], ext)
 			items[cur].console.InsertAfter(n, x)
-			destroyData(prev)
-			items[cur].console.Remove(x)
+			deleteLine(cur, x)
 			items[cur].changed = true
 			return true
 		}
@@ -428,8 +423,8 @@ func a2i(s string, lowerBound int, upperBound int) (int, bool) {
 	return num, true
 }
 
-func getCurrentConsoleSizeInBytes() (res int) {
-	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+func getConsoleSizeInBytes(i int) (res int) {
+	for x := items[i].console.Front(); x != nil; x = x.Next() {
 		s, _ := x.Value.([]byte)
 		res += len(s) + 1 // implicit '\n' character at the end of line
 	}
@@ -437,7 +432,7 @@ func getCurrentConsoleSizeInBytes() (res int) {
 }
 
 func content2raw() bool {
-	total := getCurrentConsoleSizeInBytes()
+	total := getConsoleSizeInBytes(cur)
 	if total < 2 {
 		fmt.Println(">>> Error: no content")
 		return false
@@ -453,7 +448,7 @@ func content2raw() bool {
 		i++
 	}
 
-	destroyData(items[cur].dst)
+	annihilateData(items[cur].dst)
 	items[cur].dst = b[:total-1] // remove the last newline
 	return true
 }
