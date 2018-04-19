@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"container/list"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/crutils"
+	"github.com/gluk256/crypto/terminal"
 )
 
 type Content struct {
@@ -20,14 +20,10 @@ type Content struct {
 	changed  bool
 }
 
-const (
-	MaxItems = 2
-	quit = string("q")
-)
+const MaxItems = 2
 
 var (
 	witness keccak.Keccak512
-	input   = bufio.NewReader(os.Stdin)
 	items   [MaxItems]Content
 	cur     int
 	steg    int
@@ -45,11 +41,12 @@ func main() {
 	}
 
 	for {
+		fmt.Print("Enter command: ")
 		crutils.CollectEntropy()
-		s, ok := prompt("Enter command: ")
-		cmd := string(s)
-		if ok {
-			if cmd == quit {
+		s := terminal.StandardInput()
+		if s != nil {
+			cmd := string(s)
+			if cmd == "q" {
 				if checkQuit() {
 					break
 				}
@@ -68,22 +65,6 @@ func initialize() {
 	for i := 0; i < MaxItems; i++ {
 		items[i].console = list.New()
 	}
-}
-
-func prompt(p string) ([]byte, bool) {
-	fmt.Print(p)
-	const n = byte('\n')
-	txt, err := input.ReadBytes(n)
-	if err != nil {
-		fmt.Printf(">>> Input Error: %s \n", err)
-		return []byte(""), false
-	}
-	last := len(txt) - 1
-	if last >= 0 && txt[last] == n {
-		txt = txt[:last]
-	}
-	crutils.CollectEntropy()
-	return txt, true
 }
 
 func processCommand(cmd string) {
@@ -162,6 +143,8 @@ func processCommand(cmd string) {
 		extendLine(arg, true)
 	case "p": // editor lines print
 		linesPrint(arg)
+	case "r": // editor line resize
+		resizeLine(arg)
 	////////////////////////////////////////////
 	default:
 		fmt.Printf(">>> Wrong command: '%s' [%x] \n", cmd, []byte(cmd))
@@ -200,11 +183,12 @@ func saveFile(arg []string) {
 	if len(arg) >= 2 {
 		filename = arg[1]
 	} else {
-		f, ok := prompt("Enter file name: ")
-		if ok {
-			filename = string(f)
-		} else {
+		fmt.Println("Enter file name: ")
+		f := terminal.StandardInput()
+		if f == nil {
 			return
+		} else {
+			filename = string(f)
 		}
 	}
 
@@ -217,10 +201,12 @@ func saveFile(arg []string) {
 }
 
 func saveFilePlainText(arg []string) {
-	s, ok := prompt("Do you really want to save plain text? ")
-	if !ok {
+	fmt.Print("Do you really want to save plain text? ")
+	s := terminal.StandardInput()
+	if s == nil {
 		return
 	}
+
 	answer := string(s)
 	if answer != "y" && answer != "yes" {
 		return
@@ -233,8 +219,9 @@ func saveFilePlainText(arg []string) {
 
 func checkQuit() bool {
 	if items[cur].changed {
-		s, ok := prompt("The file is not saved. Do you really want to quit and lose the changes? ")
-		if !ok {
+		fmt.Print("The file is not saved. Do you really want to quit and lose the changes? ")
+		s := terminal.StandardInput()
+		if s == nil {
 			return false
 		}
 		answer := string(s)

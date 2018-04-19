@@ -66,6 +66,7 @@ func displayTextContent() {
 func grep(arg []string, cryptic bool, scramble bool) {
 	var pattern []byte
 	if cryptic {
+		fmt.Print("Enter pattern for search: ")
 		if scramble {
 			pattern = terminal.SecureInputLinux()
 		} else {
@@ -74,11 +75,12 @@ func grep(arg []string, cryptic bool, scramble bool) {
 	} else if len(arg) > 1 {
 		pattern = []byte(arg[1])
 	} else {
-		var ok bool
-		pattern, ok = prompt("Enter pattern for search: ")
-		if !ok {
-			return
-		}
+		fmt.Print("Enter pattern for search: ")
+		pattern = terminal.StandardInput()
+	}
+
+	if pattern == nil {
+		return
 	}
 
 	i := 0
@@ -105,20 +107,32 @@ func grep(arg []string, cryptic bool, scramble bool) {
 }
 
 func appendLine(cryptic bool) {
-	var ok bool
 	var s []byte
+	fmt.Println(defaultPrompt)
 	if cryptic {
 		s = terminal.SecureInput()
 	} else {
-		s, ok = prompt(defaultPrompt)
-		if !ok {
-			return
-		}
+		s = terminal.StandardInput()
 	}
 
-	items[cur].console.PushBack(s)
-	items[cur].changed = true
-	cat()
+	if s != nil {
+		items[cur].console.PushBack(s)
+		items[cur].changed = true
+		cat()
+	}
+}
+
+func textLineInsertSpace(arg []string) {
+	if len(arg) < 2 {
+		fmt.Println(">>> Error: line number is missing")
+	} else {
+		i, ok := a2i(arg[1], 0, items[cur].console.Len())
+		if ok {
+			if insertLine(i, []byte("")) {
+				cat()
+			}
+		}
+	}
 }
 
 func insertLine(ln int, s []byte) bool {
@@ -141,19 +155,6 @@ func insertLine(ln int, s []byte) bool {
 	return false
 }
 
-func textLineInsertSpace(arg []string) {
-	if len(arg) < 2 {
-		fmt.Println(">>> Error: line number is missing")
-	} else {
-		i, ok := a2i(arg[1], 0, items[cur].console.Len())
-		if ok {
-			if insertLine(i, []byte("")) {
-				cat()
-			}
-		}
-	}
-}
-
 func textLineInsert(arg []string, cryptic bool) {
 	if len(arg) < 2 {
 		fmt.Println(">>> Error: line number is missing")
@@ -166,17 +167,17 @@ func textLineInsert(arg []string, cryptic bool) {
 	}
 
 	var s []byte
+	fmt.Println(defaultPrompt)
 	if cryptic {
 		s = terminal.SecureInput()
 	} else {
-		s, ok = prompt(defaultPrompt)
-		if !ok {
-			return
-		}
+		s = terminal.StandardInput()
 	}
 
-	if insertLine(i, s) {
-		cat()
+	if s != nil {
+		if insertLine(i, s) {
+			cat()
+		}
 	}
 }
 
@@ -326,6 +327,46 @@ func split(ln, pos int) bool {
 	return false
 }
 
+func resizeLn(ln, pos int) bool {
+	i := 0
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		if i == ln {
+			s, _ := x.Value.([]byte)
+			if pos >= len(s) {
+				fmt.Printf(">>> Error: split position %d exceeds line length %d \n", pos, len(s))
+				return false
+			}
+
+			destroyData(s[pos:])
+			s = s[:pos]
+			items[cur].changed = true
+			return true
+		}
+		i++
+	}
+
+	fmt.Println(">>> Error: line not found")
+	return false
+}
+
+func resizeLine(arg []string) {
+	// todo;
+	if len(arg) < 3 {
+		fmt.Printf(">>> Error: three params expected, got %d \n", len(arg))
+		return
+	}
+
+	ln, ok := a2i(arg[1], 0, items[cur].console.Len())
+	if ok {
+		pos, ok := a2i(arg[2], 0, 100000)
+		if ok {
+			if resizeLn(ln, pos) {
+				cat()
+			}
+		}
+	}
+}
+
 func extendLine(arg []string, cryptic bool) {
 	if len(arg) < 2 {
 		fmt.Printf(">>> Error: three params expected, got %d \n", len(arg))
@@ -338,17 +379,16 @@ func extendLine(arg []string, cryptic bool) {
 	}
 
 	var s []byte
+	fmt.Println(defaultPrompt)
 	if cryptic {
 		s = terminal.SecureInput()
 	} else {
-		s, ok = prompt(defaultPrompt)
-		if !ok {
-			return
-		}
+		s = terminal.StandardInput()
 	}
-
-	if extendLn(ln, s) {
-		cat()
+	if s != nil {
+		if extendLn(ln, s) {
+			cat()
+		}
 	}
 }
 

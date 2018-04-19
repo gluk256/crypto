@@ -1,18 +1,21 @@
 package terminal
 
 import (
-	crand "crypto/rand"
-	mrand "math/rand"
+	"bufio"
 	"fmt"
 	"time"
 	"os"
 	"os/exec"
 	"runtime"
 	"syscall"
+	crand "crypto/rand"
+	mrand "math/rand"
 	shell "golang.org/x/crypto/ssh/terminal"
 
 	"github.com/gluk256/crypto/crutils"
 )
+
+var inputReader = bufio.NewReader(os.Stdin)
 
 // you can always arbitrary extend the alphabet (add capital letters, special characters, etc.)
 // IMPORTANT: only ASCII characters are allowed
@@ -72,6 +75,7 @@ func secureRead() []byte {
 	//fmt.Println("SecureInput version 26")
 	printSpaced(alphabet)
 	fmt.Println()
+	var err error
 	var next byte
 	b := make([]byte, 1)
 	s := make([]byte, 0, 128)
@@ -81,7 +85,11 @@ func secureRead() []byte {
 		randomizeAlphabet()
 		fmt.Print("\r")
 		printSpaced(scrambledAlphabet)
-		os.Stdin.Read(b)
+		_, err = os.Stdin.Read(b)
+		if err != nil {
+			fmt.Printf(">>>>>> Input Error: %s \n", err)
+			return nil
+		}
 
 		switch b[0] {
 		case  96: // '~': do nothing (reshuffle)
@@ -123,17 +131,30 @@ func SecureInputTest() []byte {
 	return []byte("test finished")
 }
 
-
 func PasswordModeInput() []byte {
-	fmt.Print("Please enter the key: ")
 	s, err := shell.ReadPassword(int(syscall.Stdin))
 	fmt.Println()
 	if err != nil {
-		fmt.Printf("Error: %s \n", err)
-		os.Exit(0)
+		fmt.Printf(">>>>>> Input Error: %s \n", err)
+		return nil
 	}
 	crutils.CollectEntropy()
 	return s
+}
+
+func StandardInput() []byte {
+	const n = byte('\n')
+	txt, err := inputReader.ReadBytes(n)
+	if err != nil {
+		fmt.Printf(">>>>>> Input Error: %s \n", err)
+		return nil
+	}
+	last := len(txt) - 1
+	if last >= 0 && txt[last] == n {
+		txt = txt[:last]
+	}
+	crutils.CollectEntropy()
+	return txt
 }
 
 func SecureInput() []byte {
