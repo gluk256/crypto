@@ -22,6 +22,7 @@ type Content struct {
 
 const (
 	MaxItems = 2
+	quit = string("q")
 )
 
 var (
@@ -33,7 +34,7 @@ var (
 )
 
 func main() {
-	steg = -1
+	initialize()
 
 	if len(os.Args) > 1 {
 		crutils.CollectEntropy()
@@ -46,13 +47,14 @@ func main() {
 	for {
 		crutils.CollectEntropy()
 		s, ok := prompt("Enter command: ")
+		cmd := string(s)
 		if ok {
-			if s == "q" {
+			if cmd == quit {
 				if checkQuit() {
 					break
 				}
 			} else {
-				processCommand(s)
+				processCommand(cmd)
 			}
 		}
 	}
@@ -61,14 +63,25 @@ func main() {
 	testify()
 }
 
-func prompt(p string) (string, bool) {
+func initialize() {
+	steg = -1
+	for i := 0; i < MaxItems; i++ {
+		items[i].console = list.New()
+	}
+}
+
+func prompt(p string) ([]byte, bool) {
 	fmt.Print(p)
-	txt, err := input.ReadString('\n')
+	const n = byte('\n')
+	txt, err := input.ReadBytes(n)
 	if err != nil {
 		fmt.Printf(">>> Input Error: %s \n", err)
-		return "", false
+		return []byte(""), false
 	}
-	txt = strings.TrimRight(txt, " \n\r")
+	last := len(txt) - 1
+	if last >= 0 && txt[last] == n {
+		txt = txt[:last]
+	}
 	crutils.CollectEntropy()
 	return txt, true
 }
@@ -82,8 +95,8 @@ func processCommand(cmd string) {
 	switch arg[0] {
 	case "frame":
 		changeFrameStyle()
-	case "clear":
-		deleteAll()
+	case "reset":
+		reset(arg)
 	case "steg": // mark/unmark steganographic content
 		markSteg()
 	case "next":
@@ -184,12 +197,13 @@ func saveFile(arg []string) {
 	}
 
 	var filename string
-	var ok bool
 	if len(arg) >= 2 {
 		filename = arg[1]
 	} else {
-		filename, ok = prompt("Enter file name: ")
-		if !ok {
+		f, ok := prompt("Enter file name: ")
+		if ok {
+			filename = string(f)
+		} else {
 			return
 		}
 	}
@@ -207,7 +221,8 @@ func saveFilePlainText(arg []string) {
 	if !ok {
 		return
 	}
-	if s != "y" && s != "yes" {
+	answer := string(s)
+	if answer != "y" && answer != "yes" {
 		return
 	}
 
@@ -222,33 +237,27 @@ func checkQuit() bool {
 		if !ok {
 			return false
 		}
-		return (s == "y" || s == "yes")
+		answer := string(s)
+		return (answer == "y" || answer == "yes")
 	}
 	return true
 }
 
 func destroyData(b []byte) {
+	// overwrite; prevent compiler optimization
 	sz := len(b)
-	keccak.XorInplace(b, b, sz)
+	crutils.RandXor(b, sz)
+	crutils.ReverseByte(b[sz/2:])
 	witness.Write(b)
-	crutils.Rand(b, sz)
-	if sz > 64 {
-		crutils.ReverseByte(b[sz/4:sz-sz/4])
-	} else {
-		crutils.ReverseByte(b)
-	}
+	keccak.XorInplace(b, b, sz)
 	witness.Write(b)
 }
 
 func deleteContent(i int) {
 	if items[i].console != nil {
-		for {
-			x := items[i].console.Front()
-			if x == nil {
-				break
-			} else {
-				items[i].console.Remove(x)
-			}
+		for x := items[i].console.Front(); x != nil; x = items[i].console.Front() {
+			destroyData(x.Value.([]byte))
+			items[i].console.Remove(x)
 		}
 	}
 
@@ -259,6 +268,14 @@ func deleteContent(i int) {
 func deleteAll() {
 	for i := 0; i < MaxItems; i++ {
 		deleteContent(i)
+	}
+}
+
+func reset(arg []string) {
+	if len(arg) > 1 && arg[1] == "all" {
+		deleteAll()
+	} else {
+		deleteContent(cur)
 	}
 }
 

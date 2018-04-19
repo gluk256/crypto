@@ -1,24 +1,29 @@
 package terminal
 
 import (
-	"fmt"
 	"crypto/sha256"
-	//"github.com/gluk256/crypto/terminal"
+	"fmt"
 )
 
-func Sha2(s string) []byte {
+func Sha2(s []byte) []byte {
 	h := sha256.New()
-	h.Write([]byte(s))
+	h.Write(s)
 	return h.Sum(nil)
 }
 
 func SSha2(s string) string {
-	h := Sha2(s)
+	h := Sha2([]byte(s))
 	x := fmt.Sprintf("%x", h)
 	return x
 }
 
-func XSha2() string {
+//func XSha2() string {
+//	s := SecureInput()
+//	return Sha2(s)
+//}
+
+func PrintHashedInput() {
 	s := SecureInput()
-	return SSha2(s)
+	hash := Sha2(s)
+	fmt.Printf("%x", hash)
 }

@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	var x string
+	var x []byte
 	if len(os.Args) < 2 {
 		test()
 		return
@@ -23,10 +23,10 @@ func main() {
 	switch a {
 	case 't':
 		x = terminal.SecureInputTest()
-		fmt.Println(x)
+		fmt.Println(string(x))
 	case 'i':
 		x = terminal.SecureInput()
-		fmt.Println(x)
+		fmt.Println(string(x))
 	}
 }
 

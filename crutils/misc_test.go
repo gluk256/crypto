@@ -3,6 +3,7 @@ package crutils
 import (
 	"testing"
 	"bytes"
+	"fmt"
 )
 
 func isEqual(a, b []int) bool {
@@ -57,5 +58,42 @@ func TestRand(t *testing.T) {
 	Rand(b2, sz)
 	if bytes.Equal(b2, b3) {
 		t.Fatal("Rand failed")
+	}
+}
+
+func TestSubstitute(t *testing.T) {
+	var s1 string = "abcdefghijklmnopqrstuvwxyz"
+	const s2 string = "0123456789"
+	const i = 1
+	const next = byte('#')
+	var prev byte
+	var b []byte
+
+	b = []byte(s1)
+	prev = b[i]
+	Substitute(b, prev, next)
+	fmt.Print(b)
+	if b[i] != next {
+		t.Fatal("did not change")
+	} else {
+		for x, c := range b {
+			if c == prev {
+				t.Fatalf("char %c still occur at position %d", c, x)
+			}
+		}
+	}
+
+	b = []byte(s2)
+	prev = b[i]
+	Substitute(b, prev, next)
+	fmt.Print(b)
+	if b[i] != next {
+		t.Fatal("did not change")
+	} else {
+		for x, c := range b {
+			if c == prev {
+				t.Fatalf("char %c still occur at position %d", c, x)
+			}
+		}
 	}
 }

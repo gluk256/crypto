@@ -8,15 +8,13 @@ import (
 )
 
 func main() {
-	var x string
 	if len(os.Args) > 1 {
-		//x = os.Args[1]
-		fmt.Scanf("%s", &x)
-		x = terminal.SSha2(x)
+		var x string
+		fmt.Scanf("%s", &x) // todo: review
+		s := terminal.SSha2(x)
+		fmt.Println(s)
 	} else {
-		x = terminal.XSha2()
+		terminal.PrintHashedInput()
 	}
-
-	fmt.Println(x)
 }
 

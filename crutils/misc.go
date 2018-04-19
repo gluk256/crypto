@@ -45,3 +45,11 @@ func RandXor(dst []byte, sz int) {
 	Entropy.Read(rnd, sz)
 	keccak.XorInplace(dst, rnd, sz)
 }
+
+func Substitute(s []byte, prev byte, n byte) {
+	for i := 0; i < len(s); i++ {
+		if s[i] == prev {
+			s[i] = n
+		}
+	}
+}

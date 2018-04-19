@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"strings"
+	"bytes"
 	"container/list"
-	"strconv"
+	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
@@ -15,21 +15,36 @@ var BarCol  = "   │—————————+—————————+—
 var BarNorm = "   │———————————————————————————————————————————————————————————————————————————————————————————————————"
 var Bar = BarNorm
 var defaultPrompt = "Enter text: "
+const newline = byte('\n')
+
+func changeFrameStyle() {
+	if Bar == BarCol {
+		Bar = BarNorm
+	} else {
+		Bar = BarCol
+	}
+}
 
 func prepareTextContentForDisplay() {
 	if !items[cur].prepared {
-		s := string(items[cur].src)
-		if strings.Count(s, "\r") > 0 {
-			s = strings.Replace(s, "\r", "\n", -1)
-		}
-
-		arr := strings.Split(s, "\n")
-		items[cur].console = list.New()
-		for _, x := range arr {
-			items[cur].console.PushBack(x)
-		}
-
+		crutils.Substitute(items[cur].src, '\r', newline)
+		createLineList()
 		items[cur].prepared = true
+	}
+}
+
+func createLineList() {
+	items[cur].console = list.New()
+	s := items[cur].src
+	beg := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == newline {
+			items[cur].console.PushBack(s[beg:i])
+			beg = i + 1
+		}
+	}
+	if beg < len(s) {
+		items[cur].console.PushBack(s[beg:])
 	}
 }
 
@@ -42,14 +57,14 @@ func displayTextContent() {
 	fmt.Println(Bar)
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
-		fmt.Printf("%03d│ %s\n", i, x.Value)
+		fmt.Printf("%03d│ %s\n", i, x.Value.([]byte))
 		i++
 	}
 	fmt.Println(Bar)
 }
 
 func grep(arg []string, cryptic bool, scramble bool) {
-	var pattern string
+	var pattern []byte
 	if cryptic {
 		if scramble {
 			pattern = terminal.SecureInputLinux()
@@ -57,7 +72,7 @@ func grep(arg []string, cryptic bool, scramble bool) {
 			pattern = terminal.PasswordModeInput()
 		}
 	} else if len(arg) > 1 {
-		pattern = arg[1]
+		pattern = []byte(arg[1])
 	} else {
 		var ok bool
 		pattern, ok = prompt("Enter pattern for search: ")
@@ -70,13 +85,16 @@ func grep(arg []string, cryptic bool, scramble bool) {
 	found := false
 	fmt.Println(Bar)
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
-		s, _ := x.Value.(string)
-		if strings.Contains(s, pattern) {
-			if cryptic {
-				s = strings.Replace(s, pattern, "XXXXX", -1)
-			}
-			fmt.Printf("%03d│ %s\n", i, s)
+		s, _ := x.Value.([]byte)
+		j := bytes.LastIndex(s, pattern)
+		if j >= 0 {
 			found = true
+			if cryptic {
+				beg := j + len(pattern)
+				fmt.Printf("%03d│ %s\n", i, s[beg:])
+			} else  {
+				fmt.Printf("%03d│ %s\n", i, s)
+			}
 		}
 		i++
 	}
@@ -88,7 +106,7 @@ func grep(arg []string, cryptic bool, scramble bool) {
 
 func appendLine(cryptic bool) {
 	var ok bool
-	var s string
+	var s []byte
 	if cryptic {
 		s = terminal.SecureInput()
 	} else {
@@ -103,7 +121,7 @@ func appendLine(cryptic bool) {
 	cat()
 }
 
-func insertLine(ln int, s string) bool {
+func insertLine(ln int, s []byte) bool {
 	if ln >= items[cur].console.Len() {
 		fmt.Printf(">>> Error: index %d is greater than size %d \n", ln, items[cur].console.Len())
 		return false
@@ -129,7 +147,7 @@ func textLineInsertSpace(arg []string) {
 	} else {
 		i, ok := a2i(arg[1], 0, items[cur].console.Len())
 		if ok {
-			if insertLine(i, "") {
+			if insertLine(i, []byte("")) {
 				cat()
 			}
 		}
@@ -147,7 +165,7 @@ func textLineInsert(arg []string, cryptic bool) {
 		return
 	}
 
-	var s string
+	var s []byte
 	if cryptic {
 		s = terminal.SecureInput()
 	} else {
@@ -173,24 +191,33 @@ func textLinesDelete(arg []string) {
 	}
 }
 
+func deleteSingleLine(ln int) {
+	i := 0
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		if i == ln {
+			destroyData(x.Value.([]byte))
+			items[cur].console.Remove(x)
+			items[cur].changed = true
+		}
+		i++
+	}
+}
+
 func linesPrint(arg []string) {
 	prepareTextContentForDisplay()
 
 	indexes := parseAndSortInts(arg)
-	sz := len(indexes)
-	if sz == 0 {
+	total := len(indexes)
+	if total == 0 {
 		fmt.Println("Nothing to print")
 	}
 
 	var ln, i int
 	fmt.Println(Bar)
-	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+	for x := items[cur].console.Front(); x != nil && i < total; x = x.Next() {
 		if indexes[i] == ln {
-			fmt.Printf("%03d│ %s\n", ln, x.Value)
+			fmt.Printf("%03d│ %s\n", ln, x.Value.([]byte))
 			i++
-			if sz == i {
-				break
-			}
 		}
 		ln++
 	}
@@ -216,17 +243,6 @@ func parseAndSortInts(arg []string) []int {
 	return indexes
 }
 
-func deleteSingleLine(ln int) {
-	i := 0
-	for x := items[cur].console.Front(); x != nil; x = x.Next() {
-		if i == ln {
-			items[cur].console.Remove(x)
-			items[cur].changed = true
-		}
-		i++
-	}
-}
-
 func mergeLines(ln int) bool {
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
@@ -237,9 +253,14 @@ func mergeLines(ln int) bool {
 				return false
 			}
 
-			s1, _ := x.Value.(string)
-			s2, _ := y.Value.(string)
-			items[cur].console.InsertBefore(s1+s2, x)
+			s1, _ := x.Value.([]byte)
+			s2, _ := y.Value.([]byte)
+			res := make([]byte, len(s1) + len(s2))
+			copy(res, s1)
+			copy(res[len(s1):], s2)
+			items[cur].console.InsertBefore(res, x)
+			destroyData(s1)
+			destroyData(s2)
 			items[cur].console.Remove(y)
 			items[cur].console.Remove(x)
 			items[cur].changed = true
@@ -287,15 +308,14 @@ func split(ln, pos int) bool {
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
-			s, _ := x.Value.(string)
+			s, _ := x.Value.([]byte)
 			if pos >= len(s) {
 				fmt.Printf(">>> Error: split position %d exceeds line length %d \n", pos, len(s))
 				return false
 			}
 
-			items[cur].console.InsertBefore(s[:pos], x)
-			items[cur].console.InsertBefore(s[pos:], x)
-			items[cur].console.Remove(x)
+			items[cur].console.InsertAfter(s[pos:], x)
+			s = s[:pos]
 			items[cur].changed = true
 			return true
 		}
@@ -317,7 +337,7 @@ func extendLine(arg []string, cryptic bool) {
 		return
 	}
 
-	var s string
+	var s []byte
 	if cryptic {
 		s = terminal.SecureInput()
 	} else {
@@ -332,12 +352,16 @@ func extendLine(arg []string, cryptic bool) {
 	}
 }
 
-func extendLn(ln int, s string) bool {
+func extendLn(ln int, ext []byte) bool {
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
-			old, _ := x.Value.(string)
-			items[cur].console.InsertAfter(old+s, x)
+			prev, _ := x.Value.([]byte)
+			n := make([]byte, len(prev) + len(ext))
+			copy(n, prev)
+			copy(n[len(prev):], ext)
+			items[cur].console.InsertAfter(n, x)
+			destroyData(prev)
 			items[cur].console.Remove(x)
 			items[cur].changed = true
 			return true
@@ -364,39 +388,32 @@ func a2i(s string, lowerBound int, upperBound int) (int, bool) {
 	return num, true
 }
 
-func getCurrentConsoleSize() (res int) {
+func getCurrentConsoleSizeInBytes() (res int) {
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
-		s, _ := x.Value.(string)
+		s, _ := x.Value.([]byte)
 		res += len(s) + 1 // implicit '\n' character at the end of line
 	}
 	return res
 }
 
 func content2raw() bool {
-	capacity := getCurrentConsoleSize() * 4 // to accommodate different encoding methods
-	b := make([]byte, 0, capacity)
-
-	for x := items[cur].console.Front(); x != nil; x = x.Next() {
-		s, _ := x.Value.(string)
-		b = append(b, []byte(s)...)
-		b = append(b, byte('\n'))
-	}
-
-	sz := len(b)
-	if sz > 1 {
-		b = b[:sz-1]
-		items[cur].dst = b
-		return true
-	} else {
+	total := getCurrentConsoleSizeInBytes()
+	if total < 2 {
 		fmt.Println(">>> Error: no content")
 		return false
 	}
-}
 
-func changeFrameStyle() {
-	if Bar == BarCol {
-		Bar = BarNorm
-	} else {
-		Bar = BarCol
+	i := 0
+	b := make([]byte, total)
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		s, _ := x.Value.([]byte)
+		copy(b[i:], s)
+		i += len(s)
+		b[i] = newline
+		i++
 	}
+
+	destroyData(items[cur].dst)
+	items[cur].dst = b[:total-1] // remove the last newline
+	return true
 }
