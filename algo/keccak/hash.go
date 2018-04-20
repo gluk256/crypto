@@ -125,15 +125,20 @@ func Digest(in []byte, out []byte, sz int) []byte {
 	return out
 }
 
-// NB: don't forget to destroy the return value
+func XorInplace(dst []byte, gamma []byte, sz int) {
+	for i := 0; i < sz; i++ {
+		dst[i] ^= gamma[i]
+	}
+}
+
+// NB: don't forget to destroy the return value!
 func Encrypt(key []byte, data []byte, sz int) []byte {
 	gamma := Digest(key, nil, sz)
 	XorInplace(data, gamma, sz)
 	return gamma
 }
 
-func XorInplace(dst []byte, gamma []byte, sz int) {
-	for i := 0; i < sz; i++ {
-		dst[i] ^= gamma[i]
-	}
+// NB: don't forget to destroy the return value!
+func Decrypt(key []byte, data []byte, sz int) []byte {
+	return Encrypt(key, data, sz)
 }

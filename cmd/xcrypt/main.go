@@ -14,7 +14,6 @@ import (
 
 type Content struct {
 	src      []byte
-	dst      []byte
 	console  *list.List
 	prepared bool
 	changed  bool
@@ -90,6 +89,23 @@ func processCommand(cmd string) {
 	case "cc": // content display as text
 		cat()
 	////////////////////////////////////////////
+	case "ec":
+		EncryptAndSaveContent(arg)
+	case "ex":
+		EncryptAndSaveSteg(arg)
+	case "dc":
+		DecryptContent(arg)
+	case "dx":
+		DecryptSteg(arg)
+	case "ef": // load file, encrypt, and save (without cat)
+		EncryptFile(arg)
+	case "fe":
+		EncryptFile(arg)
+	case "df": // load file, decrypt, and save in plain form
+		DecryptFile(arg)
+	case "fd":
+		DecryptFile(arg)
+	////////////////////////////////////////////
 	case "fl": // file load
 		FileLoad(arg)
 	case "fo": // file load text
@@ -156,33 +172,25 @@ func FileLoad(arg []string) bool {
 	}
 
 	items[cur].src = b
-	items[cur].dst = nil
 	items[cur].console = list.New()
 	items[cur].prepared = false
 	items[cur].changed = false
 	return true
 }
 
-func FileSave(arg []string) {
-	if len(items[cur].dst) == 0 {
+func saveData(arg []string, data []byte) {
+	if len(data) == 0 {
 		fmt.Println(">>> Error: content is not found")
 		return
 	}
 
-	var filename string
-	if len(arg) >= 2 {
-		filename = arg[1]
-	} else {
-		fmt.Println("Enter file name: ")
-		f := terminal.StandardInput()
-		if f == nil {
-			return
-		} else {
-			filename = string(f)
-		}
+	filename := getFileName(arg)
+	if len(filename) == 0 {
+		fmt.Println(">>> Error: filename is emprty")
+		return
 	}
 
-	err := ioutil.WriteFile(filename, items[cur].dst, 0777)
+	err := ioutil.WriteFile(filename, data, 0777)
 	if err != nil {
 		fmt.Printf(">>> Error: %s \n", err)
 	} else {
@@ -191,43 +199,82 @@ func FileSave(arg []string) {
 }
 
 func FileSavePlainText(arg []string) {
-	fmt.Print("Do you really want to save plain text? ")
-	s := terminal.StandardInput()
-	if s == nil {
-		return
+	if confirm("Do you really want to save plain text?") {
+		b := content2raw()
+		if b != nil {
+			saveData(arg, b)
+			annihilateData(b)
+		}
+	}
+}
+
+func FileSave(arg []string) {
+	b := content2raw()
+	encryptData(b)
+	if b != nil {
+		saveData(arg, b)
+		annihilateData(b)
+	}
+}
+
+func getFileName (arg []string) string {
+	var filename string
+	if len(arg) >= 2 {
+		filename = arg[1]
+	} else {
+		fmt.Println("Enter file name: ")
+		f := terminal.StandardInput()
+		if f == nil {
+			return ""
+		} else {
+			filename = string(f)
+		}
+	}
+	return filename
+}
+
+func content2raw() []byte {
+	total := getConsoleSizeInBytes(cur)
+	if total < 2 {
+		fmt.Println(">>> Error: no content")
+		return nil
 	}
 
-	answer := string(s)
-	if answer != "y" && answer != "yes" {
-		return
+	i := 0
+	b := make([]byte, total)
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		s, _ := x.Value.([]byte)
+		copy(b[i:], s)
+		i += len(s)
+		b[i] = newline
+		i++
 	}
 
-	if content2raw() {
-		FileSave(arg)
-	}
+	return b[:total-1] // remove the last newline
 }
 
 func checkQuit() bool {
 	if items[cur].changed {
-		fmt.Print("The file is not saved. Do you really want to quit and lose the changes? ")
-		s := terminal.StandardInput()
-		if s == nil {
-			return false
-		}
-		answer := string(s)
-		return (answer == "y" || answer == "yes")
+		return confirm("The file is not saved. Do you really want to quit and lose the changes?")
 	}
 	return true
 }
 
 func annihilateData(b []byte) {
-	// overwrite; prevent compiler optimization
-	sz := len(b)
-	crutils.RandXor(b, sz)
-	crutils.ReverseByte(b[sz/2:])
-	witness.Write(b)
-	keccak.XorInplace(b, b, sz)
-	witness.Write(b)
+	if len(b) != 0 {
+		// overwrite; prevent compiler optimization
+		sz := len(b)
+		crutils.RandXor(b, sz)
+		crutils.ReverseByte(b[sz / 2:])
+		witness.Write(b)
+		keccak.XorInplace(b, b, sz)
+		witness.Write(b)
+	}
+}
+
+func deleteLine(i int, e *list.Element) {
+	annihilateData(e.Value.([]byte))
+	items[i].console.Remove(e)
 }
 
 func deleteContent(i int) {
@@ -238,13 +285,10 @@ func deleteContent(i int) {
 		}
 	}
 
+	// first, feed to witness to prevent compiler optimization
+	// most of src must be already destroyed, byt still
+	witness.Write(items[cur].src)
 	annihilateData(items[cur].src)
-	annihilateData(items[cur].dst)
-}
-
-func deleteLine(i int, e *list.Element) {
-	annihilateData(e.Value.([]byte))
-	items[i].console.Remove(e)
 }
 
 func deleteAll() {
@@ -278,4 +322,51 @@ func MarkSteg() {
 		steg = -1
 	}
 	info()
+}
+
+func confirm(question string) bool {
+	fmt.Printf("%s ", question)
+	s := terminal.StandardInput()
+	if s == nil {
+		return false
+	}
+	answer := string(s)
+	return (answer == "y" || answer == "yes")
+}
+
+func encryptData(data []byte) {
+	// todo: implement!!!!!
+	fmt.Println("NOT IMPLEMENTED")
+}
+
+func EncryptAndSaveContent(args []string) {
+	// todo: implement!!!!!
+	fmt.Println("NOT IMPLEMENTED")
+}
+
+func EncryptAndSaveSteg(args []string) {
+	// todo: implement!!!!!
+	fmt.Println("NOT IMPLEMENTED")
+}
+
+func DecryptContent(args []string) {
+	// todo: implement!!!!!
+	fmt.Println("NOT IMPLEMENTED")
+}
+
+func DecryptSteg(args []string) {
+	// todo: implement!!!!!
+	fmt.Println("NOT IMPLEMENTED")
+}
+
+// load file, encrypt, and save (without cat)
+func EncryptFile(args []string) {
+	// todo: implement!!!!!
+	fmt.Println("NOT IMPLEMENTED")
+}
+
+// load file, decrypt, and save in plain form
+func DecryptFile(args []string) {
+	// todo: implement!!!!!
+	fmt.Println("NOT IMPLEMENTED")
 }

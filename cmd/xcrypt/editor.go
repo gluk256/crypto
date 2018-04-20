@@ -430,25 +430,3 @@ func getConsoleSizeInBytes(i int) (res int) {
 	}
 	return res
 }
-
-func content2raw() bool {
-	total := getConsoleSizeInBytes(cur)
-	if total < 2 {
-		fmt.Println(">>> Error: no content")
-		return false
-	}
-
-	i := 0
-	b := make([]byte, total)
-	for x := items[cur].console.Front(); x != nil; x = x.Next() {
-		s, _ := x.Value.([]byte)
-		copy(b[i:], s)
-		i += len(s)
-		b[i] = newline
-		i++
-	}
-
-	annihilateData(items[cur].dst)
-	items[cur].dst = b[:total-1] // remove the last newline
-	return true
-}
