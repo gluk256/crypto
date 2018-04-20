@@ -104,6 +104,8 @@ func grep(arg []string, cryptic bool, scramble bool) {
 	if !found {
 		fmt.Println(">>> not found <<<")
 	}
+
+	annihilateData(pattern)
 }
 
 func LineAppend(cryptic bool) {
@@ -386,6 +388,7 @@ func LineExtend(arg []string, cryptic bool) {
 			cat()
 		}
 	}
+	annihilateData(s)
 }
 
 func extendLine(ln int, ext []byte) bool {

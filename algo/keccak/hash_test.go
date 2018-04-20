@@ -96,13 +96,13 @@ func TestEncrypt(t *testing.T) {
 		t.Fatal("copy failed")
 	}
 
-	gamma := Encrypt(key, b1, sz)
+	gamma := EncryptInplace(key, b1, sz)
 	if bytes.Equal(b1, xx) {
 		t.Fatal("xor failed")
 	}
 	checkDeepNotEqual(t, b1, xx, sz)
 
-	Encrypt(key, b2, sz)
+	EncryptInplace(key, b2, sz)
 	if bytes.Equal(b2, xx) {
 		t.Fatal("xor failed")
 	}
@@ -113,7 +113,7 @@ func TestEncrypt(t *testing.T) {
 		t.Fatal("b2 did not return to previous state")
 	}
 
-	Encrypt(key, b1, sz)
+	EncryptInplace(key, b1, sz)
 	if !bytes.Equal(b1, xx) {
 		t.Fatal("b1 did not return to previous state")
 	}

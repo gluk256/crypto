@@ -31,11 +31,17 @@ var (
 func main() {
 	initialize()
 
-	if len(os.Args) > 1 {
+	if len(os.Args) > 3 {
 		// todo: this should be interpreted as encrypt/decrypt file
-		// flags: -e, -d, -x (encrypt with verify password)
-		//filename := os.Args[1]
-		//processCommand("decrypt " + filename)
+		//cryptic, verifyPass, show := parseEncryptionFlag(os.Args[1:])
+		//srcFilename := os.Args[1]
+		//dstFilename := os.Args[2]
+		//os.Args[3]: -e or -d
+		//process command
+		//return
+	} else if len(os.Args) > 1 {
+		fmt.Print("Not enough args")
+		return
 	}
 
 	for {
@@ -70,6 +76,7 @@ func processCommand(cmd string) {
 	if len(arg) == 0 {
 		return
 	}
+	cryptic, verifyPass, show := parseEncryptionFlag(arg[1:])
 
 	switch arg[0] {
 	case "frame":
@@ -88,23 +95,6 @@ func processCommand(cmd string) {
 		cat()
 	case "cc": // content display as text
 		cat()
-	////////////////////////////////////////////
-	case "ec":
-		EncryptAndSaveContent(arg)
-	case "ex":
-		EncryptAndSaveSteg(arg)
-	case "dc":
-		DecryptContent(arg)
-	case "dx":
-		DecryptSteg(arg)
-	case "ef": // load file, encrypt, and save (without cat)
-		EncryptFile(arg)
-	case "fe":
-		EncryptFile(arg)
-	case "df": // load file, decrypt, and save in plain form
-		DecryptFile(arg)
-	case "fd":
-		DecryptFile(arg)
 	////////////////////////////////////////////
 	case "fl": // file load
 		FileLoad(arg)
@@ -151,6 +141,12 @@ func processCommand(cmd string) {
 		LinesPrint(arg)
 	case "c": // editor: cut line (delete from the end)
 		LineCut(arg)
+	////////////////////////////////////////////
+	case "ei":
+		EncryptInputAndPrintHex(cryptic, verifyPass)
+	case "di":
+		DecryptHexInput(cryptic, show)
+	// todo: add other encrypt/decrypt commands from the bottom of this file
 	////////////////////////////////////////////
 	default:
 		fmt.Printf(">>> Wrong command: '%s' [%x] \n", cmd, []byte(cmd))
@@ -210,9 +206,10 @@ func FileSavePlainText(arg []string) {
 
 func FileSave(arg []string) {
 	b := content2raw()
-	encryptData(b)
+	x := encryptData(b)
 	if b != nil {
-		saveData(arg, b)
+		saveData(arg, x)
+		annihilateData(x)
 		annihilateData(b)
 	}
 }
@@ -334,39 +331,58 @@ func confirm(question string) bool {
 	return (answer == "y" || answer == "yes")
 }
 
-func encryptData(data []byte) {
-	// todo: implement!!!!!
-	fmt.Println("NOT IMPLEMENTED")
+/////////////////////////////////////////////////////////////////////////
+
+func parseEncryptionFlag(arg []string) (cryptic, verifyPass, show bool) {
+	for _, a := range arg {
+		if a == "-c" {
+			cryptic = true
+		} else if a == "-v" {
+			verifyPass = true
+		} else if a == "-p" {
+			show = true
+		}
+	}
+	return
 }
 
-func EncryptAndSaveContent(args []string) {
-	// todo: implement!!!!!
-	fmt.Println("NOT IMPLEMENTED")
+func encryptData(data []byte) []byte {
+	panic("NOT IMPLEMENTED")
+	return nil
 }
 
-func EncryptAndSaveSteg(args []string) {
-	// todo: implement!!!!!
-	fmt.Println("NOT IMPLEMENTED")
+func EncryptContentAndSave(args []string, cryptic bool, verifyPass bool) {
+	panic("NOT IMPLEMENTED")
 }
 
-func DecryptContent(args []string) {
-	// todo: implement!!!!!
-	fmt.Println("NOT IMPLEMENTED")
+func EncryptStegAndSave(args []string, cryptic bool, verifyPass bool) {
+	panic("NOT IMPLEMENTED")
 }
 
-func DecryptSteg(args []string) {
-	// todo: implement!!!!!
-	fmt.Println("NOT IMPLEMENTED")
+func EncryptFileAndSave(args []string, cryptic bool, verifyPass bool) {
+	panic("NOT IMPLEMENTED")
 }
 
-// load file, encrypt, and save (without cat)
-func EncryptFile(args []string) {
-	// todo: implement!!!!!
-	fmt.Println("NOT IMPLEMENTED")
+func EncryptInputAndPrintHex(cryptic bool, verifyPass bool) {
+	panic("NOT IMPLEMENTED")
 }
 
-// load file, decrypt, and save in plain form
-func DecryptFile(args []string) {
-	// todo: implement!!!!!
-	fmt.Println("NOT IMPLEMENTED")
+func DecryptContent(args []string, cryptic bool, show bool) {
+	panic("NOT IMPLEMENTED")
+}
+
+func DecryptFile(args []string, cryptic bool, show bool) {
+	panic("NOT IMPLEMENTED")
+}
+
+func DecryptFileAndSave(args []string, cryptic bool) {
+	panic("NOT IMPLEMENTED")
+}
+
+func DecryptFileSteg(args []string, firstLayerCryptic bool, show bool) {
+	panic("NOT IMPLEMENTED")
+}
+
+func DecryptHexInput(cryptic bool, show bool) {
+	panic("NOT IMPLEMENTED")
 }

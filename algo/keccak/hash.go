@@ -132,13 +132,13 @@ func XorInplace(dst []byte, gamma []byte, sz int) {
 }
 
 // NB: don't forget to destroy the return value!
-func Encrypt(key []byte, data []byte, sz int) []byte {
+func EncryptInplace(key []byte, data []byte, sz int) []byte {
 	gamma := Digest(key, nil, sz)
 	XorInplace(data, gamma, sz)
 	return gamma
 }
 
 // NB: don't forget to destroy the return value!
-func Decrypt(key []byte, data []byte, sz int) []byte {
-	return Encrypt(key, data, sz)
+func DecryptInplace(key []byte, data []byte, sz int) []byte {
+	return EncryptInplace(key, data, sz)
 }
