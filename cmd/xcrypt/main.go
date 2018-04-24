@@ -90,6 +90,8 @@ func processCommand(cmd string) {
 		cat()
 	case "info":
 		info()
+	case "ls":
+		ls()
 	////////////////////////////////////////////
 	case "cat": // content display as text
 		cat()
@@ -331,6 +333,16 @@ func confirm(question string) bool {
 	return (answer == "y" || answer == "yes")
 }
 
+func ls() {
+	files, err := ioutil.ReadDir("./")
+	if err != nil {
+		fmt.Printf(">>> Error: %s\n", err)
+	}
+	for _, f := range files {
+		fmt.Printf("[%s] ", f.Name())
+	}
+	fmt.Println()
+}
 /////////////////////////////////////////////////////////////////////////
 
 func parseEncryptionFlag(arg []string) (cryptic, verifyPass, show bool) {
