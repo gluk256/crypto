@@ -4,6 +4,8 @@ import (
 	"testing"
 	"bytes"
 	"encoding/hex"
+	mrand "math/rand"
+	"time"
 )
 
 var input = []string{
@@ -24,10 +26,23 @@ var expected = []string{
 
 const sz = 64
 
+func TestMin(t *testing.T) {
+	x1 := Min(777, 778)
+	x2 := Min(555, 554)
+	x3 := Min(0, 1)
+	x4 := Min(-1, 0)
+	x5 := Min(777, 777)
+	x6 := Min(-1, -11)
+	x7 := Min(1, -11)
+	if x1 != 777 || x2 != 554 || x3 != 0 || x4 != -1 || x5 != 777 || x6 != -11 || x7 != -11 {
+		t.Fatal("failed")
+	}
+}
+
 func TestHash(t *testing.T) {
 	exp := make([]byte, sz)
 	for i, text := range input {
-		hash := Digest([]byte(text), nil, sz)
+		hash := digest([]byte(text), sz)
 		hex.Decode(exp, []byte(expected[i]))
 		if !bytes.Equal(hash, exp) {
 			t.Fatalf("failed test number %d, result: \n[%x]", i, hash)
@@ -35,11 +50,10 @@ func TestHash(t *testing.T) {
 	}
 
 	res := make([]byte, sz)
-	var k Keccak512
 	for i := 0; i < len(input); i++ {
-		k.Reset()
+		var k Keccak512
 		k.Write([]byte(input[i]))
-		k.Read(res, sz)
+		k.Read(res)
 		hex.Decode(exp, []byte(expected[i]))
 		if !bytes.Equal(res, exp) {
 			t.Fatalf("failed advanced test number %d, result: \n[%x]", i, res)
@@ -52,19 +66,19 @@ func BenchmarkHash(b *testing.B) {
 	var k Keccak512
 	k.Write([]byte(input[3]))
 	for i := 0; i < b.N; i++ {
-		k.Read(buf, sz)
+		k.Read(buf)
 	}
 }
 
 func TestXorInplace(t *testing.T) {
 	gamma := []byte(expected[4])
-	xx := []byte(expected[3])
-	sz := len(xx)
+	src := []byte(expected[3])
+	sz := len(src)
 	b1 := make([]byte, sz)
 	b2 := make([]byte, sz)
-	copy(b1, xx)
-	copy(b2, xx)
-	if !bytes.Equal(b1, b2) || !bytes.Equal(b1, xx) {
+	copy(b1, src)
+	copy(b2, src)
+	if !bytes.Equal(b1, b2) || !bytes.Equal(b1, src) {
 		t.Fatal("copy failed")
 	}
 
@@ -89,20 +103,21 @@ func TestXorInplace(t *testing.T) {
 func TestEncrypt(t *testing.T) {
 	const sz = 1024 * 16
 	key := []byte(input[4])
-	b1 := Digest([]byte(expected[0]), nil, sz)
-	b2 := Digest([]byte(expected[0]), nil, sz)
-	xx := Digest([]byte(expected[0]), nil, sz)
+	b1 := digest([]byte(expected[0]), sz)
+	b2 := digest([]byte(expected[0]), sz)
+	xx := digest([]byte(expected[0]), sz)
 	if !bytes.Equal(b1, b2) || !bytes.Equal(b1, xx) {
 		t.Fatal("copy failed")
 	}
 
-	gamma := EncryptInplace(key, b1, sz)
+	gamma := digest(key, len(b1))
+	digestXor(key, b1)
 	if bytes.Equal(b1, xx) {
 		t.Fatal("xor failed")
 	}
 	checkDeepNotEqual(t, b1, xx, sz)
 
-	EncryptInplace(key, b2, sz)
+	digestXor(key, b2)
 	if bytes.Equal(b2, xx) {
 		t.Fatal("xor failed")
 	}
@@ -113,7 +128,7 @@ func TestEncrypt(t *testing.T) {
 		t.Fatal("b2 did not return to previous state")
 	}
 
-	EncryptInplace(key, b1, sz)
+	digestXor(key, b1)
 	if !bytes.Equal(b1, xx) {
 		t.Fatal("b1 did not return to previous state")
 	}
@@ -133,4 +148,58 @@ func checkBlockNotEqual(t *testing.T, a []byte, b []byte, off int, block int) {
 		}
 	}
 	t.Fatalf("checkDeepNotEqual failed, offset = %d", off)
+}
+
+func digest(in []byte, sz int) []byte {
+	var d Keccak512
+	d.Write(in)
+	out := make([]byte, sz)
+	d.Read(out)
+	return out
+}
+
+func digestXor(in []byte, out []byte) {
+	var d Keccak512
+	d.Write(in)
+	d.ReadXor(out)
+}
+
+func TestReadXor(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 1024; i++ {
+		key := generateRandomBytes(t)
+		x := generateRandomBytes(t)
+		y := cloneBytes(x)
+
+		var k1, k2 Keccak512
+		k1.Write(key)
+		k2.Write(key)
+		k2.ReadXor(x)
+
+		gamma := make([]byte, len(y))
+		k1.Read(gamma)
+		XorInplace(y, gamma, len(y))
+
+		if !bytes.Equal(x, y) {
+			t.Fatalf("failed round %d with seed %d", i, seed)
+		}
+	}
+}
+
+func generateRandomBytes(t *testing.T) []byte {
+	sz := mrand.Intn(256) + 256
+	b := make([]byte, sz)
+	_, err := mrand.Read(b)
+	if err != nil {
+		t.Fatal("failed to generate randon bytes")
+	}
+	return b
+}
+
+func cloneBytes(src []byte) []byte {
+	b := make([]byte, len(src))
+	copy(b, src)
+	return b
 }

@@ -11,13 +11,6 @@ type Keccak512 struct {
 	buf  []byte // points into storage
 }
 
-func (d *Keccak512) Reset() {
-	for i := range d.a {
-		d.a[i] = 0
-	}
-	d.buf = d.storage[:0]
-}
-
 func xorIn(d *Keccak512, in []byte) {
 	const sz = Rate / 8
 	b := (*[sz]uint64)(unsafe.Pointer(&in[0]))
@@ -29,6 +22,20 @@ func xorIn(d *Keccak512, in []byte) {
 func copyOut(d *Keccak512, buf []byte) {
 	ab := (*[Rate]uint8)(unsafe.Pointer(&d.a[0]))
 	copy(buf, ab[:])
+}
+
+func XorInplace(dst []byte, gamma []byte, sz int) {
+	for i := 0; i < sz; i++ {
+		dst[i] ^= gamma[i]
+	}
+}
+
+func Min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
 }
 
 func (d *Keccak512) absorb() {
@@ -67,13 +74,20 @@ func (d *Keccak512) finalize() {
 	d.absorbing = false
 }
 
-func (d *Keccak512) Read(out []byte, sz int) {
+func (d *Keccak512) read(out []byte, xor bool) {
 	if d.absorbing {
 		d.finalize()
 	}
 
 	for len(out) > 0 {
-		n := copy(out, d.buf)
+		var n int
+		if xor {
+			n = Min(len(out), len(d.buf))
+			XorInplace(out, d.buf, n)
+		} else {
+			n = copy(out, d.buf)
+		}
+
 		d.buf = d.buf[n:]
 		out = out[n:]
 
@@ -82,6 +96,14 @@ func (d *Keccak512) Read(out []byte, sz int) {
 			d.squeeze()
 		}
 	}
+}
+
+func (d *Keccak512) Read(out []byte) {
+	d.read(out, false)
+}
+
+func (d *Keccak512) ReadXor(out []byte) {
+	d.read(out, true)
 }
 
 // Write absorbs more data into the hash's state. It produces an error
@@ -113,32 +135,4 @@ func (d *Keccak512) Write(p []byte) {
 			}
 		}
 	}
-}
-
-func Digest(in []byte, out []byte, sz int) []byte {
-	if out == nil {
-		out = make([]byte, sz)
-	}
-	var d Keccak512
-	d.Write(in)
-	d.Read(out, sz)
-	return out
-}
-
-func XorInplace(dst []byte, gamma []byte, sz int) {
-	for i := 0; i < sz; i++ {
-		dst[i] ^= gamma[i]
-	}
-}
-
-// NB: don't forget to destroy the return value!
-func EncryptInplace(key []byte, data []byte, sz int) []byte {
-	gamma := Digest(key, nil, sz)
-	XorInplace(data, gamma, sz)
-	return gamma
-}
-
-// NB: don't forget to destroy the return value!
-func DecryptInplace(key []byte, data []byte, sz int) []byte {
-	return EncryptInplace(key, data, sz)
 }
