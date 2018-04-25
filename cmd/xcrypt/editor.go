@@ -9,6 +9,7 @@ import (
 
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
+	"github.com/gluk256/crypto/algo/primitives"
 )
 
 var BarCol  = "   │—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
@@ -27,7 +28,7 @@ func ChangeFrameStyle() {
 
 func prepareContentForDisplayAsText() {
 	if !items[cur].prepared {
-		crutils.Substitute(items[cur].src, '\r', newline)
+		primitives.Substitute(items[cur].src, '\r', newline)
 		parseSource()
 		items[cur].prepared = true
 	}
@@ -105,7 +106,7 @@ func grep(arg []string, cryptic bool, scramble bool) {
 		fmt.Println(">>> not found <<<")
 	}
 
-	annihilateData(pattern)
+	crutils.AnnihilateData(pattern)
 }
 
 func LineAppend(cryptic bool) {
@@ -186,7 +187,7 @@ func LineInsert(arg []string, cryptic bool) {
 func LinesDelete(arg []string) {
 	indexes := parseAndSortIntArgs(arg)
 	if indexes != nil {
-		crutils.ReverseInt(indexes)
+		primitives.ReverseInt(indexes)
 		for _, x := range indexes {
 			deleteLineAtIndex(x)
 		}
@@ -336,7 +337,7 @@ func cutLine(ln, pos int) bool {
 				return false
 			}
 
-			annihilateData(s[pos:])
+			crutils.AnnihilateData(s[pos:])
 			s = s[:pos]
 			items[cur].changed = true
 			return true
@@ -388,7 +389,7 @@ func LineExtend(arg []string, cryptic bool) {
 			cat()
 		}
 	}
-	annihilateData(s)
+	crutils.AnnihilateData(s)
 }
 
 func extendLine(ln int, ext []byte) bool {

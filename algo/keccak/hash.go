@@ -1,14 +1,18 @@
 package keccak
 
-import "unsafe"
+import (
+	"unsafe"
+
+	"github.com/gluk256/crypto/algo/primitives"
+)
 
 const Rate = 72
 
 type Keccak512 struct {
-	a    [25]uint64
+	a [25]uint64
 	storage [Rate]byte
 	absorbing bool
-	buf  []byte // points into storage
+	buf []byte // points into storage
 }
 
 func xorIn(d *Keccak512, in []byte) {
@@ -22,20 +26,6 @@ func xorIn(d *Keccak512, in []byte) {
 func copyOut(d *Keccak512, buf []byte) {
 	ab := (*[Rate]uint8)(unsafe.Pointer(&d.a[0]))
 	copy(buf, ab[:])
-}
-
-func XorInplace(dst []byte, gamma []byte, sz int) {
-	for i := 0; i < sz; i++ {
-		dst[i] ^= gamma[i]
-	}
-}
-
-func Min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
 }
 
 func (d *Keccak512) absorb() {
@@ -82,8 +72,8 @@ func (d *Keccak512) read(out []byte, xor bool) {
 	for len(out) > 0 {
 		var n int
 		if xor {
-			n = Min(len(out), len(d.buf))
-			XorInplace(out, d.buf, n)
+			n = primitives.Min(len(out), len(d.buf))
+			primitives.XorInplace(out, d.buf, n)
 		} else {
 			n = copy(out, d.buf)
 		}

@@ -3,11 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
-	"bufio"
 
-	"github.com/gluk256/crypto/algo/keccak"
-//	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
 )
 
@@ -27,19 +23,6 @@ func main() {
 	case 'i':
 		x = terminal.SecureInput()
 		fmt.Println(string(x))
-	}
-}
-
-func testHash() {
-	input := bufio.NewReader(os.Stdin)
-	for {
-		s, _ := input.ReadString('\n')
-		s = strings.TrimRight(s, " \n\r")
-		h := keccak.Digest([]byte(s), nil, 64)
-		fmt.Printf("%x \n", h)
-		if s == "q" {
-			break
-		}
 	}
 }
 

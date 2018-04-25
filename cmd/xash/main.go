@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+
 	"github.com/gluk256/crypto/terminal"
 )
 

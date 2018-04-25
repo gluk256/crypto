@@ -60,7 +60,7 @@ func main() {
 	}
 
 	deleteAll()
-	testify()
+	crutils.ProveDestruction()
 }
 
 func initialize() {
@@ -201,7 +201,7 @@ func FileSavePlainText(arg []string) {
 		b := content2raw()
 		if b != nil {
 			saveData(arg, b)
-			annihilateData(b)
+			crutils.AnnihilateData(b)
 		}
 	}
 }
@@ -211,8 +211,8 @@ func FileSave(arg []string) {
 	x := encryptData(b)
 	if b != nil {
 		saveData(arg, x)
-		annihilateData(x)
-		annihilateData(b)
+		crutils.AnnihilateData(x)
+		crutils.AnnihilateData(b)
 	}
 }
 
@@ -259,20 +259,8 @@ func checkQuit() bool {
 	return true
 }
 
-func annihilateData(b []byte) {
-	if len(b) != 0 {
-		// overwrite; prevent compiler optimization
-		sz := len(b)
-		crutils.RandXor(b, sz)
-		crutils.ReverseByte(b[sz / 2:])
-		witness.Write(b)
-		keccak.XorInplace(b, b, sz)
-		witness.Write(b)
-	}
-}
-
 func deleteLine(i int, e *list.Element) {
-	annihilateData(e.Value.([]byte))
+	crutils.AnnihilateData(e.Value.([]byte))
 	items[i].console.Remove(e)
 }
 
@@ -285,9 +273,9 @@ func deleteContent(i int) {
 	}
 
 	// first, feed to witness to prevent compiler optimization
-	// most of src must be already destroyed, byt still
+	// most of src must be already destroyed
 	witness.Write(items[cur].src)
-	annihilateData(items[cur].src)
+	crutils.AnnihilateData(items[cur].src)
 }
 
 func deleteAll() {
@@ -302,12 +290,6 @@ func Reset(arg []string) {
 	} else {
 		deleteContent(cur)
 	}
-}
-
-func testify() {
-	b := make([]byte, 32)
-	witness.Read(b, 32)
-	fmt.Printf("Proof of data destruction: [%x]\n", b)
 }
 
 func info() {

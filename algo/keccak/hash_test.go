@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	mrand "math/rand"
 	"time"
+
+	"github.com/gluk256/crypto/algo/primitives"
 )
 
 var input = []string{
@@ -26,16 +28,12 @@ var expected = []string{
 
 const sz = 64
 
-func TestMin(t *testing.T) {
-	x1 := Min(777, 778)
-	x2 := Min(555, 554)
-	x3 := Min(0, 1)
-	x4 := Min(-1, 0)
-	x5 := Min(777, 777)
-	x6 := Min(-1, -11)
-	x7 := Min(1, -11)
-	if x1 != 777 || x2 != 554 || x3 != 0 || x4 != -1 || x5 != 777 || x6 != -11 || x7 != -11 {
-		t.Fatal("failed")
+func BenchmarkHash(b *testing.B) {
+	buf := make([]byte, sz)
+	var k Keccak512
+	k.Write([]byte(input[3]))
+	for i := 0; i < b.N; i++ {
+		k.Read(buf)
 	}
 }
 
@@ -61,45 +59,6 @@ func TestHash(t *testing.T) {
 	}
 }
 
-func BenchmarkHash(b *testing.B) {
-	buf := make([]byte, sz)
-	var k Keccak512
-	k.Write([]byte(input[3]))
-	for i := 0; i < b.N; i++ {
-		k.Read(buf)
-	}
-}
-
-func TestXorInplace(t *testing.T) {
-	gamma := []byte(expected[4])
-	src := []byte(expected[3])
-	sz := len(src)
-	b1 := make([]byte, sz)
-	b2 := make([]byte, sz)
-	copy(b1, src)
-	copy(b2, src)
-	if !bytes.Equal(b1, b2) || !bytes.Equal(b1, src) {
-		t.Fatal("copy failed")
-	}
-
-	XorInplace(b1, gamma, sz)
-	if bytes.Equal(b1, b2) {
-		t.Fatal("xor failed")
-	}
-	checkDeepNotEqual(t, b1, b2, sz)
-
-	XorInplace(b1, gamma, sz)
-	if !bytes.Equal(b1, b2) {
-		t.Fatal("decrypt failed")
-	}
-
-	XorInplace(b1, b1, sz)
-	zero := make([]byte, sz)
-	if !bytes.Equal(b1, zero) {
-		t.Fatal("self-destruction failed")
-	}
-}
-
 func TestEncrypt(t *testing.T) {
 	const sz = 1024 * 16
 	key := []byte(input[4])
@@ -115,15 +74,21 @@ func TestEncrypt(t *testing.T) {
 	if bytes.Equal(b1, xx) {
 		t.Fatal("xor failed")
 	}
-	checkDeepNotEqual(t, b1, xx, sz)
+	ok := primitives.IsDeepNotEqual(b1, xx, sz)
+	if !ok {
+		t.Fatal("xor failed deep check")
+	}
 
 	digestXor(key, b2)
 	if bytes.Equal(b2, xx) {
-		t.Fatal("xor failed")
+		t.Fatal("xor failed second")
 	}
-	checkDeepNotEqual(t, b2, xx, sz)
+	ok = primitives.IsDeepNotEqual(b2, xx, sz)
+	if !ok {
+		t.Fatal("xor failed second check")
+	}
 
-	XorInplace(b2, gamma, sz)
+	primitives.XorInplace(b2, gamma, sz)
 	if !bytes.Equal(xx, b2) {
 		t.Fatal("b2 did not return to previous state")
 	}
@@ -132,22 +97,6 @@ func TestEncrypt(t *testing.T) {
 	if !bytes.Equal(b1, xx) {
 		t.Fatal("b1 did not return to previous state")
 	}
-}
-
-func checkDeepNotEqual(t *testing.T, a []byte, b []byte, sz int) {
-	const block = 4
-	for i := 0; i < sz - block; i += 2 {
-		checkBlockNotEqual(t, a, b, i, block)
-	}
-}
-
-func checkBlockNotEqual(t *testing.T, a []byte, b []byte, off int, block int) {
-	for i := off; i < off + block; i++ {
-		if a[i] != b[i] {
-			return
-		}
-	}
-	t.Fatalf("checkDeepNotEqual failed, offset = %d", off)
 }
 
 func digest(in []byte, sz int) []byte {
@@ -171,7 +120,8 @@ func TestReadXor(t *testing.T) {
 	for i := 0; i < 1024; i++ {
 		key := generateRandomBytes(t)
 		x := generateRandomBytes(t)
-		y := cloneBytes(x)
+		y := make([]byte, len(x))
+		copy(y, x)
 
 		var k1, k2 Keccak512
 		k1.Write(key)
@@ -180,7 +130,7 @@ func TestReadXor(t *testing.T) {
 
 		gamma := make([]byte, len(y))
 		k1.Read(gamma)
-		XorInplace(y, gamma, len(y))
+		primitives.XorInplace(y, gamma, len(y))
 
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed round %d with seed %d", i, seed)
@@ -193,13 +143,37 @@ func generateRandomBytes(t *testing.T) []byte {
 	b := make([]byte, sz)
 	_, err := mrand.Read(b)
 	if err != nil {
-		t.Fatal("failed to generate randon bytes")
+		t.Fatal("failed to generate random bytes")
 	}
 	return b
 }
 
-func cloneBytes(src []byte) []byte {
-	b := make([]byte, len(src))
-	copy(b, src)
-	return b
+func TestXorIn(t *testing.T) {
+	sample := [8]byte { 0xed, 0x01, 0xd4, 0x0a, 0xb7, 0x80, 0x15, 0xcf }
+	const expected = uint64(0xcf1580b70ad401ed)
+
+	var k Keccak512
+	var b []byte
+	for i := 0; i < Rate / 8; i++ {
+		b = append(b, sample[:]...)
+	}
+	if len(b) != Rate {
+		t.Fatal("wrong buf len")
+	}
+	for i := 0; i < Rate; i++ {
+		b[i] += byte(i/8)
+	}
+	xorIn(&k, b)
+	exp := expected
+	for i := 0; i < Rate / 8; i++ {
+		if k.a[i] != exp {
+			t.Fatalf("a[%d] != expected [%x != %x]", i, k.a[i], exp)
+		}
+		exp += 0x0101010101010101
+	}
+	for i := Rate / 8; i < 25; i++ {
+		if k.a[i] != 0 {
+			t.Fatalf("a[%d] != 0", i)
+		}
+	}
 }
