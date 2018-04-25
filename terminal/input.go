@@ -16,12 +16,12 @@ import (
 )
 
 var inputReader = bufio.NewReader(os.Stdin)
+const sz = 39
 
 // you can always arbitrary extend the alphabet (add capital letters, special characters, etc.)
 // IMPORTANT: only ASCII characters are allowed
 var alphabet = []byte("abcdefghijklmnopqrstuvwxyz 0123456789,.")
-var sz = len(alphabet)
-var scrambledAlphabet []byte
+var scrambledAlphabet []byte = make([]byte, sz)
 
 func printSpaced(s []byte) {
 	var x string
@@ -72,20 +72,22 @@ func decryptByte(c byte) (byte, bool) {
 }
 
 func secureRead() []byte {
+	if len(alphabet) != sz {
+		panic("please fix the sz constant")
+	}
 	//fmt.Println("SecureInput version 26")
 	printSpaced(alphabet)
 	fmt.Println()
-	var err error
-	var next byte
 	b := make([]byte, 1)
 	s := make([]byte, 0, 128)
+	var next byte
 	done := false
 
 	for !done {
 		randomizeAlphabet()
 		fmt.Print("\r")
 		printSpaced(scrambledAlphabet)
-		_, err = os.Stdin.Read(b)
+		_, err := os.Stdin.Read(b)
 		if err != nil {
 			fmt.Printf(">>>>>> Input Error: %s \n", err)
 			return nil
@@ -100,7 +102,9 @@ func secureRead() []byte {
 			}
 		default:
 			next, done = decryptByte(b[0])
-			s = append(s, next)
+			if !done {
+				s = append(s, next)
+			}
 		}
 
 		crutils.CollectEntropy()
