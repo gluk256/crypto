@@ -81,6 +81,7 @@ func processCommand(cmd string) {
 	switch arg[0] {
 	case "frame":
 		ChangeFrameStyle()
+		cat()
 	case "reset":
 		Reset(arg)
 	case "steg": // mark/unmark steganographic content
