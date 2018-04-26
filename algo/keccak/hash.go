@@ -126,3 +126,11 @@ func (d *Keccak512) Write(p []byte) {
 		}
 	}
 }
+
+func Digest(in []byte, sz int) []byte {
+	var d Keccak512
+	d.Write(in)
+	out := make([]byte, sz)
+	d.Read(out)
+	return out
+}

@@ -1,6 +1,7 @@
 package keccak
 
 import (
+	"fmt"
 	"testing"
 	"bytes"
 	"encoding/hex"
@@ -40,7 +41,7 @@ func BenchmarkHash(b *testing.B) {
 func TestHash(t *testing.T) {
 	exp := make([]byte, sz)
 	for i, text := range input {
-		hash := digest([]byte(text), sz)
+		hash := Digest([]byte(text), sz)
 		hex.Decode(exp, []byte(expected[i]))
 		if !bytes.Equal(hash, exp) {
 			t.Fatalf("failed test number %d, result: \n[%x]", i, hash)
@@ -52,8 +53,8 @@ func TestHash(t *testing.T) {
 		var k Keccak512
 		k.Write([]byte(input[i]))
 		k.Read(res)
-		hex.Decode(exp, []byte(expected[i]))
-		if !bytes.Equal(res, exp) {
+		s := fmt.Sprintf("%x", res)
+		if s != expected[i] {
 			t.Fatalf("failed advanced test number %d, result: \n[%x]", i, res)
 		}
 	}
@@ -62,14 +63,14 @@ func TestHash(t *testing.T) {
 func TestEncrypt(t *testing.T) {
 	const sz = 1024 * 16
 	key := []byte(input[4])
-	b1 := digest([]byte(expected[0]), sz)
-	b2 := digest([]byte(expected[0]), sz)
-	xx := digest([]byte(expected[0]), sz)
+	b1 := Digest([]byte(expected[0]), sz)
+	b2 := Digest([]byte(expected[0]), sz)
+	xx := Digest([]byte(expected[0]), sz)
 	if !bytes.Equal(b1, b2) || !bytes.Equal(b1, xx) {
 		t.Fatal("copy failed")
 	}
 
-	gamma := digest(key, len(b1))
+	gamma := Digest(key, len(b1))
 	digestXor(key, b1)
 	if bytes.Equal(b1, xx) {
 		t.Fatal("xor failed")
@@ -97,14 +98,6 @@ func TestEncrypt(t *testing.T) {
 	if !bytes.Equal(b1, xx) {
 		t.Fatal("b1 did not return to previous state")
 	}
-}
-
-func digest(in []byte, sz int) []byte {
-	var d Keccak512
-	d.Write(in)
-	out := make([]byte, sz)
-	d.Read(out)
-	return out
 }
 
 func digestXor(in []byte, out []byte) {
