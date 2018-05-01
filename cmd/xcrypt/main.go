@@ -19,7 +19,10 @@ type Content struct {
 	changed  bool
 }
 
-const MaxItems = 2
+const (
+	MaxItems = 2
+	version = 1
+)
 
 var (
 	witness keccak.Keccak512
@@ -294,7 +297,7 @@ func Reset(arg []string) {
 }
 
 func info() {
-	fmt.Printf("cur = %d, steg = %d \n", cur, steg)
+	fmt.Printf("ver = %d, cur = %d, steg = %d \n", version, cur, steg)
 }
 
 func MarkSteg() {

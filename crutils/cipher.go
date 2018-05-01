@@ -25,24 +25,28 @@ func DecryptKeccakInplace(key []byte, data []byte) {
 	EncryptKeccakInplace(key, data)
 }
 
-func EncryptAES(key []byte, salt []byte, data []byte) (encrypted []byte, err error) {
+func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
-	if err == nil {
-		aesgcm, err := cipher.NewGCM(block)
-		if err == nil {
-			encrypted = aesgcm.Seal(nil, salt, data, nil)
-		}
+	if err != nil {
+		return nil, err
 	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	encrypted := aesgcm.Seal(nil, salt, data, nil)
 	return encrypted, err
 }
 
-func DecryptAES(key []byte, salt []byte, data []byte) (decrypted []byte, err error) {
+func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
-	if err == nil {
-		aesgcm, err := cipher.NewGCM(block)
-		if err == nil {
-			decrypted, err = aesgcm.Open(nil, salt, data, nil)
-		}
+	if err != nil {
+		return nil, err
 	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	decrypted, err := aesgcm.Open(nil, salt, data, nil)
 	return decrypted, err
 }
