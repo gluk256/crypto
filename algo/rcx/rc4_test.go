@@ -188,3 +188,37 @@ func BenchmarkRCX(b *testing.B) {
 		box.EncryptCascade(y, iterations)
 	}
 }
+
+func TestAvalanche(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+	const iters = 255
+
+	for i := 0; i < 32; i++ {
+		key := generateRandomBytes(t, false)
+		x := generateRandomBytes(t, true)
+		y := make([]byte, len(x))
+		z := make([]byte, len(x))
+		copy(y, x)
+		copy(z, x)
+
+		var box XBox
+		var r RC4
+		r.InitKey(key)
+		box.Shuffle(&r)
+
+		x[0]--
+		box.EncryptCascade(x, iters)
+		box.EncryptCascade(y, iters)
+		box.EncryptCascade(z, iters)
+
+		if !bytes.Equal(y, z) {
+			t.Fatalf("failed to encrypt, round %d with seed %d", i, seed)
+		}
+
+		ok := primitives.IsDeepNotEqual(x, y, len(x))
+		if !ok {
+			t.Fatalf("failed deep check, round %d with seed %d", i, seed)
+		}
+	}
+}

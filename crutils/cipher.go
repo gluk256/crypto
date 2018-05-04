@@ -25,6 +25,7 @@ func DecryptKeccakInplace(key []byte, data []byte) {
 	EncryptKeccakInplace(key, data)
 }
 
+// don'tforget to clear the data
 func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -38,6 +39,7 @@ func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	return encrypted, err
 }
 
+// don'tforget to clear the data
 func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
