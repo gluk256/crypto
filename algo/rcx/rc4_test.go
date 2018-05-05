@@ -115,7 +115,6 @@ func TestConversion(t *testing.T) {
 }
 
 func TestSingleRunRCX(t *testing.T) {
-	// seed := 1525474555 is a special case
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -187,7 +186,6 @@ func BenchmarkRCX(b *testing.B) {
 func TestAvalanche(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
-	const iters = 255
 
 	for i := 0; i < 32; i++ {
 		key := generateRandomBytes(t, false)
@@ -201,9 +199,10 @@ func TestAvalanche(t *testing.T) {
 		cipher.InitKey(key)
 
 		x[0]--
-		cipher.encryptCascade(x, iters)
-		cipher.encryptCascade(y, iters)
-		cipher.encryptCascade(z, iters)
+		cycles := len(x)/2
+		cipher.encryptCascade(x, cycles)
+		cipher.encryptCascade(y, cycles)
+		cipher.encryptCascade(z, cycles)
 
 		if !bytes.Equal(y, z) {
 			t.Fatalf("failed to encrypt, round %d with seed %d", i, seed)
@@ -211,7 +210,7 @@ func TestAvalanche(t *testing.T) {
 
 		ok := primitives.IsDeepNotEqual(x, y, len(x))
 		if !ok {
-			t.Fatalf("failed deep check, round %d with seed %d", i, seed)
+			t.Fatalf("failed deep check, round %d with seed %d and len=%d", i, seed, len(x))
 		}
 	}
 }
@@ -254,13 +253,11 @@ func TestEncryptionRcxZero(t *testing.T) {
 		copy(y, x)
 		copy(z, x)
 
-		arr := make([]byte, 512)
-		var rc4 RC4
-		rc4.InitKey(key)
-		for i := 0; i < 256 * 4; i++ {
-			rc4.XorInplace(arr)
-		}
-		rc4.XorInplace(z)
+		arr := make([]byte, 256*256*8)
+		var cipher RC4
+		cipher.InitKey(key)
+		cipher.XorInplace(arr)
+		cipher.XorInplace(z)
 
 		EncryptInplace(key, y, 0)
 		if bytes.Equal(x, y) {
@@ -272,6 +269,35 @@ func TestEncryptionRcxZero(t *testing.T) {
 		}
 		if !bytes.Equal(y, z) {
 			t.Fatalf("y != z, round %d with seed %d", i, seed)
+		}
+	}
+}
+
+func TestConsistencyRC4(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+	b := make([]byte, 1024)
+	for i := 0; i < 32; i++ {
+		key := generateRandomBytes(t, false)
+		sz := Bytes2uint(key[0], key[1])
+		x := make([]byte, sz)
+		y := make([]byte, sz)
+
+		var r1, r2 RC4
+		r1.InitKey(key)
+		r2.InitKey(key)
+
+		for j := 0; j < 170; j++ {
+			r1.XorInplace(b[:33])
+		}
+		for j := 0; j < 330; j++ {
+			r2.XorInplace(b[:17])
+		}
+
+		r1.XorInplace(x)
+		r2.XorInplace(y)
+		if !bytes.Equal(x, y) {
+			t.Fatalf("failed to generate consistent gamma, round %d with seed %d", i, seed)
 		}
 	}
 }

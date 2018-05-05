@@ -43,10 +43,11 @@ func Substitute(s []byte, prev byte, ersatz byte) {
 }
 
 func IsDeepNotEqual(a []byte, b []byte, sz int) bool {
-	const block = 4
-	for i := 0; i < sz - block; i += 2 {
+	const block = 5
+	for i := 0; i < sz - block; i++ {
 		ok := isBlockNotEqual( a, b, i, block)
 		if !ok {
+			//fmt.Printf("%d [%x] [%x]\n[%x]\n[%x]\n", i, a[i:i+block], b[i:i+block], a, b)
 			return false
 		}
 	}
