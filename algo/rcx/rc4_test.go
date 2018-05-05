@@ -67,7 +67,7 @@ func TestEncryptionRC4(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < 256; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, false)
 		y := make([]byte, len(x))
@@ -115,6 +115,7 @@ func TestConversion(t *testing.T) {
 }
 
 func TestSingleRunRCX(t *testing.T) {
+	// seed := 1525474555 is a special case
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -124,12 +125,10 @@ func TestSingleRunRCX(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		var box XBox
-		var r RC4
-		r.InitKey(key)
-		box.Shuffle(&r)
+		var cipher RCX
+		cipher.InitKey(key)
 
-		box.encryptSingleIteration(y)
+		cipher.encryptSingleIteration(y)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -138,7 +137,7 @@ func TestSingleRunRCX(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		box.decryptSingleIteration(y)
+		cipher.decryptSingleIteration(y)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -155,12 +154,10 @@ func TestCascade(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		var box XBox
-		var r RC4
-		r.InitKey(key)
-		box.Shuffle(&r)
+		var c RCX
+		c.InitKey(key)
 
-		box.EncryptCascade(y, iterations)
+		c.encryptCascade(y, iterations)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -169,7 +166,7 @@ func TestCascade(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		box.DecryptCascade(y, iterations)
+		c.decryptCascade(y, iterations)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -179,13 +176,11 @@ func TestCascade(t *testing.T) {
 func BenchmarkRCX(b *testing.B) {
 	key := "7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e"
 	y := make([]byte, 1000000)
-	var box XBox
-	var r RC4
-	r.InitKey([]byte(key))
-	box.Shuffle(&r)
+	var cipher RCX
+	cipher.InitKey([]byte(key))
 
 	for i := 0; i < b.N; i++ {
-		box.EncryptCascade(y, iterations)
+		cipher.encryptCascade(y, iterations)
 	}
 }
 
@@ -202,15 +197,13 @@ func TestAvalanche(t *testing.T) {
 		copy(y, x)
 		copy(z, x)
 
-		var box XBox
-		var r RC4
-		r.InitKey(key)
-		box.Shuffle(&r)
+		var cipher RCX
+		cipher.InitKey(key)
 
 		x[0]--
-		box.EncryptCascade(x, iters)
-		box.EncryptCascade(y, iters)
-		box.EncryptCascade(z, iters)
+		cipher.encryptCascade(x, iters)
+		cipher.encryptCascade(y, iters)
+		cipher.encryptCascade(z, iters)
 
 		if !bytes.Equal(y, z) {
 			t.Fatalf("failed to encrypt, round %d with seed %d", i, seed)
@@ -219,6 +212,66 @@ func TestAvalanche(t *testing.T) {
 		ok := primitives.IsDeepNotEqual(x, y, len(x))
 		if !ok {
 			t.Fatalf("failed deep check, round %d with seed %d", i, seed)
+		}
+	}
+}
+
+func TestEncryptionRCX(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 32; i++ {
+		key := generateRandomBytes(t, false)
+		x := generateRandomBytes(t, true)
+		y := make([]byte, len(x))
+		copy(y, x)
+
+		EncryptInplace(key, y, iterations)
+		if bytes.Equal(x, y) {
+			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
+		}
+		ok := primitives.IsDeepNotEqual(x, y, len(x))
+		if !ok {
+			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
+		}
+
+		DecryptInplace(key, y, iterations)
+		if !bytes.Equal(x, y) {
+			t.Fatalf("failed decrypt, round %d with seed %d\n%x\n%x", i, seed, x, y)
+		}
+	}
+}
+
+func TestEncryptionRcxZero(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 32; i++ {
+		key := generateRandomBytes(t, false)
+		x := generateRandomBytes(t, true)
+		y := make([]byte, len(x))
+		z := make([]byte, len(x))
+		copy(y, x)
+		copy(z, x)
+
+		arr := make([]byte, 512)
+		var rc4 RC4
+		rc4.InitKey(key)
+		for i := 0; i < 256 * 4; i++ {
+			rc4.XorInplace(arr)
+		}
+		rc4.XorInplace(z)
+
+		EncryptInplace(key, y, 0)
+		if bytes.Equal(x, y) {
+			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
+		}
+		ok := primitives.IsDeepNotEqual(x, y, len(x))
+		if !ok {
+			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
+		}
+		if !bytes.Equal(y, z) {
+			t.Fatalf("y != z, round %d with seed %d", i, seed)
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package rcx
 
-type XBox struct {
+type RCX struct {
+	r RC4
 	f [256 * 256]uint16
 }
 
@@ -16,7 +17,12 @@ func Uint2bytes(i uint16) (byte, byte) {
 	return a, b
 }
 
-func (x *XBox) Shuffle(r *RC4) {
+func (x *RCX) InitKey(key []byte) {
+	x.r.InitKey(key)
+	x.shuffle()
+}
+
+func (x *RCX) shuffle() {
 	for i := 0; i < 256 * 256; i++ {
 		x.f[i] = uint16(i)
 	}
@@ -24,7 +30,7 @@ func (x *XBox) Shuffle(r *RC4) {
 	var arr [512]byte
 	var cnt uint16
 	for i := 0; i < 256 * 4; i++ {
-		r.XorInplace(arr[:])
+		x.r.XorInplace(arr[:])
 		for j := 0; j < 512; j += 2 {
 			v := Bytes2uint(arr[j], arr[j+1])
 			x.f[cnt], x.f[v] = x.f[v], x.f[cnt]
@@ -34,7 +40,7 @@ func (x *XBox) Shuffle(r *RC4) {
 }
 
 // this func expects len(data)%4 == 0
-func (x *XBox) encryptSingleIteration(d []byte) {
+func (x *RCX) encryptSingleIteration(d []byte) {
 	for i := 0; i < len(d); i += 4 {
 		a := Bytes2uint(d[i], d[i+1])
 		b := Bytes2uint(d[i+2], d[i+3])
@@ -46,7 +52,7 @@ func (x *XBox) encryptSingleIteration(d []byte) {
 }
 
 // this func expects len(data)%4 == 0
-func (x *XBox) decryptSingleIteration(d []byte) {
+func (x *RCX) decryptSingleIteration(d []byte) {
 	for i := 0; i < len(d); i += 4 {
 		y := Bytes2uint(d[i], d[i+1])
 		z := Bytes2uint(d[i+2], d[i+3])
@@ -59,7 +65,7 @@ func (x *XBox) decryptSingleIteration(d []byte) {
 
 // this func expects the number of iterations to be odd,
 // len(data)%4 == 0, and len(data) > 4
-func (x *XBox) EncryptCascade(d []byte, iterations int) {
+func (x *RCX) encryptCascade(d []byte, iterations int) {
 	x.encryptSingleIteration(d)
 	for i := 0; i < iterations/2; i++ {
 		x.encryptSingleIteration(d[2:len(d)-2])
@@ -69,10 +75,32 @@ func (x *XBox) EncryptCascade(d []byte, iterations int) {
 
 // this func expects the number of iterations to be odd,
 // len(data)%4 == 0 and len(data) > 4
-func (x *XBox) DecryptCascade(d []byte, iterations int) {
+func (x *RCX) decryptCascade(d []byte, iterations int) {
 	x.decryptSingleIteration(d)
 	for i := 0; i < iterations/2; i++ {
 		x.decryptSingleIteration(d[2:len(d)-2])
 		x.decryptSingleIteration(d)
 	}
+}
+
+// this func expects the number of iterations to be odd,
+// len(data)%4 == 0, and len(data) > 4
+func EncryptInplace(key []byte, d []byte, iterations int) {
+	var x RCX
+	x.InitKey(key)
+	x.r.XorInplace(d)
+	if iterations > 0 {
+		x.encryptCascade(d, iterations)
+	}
+}
+
+// this func expects the number of iterations to be odd,
+// len(data)%4 == 0 and len(data) > 4
+func DecryptInplace(key []byte, d []byte, iterations int) {
+	var x RCX
+	x.InitKey(key)
+	if iterations > 0 {
+		x.decryptCascade(d, iterations)
+	}
+	x.r.XorInplace(d)
 }

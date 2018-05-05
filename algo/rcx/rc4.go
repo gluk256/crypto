@@ -8,6 +8,7 @@ type RC4 struct {
 }
 
 func (c *RC4) InitKey(key []byte) {
+	c.i = 0
 	for i := 0; i < rc4sz; i++ {
 		c.s[i] = byte(i)
 	}
