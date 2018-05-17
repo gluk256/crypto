@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/gluk256/crypto/terminal"
 )
@@ -23,6 +24,13 @@ func main() {
 	case 'i':
 		x = terminal.SecureInput()
 		fmt.Println(string(x))
+	case 'x':
+		x = terminal.SecureInput()
+		fmt.Println("will execute command ", string(x))
+		cmd := exec.Command("acpi")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Run()
 	}
 }
 
