@@ -27,7 +27,7 @@ func main() {
 	case 'x':
 		x = terminal.SecureInput()
 		fmt.Println("will execute command ", string(x))
-		cmd := exec.Command("acpi")
+		cmd := exec.Command(string(x))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Run()
