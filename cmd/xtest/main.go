@@ -9,9 +9,8 @@ import (
 )
 
 func main() {
-	var x []byte
 	if len(os.Args) < 2 {
-		test()
+		crypticExe()
 		return
 	}
 
@@ -19,21 +18,23 @@ func main() {
 	a := arg[0]
 	switch a {
 	case 't':
-		x = terminal.SecureInputTest()
-		fmt.Println(string(x))
+		tst()
 	case 'i':
-		x = terminal.SecureInput()
-		fmt.Println(string(x))
+		text := terminal.SecureInput()
+		fmt.Println(string(text))
 	case 'x':
-		x = terminal.SecureInput()
-		fmt.Println("will execute command ", string(x))
-		cmd := exec.Command(string(x))
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Run()
+		crypticExe()
 	}
 }
 
-func test() {
+func crypticExe() {
+	x := terminal.SecureInput()
+	cmd := exec.Command(string(x))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Run()
+}
+
+func tst() {
 
 }
