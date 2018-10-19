@@ -15,13 +15,14 @@ import (
 	"github.com/gluk256/crypto/crutils"
 )
 
-var inputReader = bufio.NewReader(os.Stdin)
-const sz = 39
-
 // you can always arbitrary extend the alphabet (add capital letters, special characters, etc.)
 // IMPORTANT: only ASCII characters are allowed
+//var alphabet = []byte("abcdefghijklmnopqrstuvwxyz 0123456789!@#$%^&*()_+-=[];'\\,./:\"|<>?")
 var alphabet = []byte("abcdefghijklmnopqrstuvwxyz 0123456789,.")
+
+var sz = len(alphabet)
 var scrambledAlphabet []byte = make([]byte, sz)
+var inputReader = bufio.NewReader(os.Stdin)
 
 func printSpaced(s []byte) {
 	var x string
@@ -95,7 +96,8 @@ func secureRead() []byte {
 
 		switch b[0] {
 		case  96: // '~': do nothing (reshuffle)
-		case 126: // shift + '~': do nothing (reshuffle)
+		case 126: // '`': do nothing (reshuffle)
+
 		case 127: // backspace
 			if i := len(s); i > 0 {
 				s = s[:i-1]
