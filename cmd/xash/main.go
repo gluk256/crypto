@@ -2,28 +2,32 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"io/ioutil"
+	"os"
+	"strings"
 
-	"github.com/gluk256/crypto/terminal"
-	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/algo/keccak"
+	"github.com/gluk256/crypto/crutils"
+	"github.com/gluk256/crypto/terminal"
+)
+
+var (
+	plaintext bool
+	extended bool
+	passwordMode bool
+	fileMode bool
+	keccakHash bool
 )
 
 func help() {
-	fmt.Println("USAGE: xash [arg1] [arg2]")
-	fmt.Println("\t arg1:")
-	fmt.Println("\t\t s secure input standard")
-	fmt.Println("\t\t e secure input extended")
-	fmt.Println("\t\t t plain text input")
-	fmt.Println("\t\t p password mode input")
-	fmt.Println("\t\t f file name as input")
-	fmt.Println("\t\t x scrambled file name as input")
-	fmt.Println("\t\t h help")
-	fmt.Println("\t arg2:")
-	fmt.Println("\t\t k keccak hash")
-	fmt.Println("\t default:")
-	fmt.Println("\t\t secure input standard")
+	fmt.Println("USAGE: xash [flags]")
+	fmt.Println("\t s secure input standard (default)")
+	fmt.Println("\t x secure input extended")
+	fmt.Println("\t t plain text input")
+	fmt.Println("\t p password mode input")
+	fmt.Println("\t f file name as input")
+	fmt.Println("\t k keccak hash")
+	fmt.Println("\t h help")
 }
 
 func readFile(name string) []byte {
@@ -36,38 +40,53 @@ func readFile(name string) []byte {
 }
 
 func main() {
-	var txt []byte
-	if len(os.Args) < 2 {
-		txt = terminal.SecureInput(false)
-	} else if os.Args[1] == "f" {
-		txt = terminal.PlainTextInput()
-		txt = readFile(string(txt))
-	} else if os.Args[1] == "x" {
-		txt = terminal.SecureInput(true)
-		txt = readFile(string(txt))
-	} else if os.Args[1] == "s" {
-		txt = terminal.SecureInput(false)
-	} else if os.Args[1] == "e" {
-		txt = terminal.SecureInput(true)
-	} else if os.Args[1] == "h" {
-		help()
-	} else if os.Args[1] == "?" {
-		help()
-	} else if os.Args[1] == "t" {
-		txt = terminal.PlainTextInput()
-	} else if os.Args[1] == "p" {
-		txt = terminal.PasswordModeInput()
-	} else {
-		txt = terminal.SecureInput(false)
+	var src []byte
+	if len(os.Args) > 1 {
+		flags := os.Args[1]
+		if strings.Contains(flags, "h") {
+			help()
+			return
+		}
+		if strings.Contains(flags, "?") {
+			help()
+			return
+		}
+		if strings.Contains(flags, "x") {
+			extended = true
+		}
+		if strings.Contains(flags, "k") {
+			keccakHash = true
+		}
+		if strings.Contains(flags, "t") {
+			plaintext = true
+		}
+		if strings.Contains(flags, "p") {
+			passwordMode = true
+		}
+		if strings.Contains(flags, "f") {
+			fileMode = true
+		}
 	}
 
-	if len(os.Args) < 3 {
-		hash := crutils.Sha2(txt)
-		fmt.Printf("%x\n", hash)
+	if passwordMode {
+		src = terminal.PasswordModeInput()
+	} else if plaintext {
+		src = terminal.PlainTextInput()
 	} else {
-		hash := keccak.Digest(txt, 32)
+		src = terminal.SecureInput(extended)
+	}
+
+	if fileMode {
+		src = readFile(string(src))
+	}
+
+	if keccakHash {
+		hash := keccak.Digest(src, 32)
 		fmt.Printf("%x\n", hash)
 		crutils.AnnihilateData(hash)
 		crutils.ProveDestruction()
+	} else {
+		hash := crutils.Sha2(src)
+		fmt.Printf("%x\n", hash)
 	}
 }
