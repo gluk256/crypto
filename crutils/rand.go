@@ -60,5 +60,5 @@ func ProveDestruction() {
 	b := make([]byte, 32)
 	witness.Write(accumulator)
 	witness.Read(b)
-	fmt.Printf("Proof of data destruction: [%x]\n", b)
+	fmt.Printf("proof of destruction: %x\n", b)
 }

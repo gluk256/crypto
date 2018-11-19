@@ -20,7 +20,7 @@ func main() {
 	case 't':
 		tst()
 	case 'i':
-		text := terminal.SecureInput()
+		text := terminal.SecureInput(false)
 		fmt.Println(string(text))
 	case 'x':
 		crypticExe()
@@ -28,7 +28,7 @@ func main() {
 }
 
 func crypticExe() {
-	x := terminal.SecureInput()
+	x := terminal.SecureInput(false)
 	cmd := exec.Command(string(x))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

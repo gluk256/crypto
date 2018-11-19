@@ -69,7 +69,7 @@ func grep(arg []string, cryptic bool, scramble bool) {
 	if cryptic {
 		fmt.Print("Enter pattern for search: ")
 		if scramble {
-			pattern = terminal.SecureInputLinux()
+			pattern = terminal.SecureInputLinux(false)
 		} else {
 			pattern = terminal.PasswordModeInput()
 		}
@@ -77,7 +77,7 @@ func grep(arg []string, cryptic bool, scramble bool) {
 		pattern = []byte(arg[1])
 	} else {
 		fmt.Print("Enter pattern for search: ")
-		pattern = terminal.StandardInput()
+		pattern = terminal.PlainTextInput()
 	}
 
 	if pattern == nil {
@@ -113,9 +113,9 @@ func LineAppend(cryptic bool) {
 	var s []byte
 	fmt.Println(defaultPrompt)
 	if cryptic {
-		s = terminal.SecureInput()
+		s = terminal.SecureInput(false)
 	} else {
-		s = terminal.StandardInput()
+		s = terminal.PlainTextInput()
 	}
 
 	if s != nil {
@@ -172,9 +172,9 @@ func LineInsert(arg []string, cryptic bool) {
 	var s []byte
 	fmt.Println(defaultPrompt)
 	if cryptic {
-		s = terminal.SecureInput()
+		s = terminal.SecureInput(false)
 	} else {
-		s = terminal.StandardInput()
+		s = terminal.PlainTextInput()
 	}
 
 	if s != nil {
@@ -380,9 +380,9 @@ func LineExtend(arg []string, cryptic bool) {
 	var s []byte
 	fmt.Println(defaultPrompt)
 	if cryptic {
-		s = terminal.SecureInput()
+		s = terminal.SecureInput(false)
 	} else {
-		s = terminal.StandardInput()
+		s = terminal.PlainTextInput()
 	}
 	if s != nil {
 		if extendLine(ln, s) {

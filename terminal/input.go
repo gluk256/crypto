@@ -15,13 +15,12 @@ import (
 	"github.com/gluk256/crypto/crutils"
 )
 
-// you can always arbitrary extend the alphabet (add capital letters, special characters, etc.)
-// IMPORTANT: only ASCII characters are allowed
-//var alphabet = []byte("abcdefghijklmnopqrstuvwxyz 0123456789!@#$%^&*()_+-=[];'\\,./:\"|<>?")
-var alphabet = []byte("abcdefghijklmnopqrstuvwxyz 0123456789,.")
-
-var sz = len(alphabet)
-var scrambledAlphabet []byte = make([]byte, sz)
+// you can arbitrary extend the alphabet (add capital letters, special characters, etc.), but only ASCII characters are allowed
+var alphabetStandard = []byte("abcdefghijklmnopqrstuvwxyz 0123456789,.")
+var alphabetExt = []byte("abcdefghijklmnopqrstuvwxyz 0123456789!@#$%^&*()_+-=[];'\\,./:\"|<>?")
+var alphabet []byte
+var scrambledAlphabet []byte
+var sz = 0
 var inputReader = bufio.NewReader(os.Stdin)
 
 func printSpaced(s []byte) {
@@ -72,11 +71,28 @@ func decryptByte(c byte) (byte, bool) {
 	return byte(0), true
 }
 
-func secureRead() []byte {
-	if len(alphabet) != sz {
-		panic("please fix the sz constant")
+func initParams(ext bool) {
+	if ext {
+		alphabet = alphabetExt
+	} else {
+		alphabet = alphabetStandard
 	}
-	//fmt.Println("SecureInput version 26")
+
+	sz = len(alphabet)
+	scrambledAlphabet = make([]byte, sz)
+}
+
+func resetParams() {
+	sz = 0
+	scrambledAlphabet = nil
+	alphabet = nil
+}
+
+func secureRead(ext bool) []byte {
+	//fmt.Println("SecureInput version 30")
+	initParams(ext)
+	defer resetParams()
+
 	printSpaced(alphabet)
 	fmt.Println()
 	b := make([]byte, 1)
@@ -118,12 +134,12 @@ func secureRead() []byte {
 	return s
 }
 
-func SecureInputLinux() []byte {
+func SecureInputLinux(ext bool) []byte {
 	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run() // disable input buffering
 	exec.Command("stty", "-F", "/dev/tty", "-echo").Run() // do not display entered characters on the screen
 	defer exec.Command("stty", "-F", "/dev/tty", "echo").Run() // restore the echoing state when exiting
 	defer exec.Command("stty", "-F", "/dev/tty", "icanon").Run()
-	return secureRead()
+	return secureRead(ext)
 }
 
 func SecureInputTest() []byte {
@@ -151,7 +167,7 @@ func PasswordModeInput() []byte {
 	return s
 }
 
-func StandardInput() []byte {
+func PlainTextInput() []byte {
 	const n = byte('\n')
 	txt, err := inputReader.ReadBytes(n)
 	if err != nil {
@@ -166,9 +182,9 @@ func StandardInput() []byte {
 	return txt
 }
 
-func SecureInput() []byte {
+func SecureInput(ext bool) []byte {
 	if runtime.GOOS == "linux" {
-		return SecureInputLinux()
+		return SecureInputLinux(ext)
 	} else {
 		return PasswordModeInput()
 	}

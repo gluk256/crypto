@@ -49,7 +49,7 @@ func main() {
 
 	for {
 		fmt.Print("Enter command: ")
-		s := terminal.StandardInput()
+		s := terminal.PlainTextInput()
 		if s != nil {
 			cmd := string(s)
 			if cmd == "q" {
@@ -226,7 +226,7 @@ func getFileName (arg []string) string {
 		filename = arg[1]
 	} else {
 		fmt.Println("Enter file name: ")
-		f := terminal.StandardInput()
+		f := terminal.PlainTextInput()
 		if f == nil {
 			return ""
 		} else {
@@ -311,7 +311,7 @@ func MarkSteg() {
 
 func confirm(question string) bool {
 	fmt.Printf("%s ", question)
-	s := terminal.StandardInput()
+	s := terminal.PlainTextInput()
 	if s == nil {
 		return false
 	}
