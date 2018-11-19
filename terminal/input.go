@@ -17,7 +17,7 @@ import (
 
 // you can arbitrary extend the alphabet (add capital letters, special characters, etc.), but only ASCII characters are allowed
 var alphabetStandard = []byte("abcdefghijklmnopqrstuvwxyz 0123456789,.")
-var alphabetExt = []byte("abcdefghijklmnopqrstuvwxyz 0123456789!@#$%^&*()_+-=[];'\\,./:\"|<>?")
+var alphabetExt = []byte("abcdefghijklmnopqrstuvwxyz 0123456789!@#$%^&*()_+-=[];'\\,./:\"|<>?~`")
 var alphabet []byte
 var scrambledAlphabet []byte
 var sz = 0
@@ -89,7 +89,7 @@ func resetParams() {
 }
 
 func secureRead(ext bool) []byte {
-	//fmt.Println("SecureInput version 30")
+	//fmt.Println("SecureInput version 31")
 	initParams(ext)
 	defer resetParams()
 
@@ -111,10 +111,10 @@ func secureRead(ext bool) []byte {
 		}
 
 		switch b[0] {
-		case  96: // '~': do nothing (reshuffle)
-		case 126: // '`': do nothing (reshuffle)
-
-		case 127: // backspace
+		case  27:
+			// escape: only reshuffle
+		case 127:
+			// backspace
 			if i := len(s); i > 0 {
 				s = s[:i-1]
 			}
