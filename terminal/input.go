@@ -120,7 +120,7 @@ func secureRead(ext bool) []byte {
 			}
 		default:
 			next, done = decryptByte(b[0])
-			if !done {
+			if !done && next != '`' {
 				s = append(s, next)
 			}
 		}

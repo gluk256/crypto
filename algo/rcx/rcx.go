@@ -27,9 +27,9 @@ func (x *RCX) shuffle() {
 		x.f[i] = uint16(i)
 	}
 
-	var arr [512]byte
 	var cnt uint16
-	for i := 0; i < 256 * 4; i++ {
+	for i := 0; i < 1024 * 2; i++ {
+		arr := make([]byte, 512)
 		x.r.XorInplace(arr[:])
 		for j := 0; j < 512; j += 2 {
 			v := Bytes2uint(arr[j], arr[j+1])
@@ -86,6 +86,10 @@ func (x *RCX) decryptCascade(d []byte, iterations int) {
 // this func expects the number of iterations to be odd,
 // len(data)%4 == 0, and len(data) > 4
 func EncryptInplace(key []byte, d []byte, iterations int) {
+	if iterations % 2 == 1 {
+		iterations++
+	}
+
 	var x RCX
 	x.InitKey(key)
 	x.r.XorInplace(d)
@@ -97,6 +101,10 @@ func EncryptInplace(key []byte, d []byte, iterations int) {
 // this func expects the number of iterations to be odd,
 // len(data)%4 == 0 and len(data) > 4
 func DecryptInplace(key []byte, d []byte, iterations int) {
+	if iterations % 2 == 1 {
+		iterations++
+	}
+
 	var x RCX
 	x.InitKey(key)
 	if iterations > 0 {

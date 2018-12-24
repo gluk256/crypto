@@ -6,6 +6,7 @@ import (
 
 	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/algo/primitives"
+	"github.com/gluk256/crypto/algo/rcx"
 )
 
 func EncryptKeccakInplace(key []byte, data []byte) {
@@ -51,4 +52,15 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	}
 	decrypted, err := aesgcm.Open(nil, salt, data, nil)
 	return decrypted, err
+}
+
+// encryption == decryption
+func EncryptSimplestInplace(key []byte, data []byte) {
+	dummy := make([]byte, 1024*216)
+	var rc4 rcx.RC4
+	rc4.InitKey(key)
+	rc4.XorInplace(dummy) // roll rc4 forward
+	rc4.XorInplace(data)
+
+	EncryptKeccakInplace(key, data)
 }

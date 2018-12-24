@@ -51,7 +51,17 @@ func TestRand(t *testing.T) {
 	}
 }
 
-func TestEncrypt(t *testing.T) {
+func generateRandomBytes(t *testing.T) []byte {
+	sz := mrand.Intn(256) + 256
+	b := make([]byte, sz)
+	_, err := mrand.Read(b)
+	if err != nil {
+		t.Fatal("failed to generate random bytes")
+	}
+	return b
+}
+
+func TestEncryptKeccak(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -77,12 +87,28 @@ func TestEncrypt(t *testing.T) {
 	}
 }
 
-func generateRandomBytes(t *testing.T) []byte {
-	sz := mrand.Intn(256) + 256
-	b := make([]byte, sz)
-	_, err := mrand.Read(b)
-	if err != nil {
-		t.Fatal("failed to generate random bytes")
+func TestEncryptSimplest(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 1024; i++ {
+		key := generateRandomBytes(t)
+		x := generateRandomBytes(t)
+		y := make([]byte, len(x))
+		copy(y, x)
+
+		EncryptSimplestInplace(key, y)
+		if bytes.Equal(x, y) {
+			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
+		}
+		ok := primitives.IsDeepNotEqual(x, y, len(x))
+		if !ok {
+			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
+		}
+
+		EncryptSimplestInplace(key, y)
+		if !bytes.Equal(x, y) {
+			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
+		}
 	}
-	return b
 }

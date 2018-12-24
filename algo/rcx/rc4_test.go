@@ -253,7 +253,7 @@ func TestEncryptionRcxZero(t *testing.T) {
 		copy(y, x)
 		copy(z, x)
 
-		arr := make([]byte, 256*256*8)
+		arr := make([]byte, 256*256*16)
 		var cipher RC4
 		cipher.InitKey(key)
 		cipher.XorInplace(arr)

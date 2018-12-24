@@ -62,3 +62,19 @@ func ProveDestruction() {
 	witness.Read(b)
 	fmt.Printf("proof of destruction: %x\n", b)
 }
+
+func RandPass(sz int) []byte {
+	var arr = []byte("abcdefghijklmnopqrstuvwxyz0123456789") // you can add arbitrary chars
+	var res []byte
+	for i := 0; i < sz; i++ {
+		b := make([]byte, len(arr))
+		StochasticRand(b)
+		var sum int
+		for j := 0; j < len(arr); j++ {
+			sum += int(b[j])
+		}
+		c := arr[sum % len(arr)]
+		res = append(res, c)
+	}
+	return res
+}
