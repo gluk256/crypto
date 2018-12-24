@@ -32,55 +32,32 @@ func readFile(name string) []byte {
 }
 
 func main() {
-	var txt []byte
+	var data []byte
 	if len(os.Args) < 2 {
-		txt = terminal.SecureInput(false)
+		data = terminal.SecureInput(false)
 	} else if os.Args[1] == "f" {
-		txt = terminal.PlainTextInput()
-		txt = readFile(string(txt))
+		data = terminal.PlainTextInput()
+		data = readFile(string(data))
 	} else if os.Args[1] == "x" {
-		txt = terminal.SecureInput(true)
-		txt = readFile(string(txt))
+		data = terminal.SecureInput(true)
+		data = readFile(string(data))
 	} else if os.Args[1] == "e" {
-		txt = terminal.SecureInput(true)
+		data = terminal.SecureInput(true)
 	} else if os.Args[1] == "h" {
 		help()
 	} else if os.Args[1] == "?" {
 		help()
 	} else if os.Args[1] == "t" {
-		txt = terminal.PlainTextInput()
+		data = terminal.PlainTextInput()
 	} else if os.Args[1] == "p" {
-		txt = terminal.PasswordModeInput()
+		data = terminal.PasswordModeInput()
 	} else {
-		txt = terminal.SecureInput(false)
+		data = terminal.SecureInput(false)
 	}
 
-	hash := keccak.Digest(txt, 32)
+	hash := keccak.Digest(data, 32)
 	fmt.Printf("%x\n", hash)
 
-	crutils.AnnihilateData(hash)
+	crutils.AnnihilateData(data)
 	crutils.ProveDestruction()
 }
-
-//func main() {
-//	var proof bool
-//	var txt []byte
-//	if len(os.Args) < 2 {
-//		txt = terminal.SecureInput(false)
-//	} else if os.Args[1] == "s" {
-//		txt = terminal.SecureInput(false)
-//		proof = true
-//	} else if os.Args[1] == "p" {
-//		txt = terminal.PlainTextInput()
-//	} else {
-//		txt = terminal.PasswordModeInput()
-//	}
-//
-//	hash := keccak.Digest(txt, 32)
-//	fmt.Printf("%x\n", hash)
-//
-//	crutils.AnnihilateData(hash)
-//	if proof {
-//		crutils.ProveDestruction()
-//	}
-//}
