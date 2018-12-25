@@ -48,6 +48,7 @@ func main() {
 
 	pass := getPassword(randpass, secure)
 	crutils.EncryptInplaceLevelZero(pass, b)
+	crutils.AnnihilateData(pass)
 	fmt.Printf("%x\n", b)
 }
 

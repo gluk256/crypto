@@ -71,7 +71,7 @@ func TestEncryptKeccak(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		EncryptKeccakInplace(key, y)
+		EncryptInplaceKeccak(key, y)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -80,7 +80,7 @@ func TestEncryptKeccak(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		DecryptKeccakInplace(key, y)
+		DecryptInplaceKeccak(key, y)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}

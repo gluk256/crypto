@@ -67,6 +67,8 @@ func main() {
 	}
 
 	saveData(dstFile, data)
+	crutils.AnnihilateData(key)
+	crutils.ProveDestruction()
 }
 
 func loadFile(fname string) []byte {
