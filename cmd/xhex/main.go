@@ -47,7 +47,7 @@ func main() {
 	}
 
 	pass := getPassword(randpass, secure)
-	crutils.EncryptSimplestInplace(pass, b)
+	crutils.EncryptInplaceLevelZero(pass, b)
 	fmt.Printf("%x\n", b)
 }
 

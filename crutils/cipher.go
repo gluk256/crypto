@@ -54,8 +54,8 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	return decrypted, err
 }
 
-// encryption == decryption
-func EncryptSimplestInplace(key []byte, data []byte) {
+// encryption level 0, rc4 + keccak, no salt, no padding, decryption == encryption
+func EncryptInplaceLevelZero(key []byte, data []byte) {
 	dummy := make([]byte, 1024*216)
 	var rc4 rcx.RC4
 	rc4.InitKey(key)
@@ -63,4 +63,16 @@ func EncryptSimplestInplace(key []byte, data []byte) {
 	rc4.XorInplace(data)
 
 	EncryptKeccakInplace(key, data)
+}
+
+// encryption level 1, rcx + keccak, no salt, no padding
+func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool) {
+	const iterations = 1025
+	if encrypt {
+		rcx.EncryptInplace(key, data, iterations)
+		EncryptKeccakInplace(key, data)
+	} else {
+		DecryptKeccakInplace(key, data)
+		rcx.DecryptInplace(key, data, iterations)
+	}
 }

@@ -97,7 +97,7 @@ func TestEncryptSimplest(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		EncryptSimplestInplace(key, y)
+		EncryptInplaceLevelZero(key, y)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -106,7 +106,7 @@ func TestEncryptSimplest(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		EncryptSimplestInplace(key, y)
+		EncryptInplaceLevelZero(key, y)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}

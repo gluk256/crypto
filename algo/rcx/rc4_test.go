@@ -10,7 +10,7 @@ import (
 	"github.com/gluk256/crypto/algo/primitives"
 )
 
-const iterations = 1025
+const iterations = 1025 // must be odd
 
 func TestKeyStream(t *testing.T) {
 	testSingleKeyStream(t, "Key", "EB9F7781B734CA72A719")
@@ -198,7 +198,7 @@ func TestAvalanche(t *testing.T) {
 		var cipher RCX
 		cipher.InitKey(key)
 
-		x[0]--
+		x[0]-- // change at least one bit, which is supposed to cause an avalanche effect
 		cycles := len(x)/2
 		cipher.encryptCascade(x, cycles)
 		cipher.encryptCascade(y, cycles)
@@ -221,7 +221,7 @@ func TestEncryptionRCX(t *testing.T) {
 
 	for i := 0; i < 32; i++ {
 		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, true)
+		x := generateRandomBytes(t, false)
 		y := make([]byte, len(x))
 		copy(y, x)
 
@@ -241,6 +241,7 @@ func TestEncryptionRCX(t *testing.T) {
 	}
 }
 
+// rcx encryption with zero iterations is supposed to be equal to rc4 encryption
 func TestEncryptionRcxZero(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
@@ -273,6 +274,7 @@ func TestEncryptionRcxZero(t *testing.T) {
 	}
 }
 
+// tests the ability to generate consistent gamma
 func TestConsistencyRC4(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)

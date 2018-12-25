@@ -83,32 +83,26 @@ func (x *RCX) decryptCascade(d []byte, iterations int) {
 	}
 }
 
-// this func expects the number of iterations to be odd,
-// len(data)%4 == 0, and len(data) > 4
+// this func expects the number of iterations to be odd
 func EncryptInplace(key []byte, d []byte, iterations int) {
-	if iterations % 2 == 1 {
-		iterations++
-	}
-
+	sz := len(d)
 	var x RCX
 	x.InitKey(key)
 	x.r.XorInplace(d)
-	if iterations > 0 {
-		x.encryptCascade(d, iterations)
+	if iterations > 0 && len(d) > 4 {
+		odd := len(d) % 4
+		x.encryptCascade(d[:sz-odd], iterations)
 	}
 }
 
-// this func expects the number of iterations to be odd,
-// len(data)%4 == 0 and len(data) > 4
+// this func expects the number of iterations to be odd
 func DecryptInplace(key []byte, d []byte, iterations int) {
-	if iterations % 2 == 1 {
-		iterations++
-	}
-
+	sz := len(d)
 	var x RCX
 	x.InitKey(key)
-	if iterations > 0 {
-		x.decryptCascade(d, iterations)
+	if iterations > 0 && sz > 4 {
+		odd := len(d) % 4
+		x.decryptCascade(d[:sz-odd], iterations)
 	}
 	x.r.XorInplace(d)
 }

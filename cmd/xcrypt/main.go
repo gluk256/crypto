@@ -188,11 +188,11 @@ func saveData(arg []string, data []byte) {
 
 	filename := getFileName(arg)
 	if len(filename) == 0 {
-		fmt.Println(">>> Error: filename is emprty")
+		fmt.Println(">>> Error: filename is empty")
 		return
 	}
 
-	err := ioutil.WriteFile(filename, data, 0777)
+	err := ioutil.WriteFile(filename, data, 0666)
 	if err != nil {
 		fmt.Printf(">>> Error: %s \n", err)
 	} else {
@@ -220,7 +220,7 @@ func FileSave(arg []string) {
 	}
 }
 
-func getFileName (arg []string) string {
+func getFileName(arg []string) string {
 	var filename string
 	if len(arg) >= 2 {
 		filename = arg[1]
