@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -18,6 +19,11 @@ func help() {
 	fmt.Println("\t r random password")
 	fmt.Println("\t s secure password input")
 	fmt.Println("\t x extra secure password input")
+	fmt.Println("\t 0 encryption level")
+	fmt.Println("\t 1 encryption level")
+	fmt.Println("\t 2 encryption level")
+	fmt.Println("\t 3 encryption level")
+	fmt.Println("\t 4 encryption level")
 	fmt.Println("\t h help")
 }
 
@@ -31,8 +37,10 @@ func getPassword(flags string) []byte {
 	} else if strings.Contains(flags, "x") {
 		res = terminal.SecureInput(true)
 	} else {
-		fmt.Print("please enter the password: ")
-		res = terminal.PasswordModeInput()
+		for len(res) == 0 {
+			fmt.Print("please enter the password: ")
+			res = terminal.PasswordModeInput()
+		}
 	}
 	return res
 }
@@ -51,6 +59,7 @@ func main() {
 		return
 	}
 
+	level := getEncryptionLevel(flags)
 	encrypt := strings.Contains(flags, "e")
 	if strings.Contains(flags, "d") {
 		encrypt = false
@@ -58,7 +67,16 @@ func main() {
 
 	data := loadFile(srcFile)
 	key := getPassword(flags)
-	crutils.EncryptInplaceLevelOne(key, data, encrypt)
+	defer func() {
+		crutils.AnnihilateData(key)
+		crutils.ProveDestruction()
+	}()
+
+	res, err := crypt(key, data, encrypt, level)
+	if err != nil {
+		fmt.Printf("Error encrypting/decrypting: %s\n", err.Error())
+		return
+	}
 
 	if len(os.Args) > 3 {
 		dstFile = os.Args[3]
@@ -66,9 +84,40 @@ func main() {
 		dstFile = getFileName()
 	}
 
-	saveData(dstFile, data)
-	crutils.AnnihilateData(key)
-	crutils.ProveDestruction()
+	saveData(dstFile, res)
+}
+
+func crypt(key []byte, data []byte, encrypt bool, level int) ([]byte, error) {
+	if level == 0 {
+		crutils.EncryptInplaceLevelZero(key, data)
+		return data, nil
+	} else if level == 1 {
+		crutils.EncryptInplaceLevelOne(key, data, encrypt)
+		return data, nil
+	} else if level == 2 {
+		return crutils.EncryptLevelTwo(key, data, encrypt)
+	} else if level == 3 {
+		return crutils.EncryptLevelThree(key, data, encrypt)
+	} else if level == 4 {
+		return crutils.EncryptLevelFour(key, data, encrypt)
+	} else {
+		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
+	}
+}
+
+func getEncryptionLevel(flags string) int {
+	if strings.Contains(flags, "0") {
+		return 0
+	} else if strings.Contains(flags, "1") {
+		return 1
+	} else if strings.Contains(flags, "2") {
+		return 2
+	} else if strings.Contains(flags, "3") {
+		return 3
+	} else if strings.Contains(flags, "4") {
+		return 4
+	}
+	return 2 // default level 2
 }
 
 func loadFile(fname string) []byte {

@@ -13,11 +13,11 @@ func TestAes(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 256; i++ {
+	for i := 0; i < 64; i++ {
 		key := generateRandomBytes(t)
-		key = key[:32]
+		key = key[:AesKeySize]
 		salt := generateRandomBytes(t)
-		salt = salt[:12]
+		salt = salt[:AesSaltSize]
 		data := generateRandomBytes(t)
 		sz := len(data)
 		expected := make([]byte, sz)
@@ -79,7 +79,7 @@ func TestEncryptionLevelZero(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		keysz := (mrand.Int() % 64) + 7
 		key := generateRandomBytes(t)
 		key = key[:keysz]
@@ -105,7 +105,7 @@ func TestEncryptionLevelOne(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		keysz := (mrand.Int() % 64) + 7
 		key := generateRandomBytes(t)
 		key = key[:keysz]
@@ -141,7 +141,7 @@ func TestEncryptionLevelTwo(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		keysz := (mrand.Int() % 64) + 7
 		key := generateRandomBytes(t)
 		key = key[:keysz]
@@ -168,6 +168,86 @@ func TestEncryptionLevelTwo(t *testing.T) {
 		}
 
 		decrypted, err := EncryptLevelTwo(key, encyprted, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(decrypted, orig) {
+			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
+		}
+	}
+}
+
+func TestEncryptionLevelThree(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 16; i++ {
+		keysz := (mrand.Int() % 64) + 7
+		key := generateRandomBytes(t)
+		key = key[:keysz]
+		data := generateRandomBytes(t)
+		sz := len(data)
+		orig := make([]byte, sz)
+		copy(orig, data)
+
+		encyprted, err := EncryptLevelThree(key, data, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ok := primitives.IsDeepNotEqual(orig, encyprted[16:], len(data))
+		if !ok {
+			t.Fatal("deep non-equal test failed")
+		}
+
+		d2 := make([]byte, len(encyprted))
+		copy(d2, encyprted)
+		d2[sz/2]++ // change at least one bit
+		_, err = EncryptLevelThree(key, d2, false)
+		if err == nil {
+			t.Fatal("decrypted fake data: false positive")
+		}
+
+		decrypted, err := EncryptLevelThree(key, encyprted, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(decrypted, orig) {
+			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
+		}
+	}
+}
+
+func TestEncryptionLevelFour(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 16; i++ {
+		keysz := (mrand.Int() % 64) + 7
+		key := generateRandomBytes(t)
+		key = key[:keysz]
+		data := generateRandomBytes(t)
+		sz := len(data)
+		orig := make([]byte, sz)
+		copy(orig, data)
+
+		encyprted, err := EncryptLevelFour(key, data, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ok := primitives.IsDeepNotEqual(orig, encyprted[16:], len(data))
+		if !ok {
+			t.Fatal("deep non-equal test failed")
+		}
+
+		d2 := make([]byte, len(encyprted))
+		copy(d2, encyprted)
+		d2[sz/2]++ // change at least one bit
+		_, err = EncryptLevelFour(key, d2, false)
+		if err == nil {
+			t.Fatal("decrypted fake data: false positive")
+		}
+
+		decrypted, err := EncryptLevelFour(key, encyprted, false)
 		if err != nil {
 			t.Fatal(err)
 		}

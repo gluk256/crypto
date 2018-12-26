@@ -143,6 +143,33 @@ func TestSingleRunRCX(t *testing.T) {
 	}
 }
 
+// encrypt array containing zeros
+func TestSingleRunRcxZero(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+	const sz = 1024 * 64
+
+	for i := 0; i < 8; i++ {
+		key := generateRandomBytes(t, false)
+		x := make([]byte, sz)
+		zero := make([]byte, sz)
+
+		var cipher RCX
+		cipher.InitKey(key)
+		cipher.encryptSingleIteration(x)
+		ok := primitives.IsDeepNotEqual(x, zero, sz)
+		if !ok {
+			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
+		}
+
+		cipher.encryptCascade(x, 255)
+		ok = primitives.IsDeepNotEqual(x, zero, sz)
+		if !ok {
+			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
+		}
+	}
+}
+
 func TestCascade(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
@@ -254,7 +281,7 @@ func TestEncryptionRcxZero(t *testing.T) {
 		copy(y, x)
 		copy(z, x)
 
-		arr := make([]byte, 256*256*16)
+		arr := make([]byte, 256*256*64)
 		var cipher RC4
 		cipher.InitKey(key)
 		cipher.XorInplace(arr)

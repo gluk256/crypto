@@ -65,7 +65,7 @@ func TestEncryptKeccak(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < 64; i++ {
 		key := generateRandomBytes(t)
 		x := generateRandomBytes(t)
 		y := make([]byte, len(x))
@@ -91,7 +91,7 @@ func TestEncryptSimplest(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < 64; i++ {
 		key := generateRandomBytes(t)
 		x := generateRandomBytes(t)
 		y := make([]byte, len(x))

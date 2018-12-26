@@ -28,7 +28,7 @@ func (x *RCX) shuffle() {
 	}
 
 	var cnt uint16
-	for i := 0; i < 1024 * 2; i++ {
+	for i := 0; i < 1024 * 8; i++ {
 		arr := make([]byte, 512)
 		x.r.XorInplace(arr[:])
 		for j := 0; j < 512; j += 2 {

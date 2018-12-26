@@ -11,6 +11,12 @@ import (
 	"github.com/gluk256/crypto/algo/rcx"
 )
 
+const (
+	AesKeySize = 32
+	AesSaltSize = 12
+	RcxIterations = 1025
+)
+
 func EncryptInplaceKeccak(key []byte, data []byte) {
 	var d keccak.Keccak512
 	d.Write(key)
@@ -29,6 +35,7 @@ func DecryptInplaceKeccak(key []byte, data []byte) {
 }
 
 // don't forget to clear the data
+// key is expected to be 32 bytes, salt 12 bytes
 func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -56,7 +63,7 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	return decrypted, err
 }
 
-// encryption level 0, rc4 + keccak, no salt, no padding, decryption == encryption
+// rc4 + keccak, no salt, no padding, decryption == encryption
 func EncryptInplaceLevelZero(key []byte, data []byte) {
 	dummy := make([]byte, 1024*216)
 	var rc4 rcx.RC4
@@ -67,30 +74,32 @@ func EncryptInplaceLevelZero(key []byte, data []byte) {
 	EncryptInplaceKeccak(key, data)
 }
 
-// encryption level 1, rcx + keccak, no salt, no padding
+// rcx + keccak, no salt, no padding
 func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool) {
-	const iterations = 1025
 	if encrypt {
-		rcx.EncryptInplace(key, data, iterations)
+		rcx.EncryptInplace(key, data, RcxIterations)
 		EncryptInplaceKeccak(key, data)
 	} else {
 		DecryptInplaceKeccak(key, data)
-		rcx.DecryptInplace(key, data, iterations)
+		rcx.DecryptInplace(key, data, RcxIterations)
 	}
 }
 
-// encryption level 2, keccak + rxc + aes + keccak, with salt, no padding
-func EncryptLevelTwo(key []byte, data []byte, encrypt bool) ([]byte, error) {
+// keccak + rxc + aes + keccak, with salt, no padding
+func EncryptWithSalt(key []byte, data []byte, encrypt bool, saltsize int) ([]byte, error) {
 	const (
-		saltsize = 16
-		b1 = 200
-		e1 = b1 + 256
-		bk = 600
-		ek = bk + 256
-		ba = 1000
-		ea = ba + 32
-		bs = 1200
-		es = bs + 12
+		offset = 256
+		begK1 = offset
+		endK1 = begK1 + offset
+		begK2 = endK1 + offset
+		endK2 = begK2 + offset
+		begRcxKey = endK2 + offset
+		endRcxKey = begRcxKey + offset
+		begAesKey = endRcxKey + offset
+		endAesKey = begAesKey + AesKeySize
+		begAesSalt = endAesKey + offset
+		endAesSalt = begAesSalt + AesSaltSize
+		keyHolderSize = endAesSalt
 	)
 
 	var res, salt []byte
@@ -99,34 +108,78 @@ func EncryptLevelTwo(key []byte, data []byte, encrypt bool) ([]byte, error) {
 		salt = make([]byte, saltsize)
 		err = StochasticRand(salt)
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Stocastic rand failed: %s", err.Error()))
+			return nil, errors.New(fmt.Sprintf("Stochastic rand failed: %s", err.Error()))
 		}
 	} else {
 		salt = data[len(data)-saltsize:]
 	}
 
-	fullkey := make([]byte, saltsize + len(key))
-	copy(fullkey, salt)
-	copy(fullkey[:saltsize], key)
-	keyholder := keccak.Digest(fullkey, es)
+	fullkey := make([]byte, 0, saltsize + len(key))
+	fullkey = append(fullkey, salt...)
+	fullkey = append(fullkey, key...)
+	keyholder := keccak.Digest(fullkey, keyHolderSize)
 	defer AnnihilateData(fullkey)
 
 	if encrypt {
-		EncryptInplaceLevelOne(keyholder[b1:e1], data, true)
-		res, err = EncryptAES(keyholder[ba:ea], keyholder[bs:es], data)
+		EncryptInplaceKeccak(keyholder[begK1:endK1], data)
+		rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], data, RcxIterations)
+		res, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
 		if err != nil {
 			return nil, err
 		}
-		EncryptInplaceKeccak(keyholder[bk:ek], res)
+		EncryptInplaceKeccak(keyholder[begK2:endK2], res)
 		res = append(res, salt...)
 	} else {
 		data = data[:len(data)-saltsize]
-		EncryptInplaceKeccak(keyholder[bk:ek], data)
-		res, err = DecryptAES(keyholder[ba:ea], keyholder[bs:es], data)
+		EncryptInplaceKeccak(keyholder[begK2:endK2], data)
+		res, err = DecryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
 		if err != nil {
 			return nil, err
 		}
-		EncryptInplaceLevelOne(keyholder[b1:e1], res, false)
+		rcx.DecryptInplace(keyholder[begRcxKey:endRcxKey], res, RcxIterations)
+		DecryptInplaceKeccak(keyholder[begK1:endK1], res)
 	}
+
 	return res, nil
+}
+
+func EncryptLevelTwo(key []byte, data []byte, encrypt bool) ([]byte, error) {
+	return EncryptWithSalt(key, data, encrypt, 16)
+}
+
+func EncryptLevelThree(key []byte, data []byte, encrypt bool) ([]byte, error) {
+	return EncryptWithSalt(key, data, encrypt, 64)
+}
+
+func EncryptLevelFour(key []byte, data []byte, encrypt bool) ([]byte, error) {
+	return EncryptWithSaltAndPadding(key, data, encrypt)
+}
+
+// with pseudorandom spacing
+func EncryptWithSaltAndPadding(key []byte, data []byte, encrypt bool) ([]byte, error) {
+	var b []byte
+	defer AnnihilateData(b)
+
+	if encrypt {
+		b = make([]byte, 0, len(data)*2)
+		rnd := make([]byte, len(data))
+		Rand(rnd)
+		for i := 0; i < len(data); i++ {
+			b = append(b, data[i])
+			b = append(b, rnd[i])
+		}
+		b, data = data, b
+	}
+
+	res, err := EncryptWithSalt(key, data, encrypt, 64)
+
+	if !encrypt && err == nil {
+		b = make([]byte, 0, len(res)/2)
+		for i := 0; i < len(res); i += 2 {
+			b = append(b, res[i])
+		}
+		b, res = res, b
+	}
+
+	return res, err
 }
