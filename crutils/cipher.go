@@ -63,7 +63,7 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	return decrypted, err
 }
 
-// rc4 + keccak, no salt, no padding, decryption == encryption
+// rc4 + keccak, no salt, no padding, xor only, decryption == encryption
 func EncryptInplaceLevelZero(key []byte, data []byte) {
 	dummy := make([]byte, 1024*216)
 	var rc4 rcx.RC4
@@ -74,14 +74,15 @@ func EncryptInplaceLevelZero(key []byte, data []byte) {
 	EncryptInplaceKeccak(key, data)
 }
 
-// rcx + keccak, no salt, no padding
+// keccak + rcx, no salt, no padding
+// for encryption keccak should be applied before rcx
 func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool) {
 	if encrypt {
-		rcx.EncryptInplace(key, data, RcxIterations)
 		EncryptInplaceKeccak(key, data)
+		rcx.EncryptInplace(key, data, RcxIterations, encrypt)
 	} else {
+		rcx.EncryptInplace(key, data, RcxIterations, encrypt)
 		DecryptInplaceKeccak(key, data)
-		rcx.DecryptInplace(key, data, RcxIterations)
 	}
 }
 
@@ -122,7 +123,7 @@ func EncryptWithSalt(key []byte, data []byte, encrypt bool, saltsize int) ([]byt
 
 	if encrypt {
 		EncryptInplaceKeccak(keyholder[begK1:endK1], data)
-		rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], data, RcxIterations)
+		rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], data, RcxIterations, encrypt)
 		res, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
 		if err != nil {
 			return nil, err
@@ -136,7 +137,7 @@ func EncryptWithSalt(key []byte, data []byte, encrypt bool, saltsize int) ([]byt
 		if err != nil {
 			return nil, err
 		}
-		rcx.DecryptInplace(keyholder[begRcxKey:endRcxKey], res, RcxIterations)
+		rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], res, RcxIterations, encrypt)
 		DecryptInplaceKeccak(keyholder[begK1:endK1], res)
 	}
 
@@ -152,11 +153,11 @@ func EncryptLevelThree(key []byte, data []byte, encrypt bool) ([]byte, error) {
 }
 
 func EncryptLevelFour(key []byte, data []byte, encrypt bool) ([]byte, error) {
-	return EncryptWithSaltAndPadding(key, data, encrypt)
+	return EncryptWithSaltAndSpacing(key, data, encrypt)
 }
 
 // with pseudorandom spacing
-func EncryptWithSaltAndPadding(key []byte, data []byte, encrypt bool) ([]byte, error) {
+func EncryptWithSaltAndSpacing(key []byte, data []byte, encrypt bool) ([]byte, error) {
 	var b []byte
 	defer AnnihilateData(b)
 

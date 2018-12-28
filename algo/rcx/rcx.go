@@ -1,5 +1,7 @@
 package rcx
 
+// RCX is a block cipher with block_size = 2 * number_of_iterations
+
 type RCX struct {
 	r RC4
 	f [256 * 256]uint16
@@ -40,7 +42,7 @@ func (x *RCX) shuffle() {
 }
 
 // this func expects len(data)%4 == 0
-func (x *RCX) encryptSingleIteration(d []byte) {
+func (x *RCX) encryptSingleRun(d []byte) {
 	for i := 0; i < len(d); i += 4 {
 		a := Bytes2uint(d[i], d[i+1])
 		b := Bytes2uint(d[i+2], d[i+3])
@@ -51,58 +53,32 @@ func (x *RCX) encryptSingleIteration(d []byte) {
 	}
 }
 
-// this func expects len(data)%4 == 0
-func (x *RCX) decryptSingleIteration(d []byte) {
-	for i := 0; i < len(d); i += 4 {
-		y := Bytes2uint(d[i], d[i+1])
-		z := Bytes2uint(d[i+2], d[i+3])
-		a := x.f[y] ^ z
-		b := x.f[a] ^ y
-		d[i], d[i+1] = Uint2bytes(a)
-		d[i+2], d[i+3] = Uint2bytes(b)
-	}
-}
-
 // this func expects the number of iterations to be odd,
 // len(data)%4 == 0, and len(data) > 4
 func (x *RCX) encryptCascade(d []byte, iterations int) {
-	x.encryptSingleIteration(d)
+	x.encryptSingleRun(d)
 	for i := 0; i < iterations/2; i++ {
-		x.encryptSingleIteration(d[2:len(d)-2])
-		x.encryptSingleIteration(d)
-	}
-}
-
-// this func expects the number of iterations to be odd,
-// len(data)%4 == 0 and len(data) > 4
-func (x *RCX) decryptCascade(d []byte, iterations int) {
-	x.decryptSingleIteration(d)
-	for i := 0; i < iterations/2; i++ {
-		x.decryptSingleIteration(d[2:len(d)-2])
-		x.decryptSingleIteration(d)
+		x.encryptSingleRun(d[2:len(d)-2])
+		x.encryptSingleRun(d)
 	}
 }
 
 // this func expects the number of iterations to be odd
-func EncryptInplace(key []byte, d []byte, iterations int) {
-	sz := len(d)
+func EncryptInplace(key []byte, d []byte, iterations int, encrypt bool) {
 	var x RCX
 	x.InitKey(key)
-	x.r.XorInplace(d)
-	if iterations > 0 && len(d) > 4 {
-		odd := len(d) % 4
+
+	if encrypt { // in case of encryption
+		x.r.XorInplace(d)
+	}
+
+	sz := len(d)
+	if iterations > 0 && sz > 4 {
+		odd := sz % 4
 		x.encryptCascade(d[:sz-odd], iterations)
 	}
-}
 
-// this func expects the number of iterations to be odd
-func DecryptInplace(key []byte, d []byte, iterations int) {
-	sz := len(d)
-	var x RCX
-	x.InitKey(key)
-	if iterations > 0 && sz > 4 {
-		odd := len(d) % 4
-		x.decryptCascade(d[:sz-odd], iterations)
+	if !encrypt { // in case of decryption
+		x.r.XorInplace(d)
 	}
-	x.r.XorInplace(d)
 }

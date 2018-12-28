@@ -20,6 +20,14 @@ func TestKeyStream(t *testing.T) {
 	testSingleEncrypt(t, "Key", "Plaintext", "BBF316E8D940AF0AD3")
 	testSingleEncrypt(t, "Wiki", "pedia", "1021BF0420")
 	testSingleEncrypt(t, "Secret", "Attack at dawn", "45A01F645FC35B383552544B9BF5")
+
+	var k []byte
+	for i := 0; i < 32; i++ {
+		k = append(k, byte(i+1))
+	}
+
+	testSingleKeyStream(t, string(k), "eaa6bd25880bf93d3f5d1e4ca2611d91cfa45c9f7e714b54bdfa80027cb14380")
+	testSingleKeyStream(t, string(k[:24]), "0595e57fe5f0bb3c706edac8a4b2db11dfde31344a1af769c74f070aee9e2326")
 }
 
 func testSingleKeyStream(t *testing.T, key string, expected string) {
@@ -127,7 +135,7 @@ func TestSingleRunRCX(t *testing.T) {
 		var cipher RCX
 		cipher.InitKey(key)
 
-		cipher.encryptSingleIteration(y)
+		cipher.encryptSingleRun(y)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -136,7 +144,7 @@ func TestSingleRunRCX(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		cipher.decryptSingleIteration(y)
+		cipher.encryptSingleRun(y)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -156,7 +164,7 @@ func TestSingleRunRcxZero(t *testing.T) {
 
 		var cipher RCX
 		cipher.InitKey(key)
-		cipher.encryptSingleIteration(x)
+		cipher.encryptSingleRun(x)
 		ok := primitives.IsDeepNotEqual(x, zero, sz)
 		if !ok {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
@@ -192,7 +200,7 @@ func TestCascade(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		c.decryptCascade(y, iterations)
+		c.encryptCascade(y, iterations)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -252,7 +260,7 @@ func TestEncryptionRCX(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		EncryptInplace(key, y, iterations)
+		EncryptInplace(key, y, iterations, true)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -261,7 +269,7 @@ func TestEncryptionRCX(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		DecryptInplace(key, y, iterations)
+		EncryptInplace(key, y, iterations, false)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d\n%x\n%x", i, seed, x, y)
 		}
@@ -287,7 +295,7 @@ func TestEncryptionRcxZero(t *testing.T) {
 		cipher.XorInplace(arr)
 		cipher.XorInplace(z)
 
-		EncryptInplace(key, y, 0)
+		EncryptInplace(key, y, 0, true)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}

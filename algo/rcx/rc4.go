@@ -27,7 +27,6 @@ func (c *RC4) XorInplace(data []byte) {
 		c.i++
 		c.j += c.s[c.i]
 		c.s[c.i], c.s[c.j] = c.s[c.j], c.s[c.i]
-
 		x := c.s[c.i] + c.s[c.j]
 		data[n] ^= c.s[x]
 	}
