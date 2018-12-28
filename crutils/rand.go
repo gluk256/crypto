@@ -50,7 +50,7 @@ func AnnihilateData(b []byte) {
 		RandXor(b)
 		sz := len(b)
 		div := int(b[sz-1] & 0x3) + 2
-		primitives.ReverseByte(b[sz/div:])
+		primitives.ReverseBytes(b[sz/div:])
 		witness.Write(b)
 	}
 }

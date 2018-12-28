@@ -1,6 +1,7 @@
 package rcx
 
 // RCX is a block cipher with block_size = 2 * number_of_iterations
+// this cipher is very simple, optimized for readability
 
 type RCX struct {
 	r RC4

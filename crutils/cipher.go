@@ -26,7 +26,7 @@ func EncryptInplaceKeccak(key []byte, data []byte) {
 	const sz = keccak.Rate * 4
 	b := make([]byte, sz)
 	d.ReadXor(b)
-	primitives.ReverseByte(b[sz/2:])
+	primitives.ReverseBytes(b[sz/2:])
 	witness.Write(b)
 }
 

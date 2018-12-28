@@ -24,7 +24,7 @@ func ReverseInt(a []int) {
 	}
 }
 
-func ReverseByte(a []byte) {
+func ReverseBytes(a []byte) {
 	i := 0
 	j := len(a) - 1
 	for i < j {

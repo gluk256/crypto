@@ -1,19 +1,17 @@
 package rcx
 
-const rc4sz = 256
-
 type RC4 struct {
-	s [rc4sz]byte
+	s [256]byte
 	i, j byte
 }
 
 func (c *RC4) InitKey(key []byte) {
-	for i := 0; i < rc4sz; i++ {
+	for i := 0; i < 256; i++ {
 		c.s[i] = byte(i)
 	}
 
 	var j byte
-	for i := 0; i < rc4sz; i++ {
+	for i := 0; i < 256; i++ {
 		j += c.s[i] + key[i % len(key)]
 		c.s[i], c.s[j] = c.s[j], c.s[i]
 	}
