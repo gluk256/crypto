@@ -29,7 +29,7 @@ func TestAes(t *testing.T) {
 		}
 
 		diff := len(encrypted) - len(expected)
-		if diff != 16 {
+		if diff != AesEncryptedSizeDiff {
 			t.Fatalf("weird diff: %d", diff)
 		}
 
@@ -57,9 +57,9 @@ func TestAes(t *testing.T) {
 		}
 
 		encrypted[sz/2]++
-		for i := 0; i < sz - 16; i++ {
-			encrypted[i] = byte(i)
-		}
+		//for i := 0; i < sz - 16; i++ { // todo: delete
+		//	encrypted[i] = byte(i)
+		//}
 
 		_, err = DecryptAES(key, salt, encrypted)
 		if err == nil {
@@ -252,6 +252,73 @@ func TestEncryptionLevelFour(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(decrypted, orig) {
+			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
+		}
+	}
+}
+
+func TestEncryptionSteg(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 4; i++ {
+		keysz := (mrand.Int() % 64) + 7
+		key := generateRandomBytes(t)
+		key = key[:keysz]
+		data := generateRandomBytes(t)
+		steg := generateRandomBytes(t)
+		if len(data) > len(steg) {
+			data = data[:len(steg)]
+		} else {
+			steg = steg[:len(data)]
+		}
+		sz := len(data)
+		origData := make([]byte, sz)
+		origSteg := make([]byte, sz)
+		copy(origData, data)
+		copy(origSteg, steg)
+
+		encyprted, err := EncryptSteg(key, data, steg)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		decryptedData, decryptedSteg, err := DecryptSteg(key, encyprted)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(decryptedData, origData) {
+			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
+		}
+		if !bytes.Equal(decryptedSteg, origSteg) {
+			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
+		}
+	}
+}
+
+func TestEncryptionCompatibility(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 4; i++ {
+		keysz := (mrand.Int() % 64) + 7
+		key := generateRandomBytes(t)
+		key = key[:keysz]
+		data := generateRandomBytes(t)
+		sz := len(data)
+		origData := make([]byte, sz)
+		copy(origData, data)
+
+		encyprted, err := EncryptLevelFour(key, data, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		decryptedData, _, err := DecryptSteg(key, encyprted)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(decryptedData, origData) {
 			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
 		}
 	}

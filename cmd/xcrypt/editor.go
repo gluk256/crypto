@@ -12,8 +12,8 @@ import (
 	"github.com/gluk256/crypto/algo/primitives"
 )
 
-var BarCol  = "   │—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
-var BarNorm = "   │———————————————————————————————————————————————————————————————————————————————————————————————————"
+var BarCol  = "   │——————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
+var BarNorm = "   │————————————————————————————————————————————————————————————————————————————————————————————————————"
 var Bar = BarNorm
 var defaultPrompt = "Enter text: "
 const newline = byte('\n')
@@ -316,7 +316,8 @@ func splitLine(ln, pos int) bool {
 			}
 
 			items[cur].console.InsertAfter(s[pos:], x)
-			s = s[:pos]
+			items[cur].console.InsertAfter(s[:pos], x)
+			items[cur].console.Remove(x)
 			items[cur].changed = true
 			return true
 		}

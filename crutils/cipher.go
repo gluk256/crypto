@@ -14,6 +14,9 @@ import (
 const (
 	AesKeySize = 32
 	AesSaltSize = 12
+	AesEncryptedSizeDiff = 16
+	SaltSizeWeak = 16
+	SaltSizeStrong = 64
 	RcxIterations = 1025
 )
 
@@ -145,18 +148,17 @@ func EncryptWithSalt(key []byte, data []byte, encrypt bool, saltsize int) ([]byt
 }
 
 func EncryptLevelTwo(key []byte, data []byte, encrypt bool) ([]byte, error) {
-	return EncryptWithSalt(key, data, encrypt, 16)
+	return EncryptWithSalt(key, data, encrypt, SaltSizeWeak)
 }
 
 func EncryptLevelThree(key []byte, data []byte, encrypt bool) ([]byte, error) {
-	return EncryptWithSalt(key, data, encrypt, 64)
+	return EncryptWithSalt(key, data, encrypt, SaltSizeStrong)
 }
 
 func EncryptLevelFour(key []byte, data []byte, encrypt bool) ([]byte, error) {
 	return EncryptWithSaltAndSpacing(key, data, encrypt)
 }
 
-// with pseudorandom spacing
 func EncryptWithSaltAndSpacing(key []byte, data []byte, encrypt bool) ([]byte, error) {
 	var b []byte
 	defer AnnihilateData(b)
@@ -172,7 +174,7 @@ func EncryptWithSaltAndSpacing(key []byte, data []byte, encrypt bool) ([]byte, e
 		b, data = data, b
 	}
 
-	res, err := EncryptWithSalt(key, data, encrypt, 64)
+	res, err := EncryptWithSalt(key, data, encrypt, SaltSizeStrong)
 
 	if !encrypt && err == nil {
 		b = make([]byte, 0, len(res)/2)
@@ -183,4 +185,38 @@ func EncryptWithSaltAndSpacing(key []byte, data []byte, encrypt bool) ([]byte, e
 	}
 
 	return res, err
+}
+
+// with steganographic content
+func EncryptSteg(key []byte, data []byte, steg []byte) ([]byte, error) {
+	if len(data) != len(steg) {
+		return nil, errors.New(fmt.Sprintf("data size is not equal steg size [%d vs. %d]", len(data), len(steg)))
+	}
+	b := make([]byte, 0, len(data)*2)
+	for i := 0; i < len(data); i++ {
+		b = append(b, data[i])
+		b = append(b, steg[i])
+	}
+	res, err := EncryptWithSalt(key, b, true, SaltSizeStrong)
+	AnnihilateData(data)
+	return res, err
+}
+
+// with steganographic content
+func DecryptSteg(key []byte, src []byte) ([]byte, []byte, error) {
+	var data, steg  []byte
+	res, err := EncryptWithSalt(key, src, false, SaltSizeStrong)
+	if err == nil {
+		data = make([]byte, 0, len(res)/2)
+		steg = make([]byte, 0, len(res)/2)
+		for i := 0; i < len(res); i += 2 {
+			data = append(data, res[i])
+			if i < len(res) {
+				steg = append(steg, res[i+1])
+			}
+		}
+		AnnihilateData(res)
+	}
+
+	return data, steg, err
 }

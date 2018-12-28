@@ -14,6 +14,8 @@ import (
 
 type Content struct {
 	src      []byte
+	key 	 []byte
+	pad 	 []byte
 	console  *list.List
 	prepared bool
 	changed  bool
@@ -21,7 +23,7 @@ type Content struct {
 
 const (
 	MaxItems = 2
-	version = 1
+	version = 2
 )
 
 var (
@@ -31,20 +33,26 @@ var (
 	steg    int
 )
 
+//func parseFlags(flags string) (cryptic, verifyPass, show bool) {
+//	if strings.Contains(flags, "-") { // todo: review
+//		cryptic = strings.Contains(flags, "s")
+//		verifyPass = strings.Contains(flags, "v")
+//		show = strings.Contains(flags, "p")
+//	}
+//	return
+//}
+
 func main() {
 	initialize()
 
-	if len(os.Args) > 3 {
-		// todo: this should be interpreted as encrypt/decrypt file
-		//cryptic, verifyPass, show := parseEncryptionFlag(os.Args[1:])
-		//srcFilename := os.Args[1]
-		//dstFilename := os.Args[2]
-		//os.Args[3]: -e or -d
-		//process command
-		//return
-	} else if len(os.Args) > 1 {
-		fmt.Print("Not enough args")
+	if len(os.Args) == 2 {
+		fmt.Println("Not enough args. Usage:")
+		fmt.Println("xcrypt [flags src_file_name]")
 		return
+	} else if len(os.Args) > 2 {
+		if FileLoad(os.Args[1:], false) {
+			contentDecrypt(os.Args[1:])
+		}
 	}
 
 	for {
@@ -79,7 +87,7 @@ func processCommand(cmd string) {
 	if len(arg) == 0 {
 		return
 	}
-	cryptic, verifyPass, show := parseEncryptionFlag(arg[1:])
+	//cryptic, verifyPass, show := parseFlags(arg[1]) //todo: delete
 
 	switch arg[0] {
 	case "frame":
@@ -101,21 +109,37 @@ func processCommand(cmd string) {
 		cat()
 	case "cc": // content display as text
 		cat()
+	case "cds": // content decrypt steg
+		stegDecrypt(arg)
+	case "csd": // content decrypt steg
+		stegDecrypt(arg)
+	case "css": // content decrypt steg
+		stegDecrypt(arg)
+	case "cd": // content decrypt
+		contentDecrypt(arg)
 	////////////////////////////////////////////
+	case "dd": // file decrypt
+		if FileLoad(arg, false) {
+			contentDecrypt(arg)
+		}
+	case "fd": // file decrypt
+		if FileLoad(arg, false) {
+			contentDecrypt(arg)
+		}
 	case "fl": // file load
-		FileLoad(arg)
+		FileLoad(arg, false)
 	case "fo": // file load text
-		if FileLoad(arg) {
-			cat()
-		}
+		FileLoad(arg, true)
 	case "flt": // file load text
-		if FileLoad(arg) {
-			cat()
-		}
-	case "fs": // file save
+		FileLoad(arg, true)
+	case "fs": // encrypt file and save
 		FileSave(arg)
 	case "fsplain": // file save plain text
 		FileSavePlainText(arg)
+	case "fss": // steganographic save
+		FileSaveSteg(arg)
+	case "ss": // steganographic save
+		FileSaveSteg(arg)
 	////////////////////////////////////////////
 	case "grep":
 		grep(arg, false, false)
@@ -148,18 +172,12 @@ func processCommand(cmd string) {
 	case "c": // editor: cut line (delete from the end)
 		LineCut(arg)
 	////////////////////////////////////////////
-	case "ei":
-		EncryptInputAndPrintHex(cryptic, verifyPass)
-	case "di":
-		DecryptHexInput(cryptic, show)
-	// todo: add other encrypt/decrypt commands from the bottom of this file
-	////////////////////////////////////////////
 	default:
 		fmt.Printf(">>> Wrong command: '%s' [%x] \n", cmd, []byte(cmd))
 	}
 }
 
-func FileLoad(arg []string) bool {
+func FileLoad(arg []string, show bool) bool {
 	deleteContent(cur)
 
 	if len(arg) < 2 {
@@ -177,6 +195,10 @@ func FileLoad(arg []string) bool {
 	items[cur].console = list.New()
 	items[cur].prepared = false
 	items[cur].changed = false
+	if show {
+		cat()
+	}
+
 	return true
 }
 
@@ -212,7 +234,7 @@ func FileSavePlainText(arg []string) {
 
 func FileSave(arg []string) {
 	b := content2raw()
-	x := encryptData(b)
+	x := encryptData(arg, b)
 	if b != nil {
 		saveData(arg, x)
 		crutils.AnnihilateData(x)
@@ -329,58 +351,166 @@ func ls() {
 	}
 	fmt.Println()
 }
-/////////////////////////////////////////////////////////////////////////
 
-func parseEncryptionFlag(arg []string) (cryptic, verifyPass, show bool) {
-	for _, a := range arg {
-		if a == "-c" {
-			cryptic = true
-		} else if a == "-v" {
-			verifyPass = true
-		} else if a == "-p" {
-			show = true
+func getPassword(cryptic bool, checkExisting bool) []byte {
+	if len(items[cur].key) > 0 && checkExisting {
+		if confirm("Do you want to use existing key? ") {
+			return items[cur].key
 		}
 	}
-	return
+
+	var res []byte
+	//if randpass {
+	//	res = crutils.RandPass(16)
+	//	fmt.Println(string(res))
+	//} else
+	if cryptic {
+		res = terminal.SecureInput(false)
+	} else {
+		fmt.Print("please enter the password: ")
+		res = terminal.PasswordModeInput()
+	}
+	if len(res) < 3 {
+		res = nil
+	} else {
+		items[cur].key = res
+	}
+	return res
 }
 
-func encryptData(data []byte) []byte {
-	panic("NOT IMPLEMENTED")
-	return nil
+func FileSaveSteg(arg []string) {
+	if steg < 0 || steg == cur {
+		fmt.Println(">>> Error: steganographic content does not exist")
+		return
+	}
+
+	const requiredDiff = crutils.AesEncryptedSizeDiff + crutils.SaltSizeWeak
+	diff := len(items[cur].src) - len(items[steg].src)
+	if diff < requiredDiff {
+		fmt.Printf(">>> Error: plain text is too small in comparison with steganographic content [%d vs. %d]",
+			len(items[cur].src), len(items[steg].src))
+		return
+	} else if diff > requiredDiff {
+		padSize := diff - requiredDiff
+		pad := make([]byte, padSize)
+		items[steg].src = append(items[steg].src, pad...)
+	}
+
+	insecure := strings.Contains(arg[1], "i")
+	fmt.Println("password for steganographic content encryption")
+	keySteg := getPassword(!insecure, true)
+	if len(keySteg) == 0 {
+		fmt.Println(">>> Error: wrong key")
+		return
+	}
+
+	fmt.Println("password for plain text encryption")
+	keyPlain := getPassword(!insecure, true)
+	if len(keyPlain) == 0 {
+		crutils.AnnihilateData(keySteg)
+		fmt.Println(">>> Error: wrong key")
+		return
+	}
+
+	contentPlain := make([]byte, len(items[cur].src))
+	copy(contentPlain, items[cur].src)
+	contentSteg := make([]byte, len(items[cur].src))
+	copy(contentSteg, items[steg].src)
+	defer crutils.AnnihilateData(contentPlain)
+	defer crutils.AnnihilateData(contentSteg)
+
+	encryptedSteg, err := crutils.EncryptLevelTwo(keySteg, contentSteg, true)
+	if err != nil {
+		fmt.Printf(">>> Error encrypting steg: %s\n", err)
+		return
+	}
+	res, err := crutils.EncryptSteg(keyPlain, contentPlain, encryptedSteg)
+	if err != nil {
+		fmt.Printf(">>> Error encrypting cur: %s\n", err)
+		return
+	}
+
+	if res != nil {
+		saveData(arg, res)
+		crutils.AnnihilateData(res)
+	}
 }
 
-func EncryptContentAndSave(args []string, cryptic bool, verifyPass bool) {
-	panic("NOT IMPLEMENTED")
+func encryptData(args []string, d []byte) []byte {
+	var secure bool
+	if len(args) > 1 {
+		secure = strings.Contains(args[1], "s")
+	}
+	key := getPassword(secure, true)
+	if len(key) == 0 {
+		fmt.Println(">>> Error: wrong key")
+		return nil
+	}
+	res, err := crutils.EncryptLevelFour(key, d, true)
+	if err != nil {
+		fmt.Printf(">>> Error: %s\n", err)
+		return nil
+	}
+	return res
 }
 
-func EncryptStegAndSave(args []string, cryptic bool, verifyPass bool) {
-	panic("NOT IMPLEMENTED")
+func contentDecrypt(arg []string) bool {
+	var secure, hide bool
+	if len(arg) > 1 {
+		secure = strings.Contains(arg[1], "s")
+		hide = strings.Contains(arg[1], "h")
+	}
+
+	content := make([]byte, len(items[cur].src))
+	copy(content, items[cur].src)
+
+	key := getPassword(secure, true)
+	if len(key) == 0 {
+		fmt.Println(">>> Error: wrong key")
+		return false
+	}
+
+	b, s, err := crutils.DecryptSteg(key, content)
+	if err != nil {
+		fmt.Printf(">>> Error: %s\n", err)
+		return false
+	}
+
+	items[cur].src = b
+	items[cur].pad = s
+	if !hide {
+		cat()
+	}
+	return true
 }
 
-func EncryptFileAndSave(args []string, cryptic bool, verifyPass bool) {
-	panic("NOT IMPLEMENTED")
-}
+func stegDecrypt(arg []string) bool {
+	var insecure, hide bool
+	if len(arg) > 1 {
+		insecure = strings.Contains(arg[1], "i")
+		hide = strings.Contains(arg[1], "h")
+	}
 
-func EncryptInputAndPrintHex(cryptic bool, verifyPass bool) {
-	panic("NOT IMPLEMENTED")
-}
+	content := make([]byte, len(items[cur].src))
+	copy(content, items[cur].pad)
 
-func DecryptContent(args []string, cryptic bool, show bool) {
-	panic("NOT IMPLEMENTED")
-}
+	key := getPassword(!insecure, false)
+	if len(key) == 0 {
+		fmt.Println(">>> Error: wrong key")
+		return false
+	}
 
-func DecryptFile(args []string, cryptic bool, show bool) {
-	panic("NOT IMPLEMENTED")
-}
+	b, err := crutils.EncryptLevelTwo(key, content, false)
+	if err != nil {
+		fmt.Printf(">>> Error: %s\n", err)
+		return false
+	}
 
-func DecryptFileAndSave(args []string, cryptic bool) {
-	panic("NOT IMPLEMENTED")
-}
-
-func DecryptFileSteg(args []string, firstLayerCryptic bool, show bool) {
-	panic("NOT IMPLEMENTED")
-}
-
-func DecryptHexInput(cryptic bool, show bool) {
-	panic("NOT IMPLEMENTED")
+	steg = (cur + 1) % 2
+	items[steg].src = b
+	items[steg].key = key
+	if !hide {
+		cat()
+	}
+	return true
 }
