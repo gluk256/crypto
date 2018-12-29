@@ -15,8 +15,7 @@ const (
 	AesKeySize = 32
 	AesSaltSize = 12
 	AesEncryptedSizeDiff = 16
-	SaltSizeWeak = 16
-	SaltSizeStrong = 64
+	SaltSize = 16
 	RcxIterations = 1025
 )
 
@@ -77,8 +76,10 @@ func EncryptInplaceLevelZero(key []byte, data []byte) {
 	EncryptInplaceKeccak(key, data)
 }
 
-// keccak + rcx, no salt, no padding
-// for encryption keccak should be applied before rcx
+// keccak + rcx, no salt, no padding.
+// rcx is a block cipher with block size of RcxIterations * 2.
+// in case of encryption, keccak should be applied before rcx,
+// in which case it will contribute to the security of the block cipher.
 func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool) {
 	if encrypt {
 		EncryptInplaceKeccak(key, data)
@@ -89,7 +90,26 @@ func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool) {
 	}
 }
 
-// keccak + rxc + aes + keccak, with salt, no padding
+func EncryptLevelTwo(key []byte, data []byte, encrypt bool) ([]byte, error) {
+	return EncryptWithSalt(key, data, encrypt, SaltSize)
+}
+
+func EncryptLevelFour(key []byte, data []byte, encrypt bool) ([]byte, error) {
+	return EncryptWithSaltAndSpacing(key, data, encrypt)
+}
+
+func EncryptLevelFive(key []byte, data []byte, encrypt bool) ([]byte, error) {
+	if encrypt {
+		data = addPadding(data, true)
+	}
+	res, err := EncryptWithSaltAndSpacing(key, data, encrypt)
+	if !encrypt {
+		res, err = removePadding(res)
+	}
+	return res, err
+}
+
+// keccak + rxc + aes + keccak, with salt, no spacing, no padding
 func EncryptWithSalt(key []byte, data []byte, encrypt bool, saltsize int) ([]byte, error) {
 	const (
 		offset = 256
@@ -122,66 +142,40 @@ func EncryptWithSalt(key []byte, data []byte, encrypt bool, saltsize int) ([]byt
 	fullkey = append(fullkey, salt...)
 	fullkey = append(fullkey, key...)
 	keyholder := keccak.Digest(fullkey, keyHolderSize)
-	defer AnnihilateData(fullkey)
 
 	if encrypt {
 		EncryptInplaceKeccak(keyholder[begK1:endK1], data)
 		rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], data, RcxIterations, encrypt)
 		res, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			EncryptInplaceKeccak(keyholder[begK2:endK2], res)
+			res = append(res, salt...)
 		}
-		EncryptInplaceKeccak(keyholder[begK2:endK2], res)
-		res = append(res, salt...)
 	} else {
 		data = data[:len(data)-saltsize]
 		EncryptInplaceKeccak(keyholder[begK2:endK2], data)
 		res, err = DecryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], res, RcxIterations, encrypt)
+			DecryptInplaceKeccak(keyholder[begK1:endK1], res)
 		}
-		rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], res, RcxIterations, encrypt)
-		DecryptInplaceKeccak(keyholder[begK1:endK1], res)
 	}
 
-	return res, nil
+	AnnihilateData(fullkey)
+	AnnihilateData(keyholder)
+	return res, err
 }
 
-func EncryptLevelTwo(key []byte, data []byte, encrypt bool) ([]byte, error) {
-	return EncryptWithSalt(key, data, encrypt, SaltSizeWeak)
-}
-
-func EncryptLevelThree(key []byte, data []byte, encrypt bool) ([]byte, error) {
-	return EncryptWithSalt(key, data, encrypt, SaltSizeStrong)
-}
-
-func EncryptLevelFour(key []byte, data []byte, encrypt bool) ([]byte, error) {
-	return EncryptWithSaltAndSpacing(key, data, encrypt)
-}
-
+// spacing is like a hidden salt, and hence more secure
 func EncryptWithSaltAndSpacing(key []byte, data []byte, encrypt bool) ([]byte, error) {
-	var b []byte
-	defer AnnihilateData(b)
-
-	if encrypt {
-		b = make([]byte, 0, len(data)*2)
-		rnd := make([]byte, len(data))
-		Rand(rnd)
-		for i := 0; i < len(data); i++ {
-			b = append(b, data[i])
-			b = append(b, rnd[i])
-		}
-		b, data = data, b
+	if encrypt { // encryption
+		data = addSpacing(data, true)
 	}
 
-	res, err := EncryptWithSalt(key, data, encrypt, SaltSizeStrong)
+	res, err := EncryptWithSalt(key, data, encrypt, SaltSize)
 
-	if !encrypt && err == nil {
-		b = make([]byte, 0, len(res)/2)
-		for i := 0; i < len(res); i += 2 {
-			b = append(b, res[i])
-		}
-		b, res = res, b
+	if !encrypt && err == nil { // decryption
+		res, _ = splitSpacing(res, true)
 	}
 
 	return res, err
@@ -197,26 +191,16 @@ func EncryptSteg(key []byte, data []byte, steg []byte) ([]byte, error) {
 		b = append(b, data[i])
 		b = append(b, steg[i])
 	}
-	res, err := EncryptWithSalt(key, b, true, SaltSizeStrong)
-	AnnihilateData(data)
+	res, err := EncryptWithSalt(key, b, true, SaltSize)
 	return res, err
 }
 
 // with steganographic content
 func DecryptSteg(key []byte, src []byte) ([]byte, []byte, error) {
-	var data, steg  []byte
-	res, err := EncryptWithSalt(key, src, false, SaltSizeStrong)
-	if err == nil {
-		data = make([]byte, 0, len(res)/2)
-		steg = make([]byte, 0, len(res)/2)
-		for i := 0; i < len(res); i += 2 {
-			data = append(data, res[i])
-			if i < len(res) {
-				steg = append(steg, res[i+1])
-			}
-		}
-		AnnihilateData(res)
+	res, err := EncryptWithSalt(key, src, false, SaltSize)
+	if err != nil {
+		return nil, nil, err
 	}
-
+	data, steg := splitSpacing(res, true)
 	return data, steg, err
 }

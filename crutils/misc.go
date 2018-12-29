@@ -4,6 +4,9 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"errors"
+
+	"github.com/gluk256/crypto/algo/rcx"
+	"github.com/gluk256/crypto/algo/primitives"
 )
 
 func Sha2(s []byte) []byte {
@@ -57,4 +60,65 @@ func HexDecode(src []byte) ([]byte, error) {
 		dst = append(dst, byte(16*a+b))
 	}
 	return dst, nil
+}
+
+func addSpacing(data []byte, destroy bool) []byte {
+	b := make([]byte, 0, len(data)*2)
+	rnd := make([]byte, len(data))
+	Rand(rnd)
+	for i := 0; i < len(data); i++ {
+		b = append(b, data[i])
+		b = append(b, rnd[i])
+	}
+	if destroy {
+		AnnihilateData(data)
+	}
+	return b
+}
+
+func splitSpacing(data []byte, destroy bool) ([]byte, []byte) {
+	b := make([]byte, 0, len(data)/2)
+	s := make([]byte, 0, len(data)/2)
+	for i := 0; i < len(data); i += 2 {
+		b = append(b, data[i])
+		if i+1 < len(data) {
+			s = append(s, data[i+1])
+		}
+	}
+	if destroy {
+		AnnihilateData(data)
+	}
+	return b, s
+}
+
+// the size of content before encryption must be power of two
+func addPadding(data []byte, mark bool) []byte {
+	sz := len(data)
+	newSz := primitives.FindNextPowerOfTwo(sz + 4)
+	rnd := make([]byte, newSz)
+	Rand(rnd)
+	copy(rnd, data)
+	AnnihilateData(data)
+	data = rnd
+	if mark {
+		b := uint16(uint32(sz) >> 16)
+		a := uint16(sz)
+		data[newSz-2], data[newSz-1] = rcx.Uint2bytes(b)
+		data[newSz-4], data[newSz-3] = rcx.Uint2bytes(a)
+	}
+	return data
+}
+
+func removePadding(data []byte) ([]byte, error) {
+	sz := len(data)
+	if sz < 4 {
+		return nil, errors.New("Can not remove padding")
+	}
+	b := rcx.Bytes2uint(data[sz-2], data[sz-1])
+	a := rcx.Bytes2uint(data[sz-4], data[sz-3])
+	newSize := int(a) + int(b) << 16
+	if newSize > sz {
+		return nil, errors.New(fmt.Sprintf("error removing padding: wrong sizes [%d vs. %d]", newSize, sz))
+	}
+	return data[:newSize], nil
 }

@@ -12,14 +12,13 @@ import (
 )
 
 func help() {
-	fmt.Println("xfile encrypts/decrypts a file (encryption level one)")
+	fmt.Println("xteg encrypts/decrypts a file (encryption level one)")
 	fmt.Println("USAGE: xfile flags srcFile [dstFile]")
 	fmt.Println("\t e encrypt")
 	fmt.Println("\t d decrypt")
 	fmt.Println("\t r random password")
 	fmt.Println("\t s secure password input")
 	fmt.Println("\t x extra secure password input")
-	fmt.Println("\t 0 encryption level")
 	fmt.Println("\t 1 encryption level")
 	fmt.Println("\t 2 encryption level")
 	fmt.Println("\t 4 encryption level")
@@ -109,8 +108,6 @@ func getEncryptionLevel(flags string) int {
 		return 1
 	} else if strings.Contains(flags, "2") {
 		return 2
-	} else if strings.Contains(flags, "3") {
-		return 3
 	} else if strings.Contains(flags, "4") {
 		return 4
 	}

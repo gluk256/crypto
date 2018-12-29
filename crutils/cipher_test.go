@@ -56,11 +56,7 @@ func TestAes(t *testing.T) {
 			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
 		}
 
-		encrypted[sz/2]++
-		//for i := 0; i < sz - 16; i++ { // todo: delete
-		//	encrypted[i] = byte(i)
-		//}
-
+		encrypted[sz/2]++ // change at least one bit
 		_, err = DecryptAES(key, salt, encrypted)
 		if err == nil {
 			t.Fatalf("decryption false positive, despite changing byte %d", sz/2)
@@ -158,6 +154,9 @@ func TestEncryptionLevelTwo(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
+		if len(encyprted) - len(orig) != SaltSize + AesEncryptedSizeDiff {
+			t.Fatalf("size diff failed [%d vs. %d]", len(encyprted) - len(orig), SaltSize + AesSaltSize)
+		}
 
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
@@ -177,7 +176,7 @@ func TestEncryptionLevelTwo(t *testing.T) {
 	}
 }
 
-func TestEncryptionLevelThree(t *testing.T) {
+func TestEncryptionLevelFive(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -190,7 +189,7 @@ func TestEncryptionLevelThree(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		encyprted, err := EncryptLevelThree(key, data, true)
+		encyprted, err := EncryptLevelFive(key, data, true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -202,17 +201,22 @@ func TestEncryptionLevelThree(t *testing.T) {
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
 		d2[sz/2]++ // change at least one bit
-		_, err = EncryptLevelThree(key, d2, false)
+		_, err = EncryptLevelFive(key, d2, false)
 		if err == nil {
 			t.Fatal("decrypted fake data: false positive")
 		}
 
-		decrypted, err := EncryptLevelThree(key, encyprted, false)
+		decrypted, err := EncryptLevelFive(key, encyprted, false)
 		if err != nil {
 			t.Fatal(err)
 		}
+		if len(decrypted) > len(orig) {
+			if !bytes.Equal(decrypted[:len(orig)], orig) {
+				t.Fatalf("decrypted != expected, [%d %d] round %d with seed %d", len(orig), len(decrypted), i, seed)
+			}
+		}
 		if !bytes.Equal(decrypted, orig) {
-			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
+			t.Fatalf("decrypted != expected, [%d %d] round %d with seed %d", len(orig), len(decrypted), i, seed)
 		}
 	}
 }
@@ -322,4 +326,8 @@ func TestEncryptionCompatibility(t *testing.T) {
 			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
 		}
 	}
+
+	// todo: vice versa [EncryptSteg + DecryptLevelFour]
+	// todo: switch to v.5
 }
+

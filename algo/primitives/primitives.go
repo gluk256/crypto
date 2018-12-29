@@ -62,3 +62,21 @@ func isBlockNotEqual(a []byte, b []byte, off int, block int) bool {
 	}
 	return false
 }
+
+func IsPowerOfTwo(i uint64) bool {
+	j := i - 1
+	x := i & j
+	return x == 0
+}
+
+func FindNextPowerOfTwo(n int) int {
+	x := 2
+	for i := 0; i < 32; i++ {
+		if x >= n {
+			return x
+		} else {
+			x *= 2
+		}
+	}
+	return 0
+}

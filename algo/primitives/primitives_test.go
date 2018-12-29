@@ -121,3 +121,29 @@ func TestXorInplace(t *testing.T) {
 		t.Fatal("self-destruction failed")
 	}
 }
+
+func TestPowerOfTwo(t *testing.T) {
+	a := uint64(1048576 * 1024)
+	if !IsPowerOfTwo(a) {
+		t.Fatal("false negative")
+	}
+	if !IsPowerOfTwo(a/2) {
+		t.Fatal("false negative")
+	}
+	if IsPowerOfTwo(a+1) {
+		t.Fatal("false positive")
+	}
+	if IsPowerOfTwo(a-1) {
+		t.Fatal("false positive")
+	}
+	if IsPowerOfTwo(a+1024) {
+		t.Fatal("false positive")
+	}
+
+	if FindNextPowerOfTwo(1048576 + 1024) != 1048576 * 2 {
+		t.Fatalf("FindNextPowerOfTwo failed: %d vs. %d", FindNextPowerOfTwo(int(a)), 1048576 * 2)
+	}
+	if FindNextPowerOfTwo(999999) != 1048576 {
+		t.Fatal("FindNextPowerOfTwo failed")
+	}
+}

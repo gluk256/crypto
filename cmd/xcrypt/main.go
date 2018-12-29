@@ -33,15 +33,6 @@ var (
 	steg    int
 )
 
-//func parseFlags(flags string) (cryptic, verifyPass, show bool) {
-//	if strings.Contains(flags, "-") { // todo: review
-//		cryptic = strings.Contains(flags, "s")
-//		verifyPass = strings.Contains(flags, "v")
-//		show = strings.Contains(flags, "p")
-//	}
-//	return
-//}
-
 func main() {
 	initialize()
 
@@ -113,7 +104,7 @@ func processCommand(cmd string) {
 		stegDecrypt(arg)
 	case "csd": // content decrypt steg
 		stegDecrypt(arg)
-	case "css": // content decrypt steg
+	case "cdd": // content decrypt steg
 		stegDecrypt(arg)
 	case "cd": // content decrypt
 		contentDecrypt(arg)
@@ -224,7 +215,7 @@ func saveData(arg []string, data []byte) {
 
 func FileSavePlainText(arg []string) {
 	if confirm("Do you really want to save plain text?") {
-		b := content2raw()
+		b := content2raw(cur, 0)
 		if b != nil {
 			saveData(arg, b)
 			crutils.AnnihilateData(b)
@@ -233,7 +224,7 @@ func FileSavePlainText(arg []string) {
 }
 
 func FileSave(arg []string) {
-	b := content2raw()
+	b := content2raw(cur, 0)
 	x := encryptData(arg, b)
 	if b != nil {
 		saveData(arg, x)
@@ -258,16 +249,21 @@ func getFileName(arg []string) string {
 	return filename
 }
 
-func content2raw() []byte {
-	total := getConsoleSizeInBytes(cur)
+func content2raw(index int, capacity int) []byte {
+	total := getConsoleSizeInBytes(index)
 	if total < 2 {
 		fmt.Println(">>> Error: no content")
 		return nil
 	}
 
+	if total > capacity {
+		capacity = total
+	}
+
 	i := 0
-	b := make([]byte, total)
-	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+	b := make([]byte, total, capacity)
+
+	for x := items[index].console.Front(); x != nil; x = x.Next() {
 		s, _ := x.Value.([]byte)
 		copy(b[i:], s)
 		i += len(s)
@@ -302,6 +298,11 @@ func deleteContent(i int) {
 	// most of src must be already destroyed
 	witness.Write(items[cur].src)
 	crutils.AnnihilateData(items[cur].src)
+	crutils.AnnihilateData(items[cur].key)
+
+	items[cur].src = nil
+	items[cur].key = nil
+	items[cur].pad = nil
 }
 
 func deleteAll() {
@@ -320,6 +321,7 @@ func Reset(arg []string) {
 
 func info() {
 	fmt.Printf("ver = %d, cur = %d, steg = %d \n", version, cur, steg)
+	fmt.Printf("len(0) = %d, len(1) = %d, \n", len(items[0].src), len(items[1].src))
 }
 
 func MarkSteg() {
@@ -379,24 +381,33 @@ func getPassword(cryptic bool, checkExisting bool) []byte {
 }
 
 func FileSaveSteg(arg []string) {
-	if steg < 0 || steg == cur {
+	if steg < 0 || items[steg].console.Len() == 0 {
 		fmt.Println(">>> Error: steganographic content does not exist")
 		return
 	}
 
-	const requiredDiff = crutils.AesEncryptedSizeDiff + crutils.SaltSizeWeak
-	diff := len(items[cur].src) - len(items[steg].src)
+	plain := (steg + 1) % 2
+	const requiredDiff = crutils.AesEncryptedSizeDiff + crutils.SaltSize
+	plainContent := content2raw(plain, 0)
+	stegContent := content2raw(steg, len(plainContent))
+	defer crutils.AnnihilateData(plainContent)
+	defer crutils.AnnihilateData(stegContent)
+
+	diff := len(plainContent) - len(stegContent)
 	if diff < requiredDiff {
-		fmt.Printf(">>> Error: plain text is too small in comparison with steganographic content [%d vs. %d]",
-			len(items[cur].src), len(items[steg].src))
+		fmt.Printf(">>> Error: plain text is too small in comparison with steganographic content [%d vs. %d] \n",
+			len(plainContent), len(stegContent))
 		return
 	} else if diff > requiredDiff {
 		padSize := diff - requiredDiff
 		pad := make([]byte, padSize)
-		items[steg].src = append(items[steg].src, pad...)
+		stegContent = append(stegContent, pad...)
 	}
 
-	insecure := strings.Contains(arg[1], "i")
+	var insecure bool
+	if len(arg) > 1 {
+		insecure = strings.Contains(arg[1], "i")
+	}
 	fmt.Println("password for steganographic content encryption")
 	keySteg := getPassword(!insecure, true)
 	if len(keySteg) == 0 {
@@ -412,19 +423,12 @@ func FileSaveSteg(arg []string) {
 		return
 	}
 
-	contentPlain := make([]byte, len(items[cur].src))
-	copy(contentPlain, items[cur].src)
-	contentSteg := make([]byte, len(items[cur].src))
-	copy(contentSteg, items[steg].src)
-	defer crutils.AnnihilateData(contentPlain)
-	defer crutils.AnnihilateData(contentSteg)
-
-	encryptedSteg, err := crutils.EncryptLevelTwo(keySteg, contentSteg, true)
+	encryptedSteg, err := crutils.EncryptLevelTwo(keySteg, stegContent, true)
 	if err != nil {
 		fmt.Printf(">>> Error encrypting steg: %s\n", err)
 		return
 	}
-	res, err := crutils.EncryptSteg(keyPlain, contentPlain, encryptedSteg)
+	res, err := crutils.EncryptSteg(keyPlain, plainContent, encryptedSteg)
 	if err != nil {
 		fmt.Printf(">>> Error encrypting cur: %s\n", err)
 		return
@@ -491,7 +495,7 @@ func stegDecrypt(arg []string) bool {
 		hide = strings.Contains(arg[1], "h")
 	}
 
-	content := make([]byte, len(items[cur].src))
+	content := make([]byte, len(items[cur].pad))
 	copy(content, items[cur].pad)
 
 	key := getPassword(!insecure, false)
