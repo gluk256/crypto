@@ -66,7 +66,7 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	return decrypted, err
 }
 
-// rc4 + keccak, no salt, no padding, xor only, decryption == encryption
+// rc4 + keccak, xor only, no salt, no spacing/padding, decryption == encryption
 func EncryptInplaceLevelZero(key []byte, data []byte) {
 	dummy := make([]byte, 1024*216)
 	var rc4 rcx.RC4
@@ -78,7 +78,7 @@ func EncryptInplaceLevelZero(key []byte, data []byte) {
 }
 
 // keccak + rcx, no salt, no spacing/padding.
-// rcx is a block cipher with block size of RcxIterations * 2.
+// this is a block cipher with block size of RcxIterations * 2.
 // in case of encryption, keccak should be applied before rcx,
 // in which case it will contribute to the security of the block cipher.
 func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool) {
