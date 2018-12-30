@@ -146,30 +146,25 @@ func TestEncryptionLevelTwo(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		encyprted, err := EncryptLevelThree(key, data, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		encyprted := EncryptLevelTwo(key, data, true)
 		ok := primitives.IsDeepNotEqual(orig, encyprted[16:], len(data))
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		if len(encyprted) - len(orig) != SaltSize + AesEncryptedSizeDiff {
-			t.Fatalf("size diff failed [%d vs. %d]", len(encyprted) - len(orig), SaltSize + AesSaltSize)
+		if len(encyprted) != len(orig) * 2 {
+			t.Fatalf("len(encyprted) failed [%d vs. %d]", len(encyprted), len(orig) * 2)
 		}
 
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
 		d2[sz/2]++ // change at least one bit
-		_, err = EncryptLevelThree(key, d2, false)
-		if err == nil {
+		d2 = EncryptLevelTwo(key, d2, false)
+		ok = primitives.IsDeepNotEqual(d2, orig, len(orig))
+		if !ok {
 			t.Fatal("decrypted fake data: false positive")
 		}
 
-		decrypted, err := EncryptLevelThree(key, encyprted, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+		decrypted := EncryptLevelTwo(key, encyprted, false)
 		if !bytes.Equal(decrypted, orig) {
 			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
 		}
@@ -189,13 +184,30 @@ func TestEncryptionLevelThree(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		encyprted := EncryptLevelTwo(key, data, true)
+		encyprted, err := EncryptLevelThree(key, data, true)
+		if err != nil {
+			t.Fatal(err)
+		}
 		ok := primitives.IsDeepNotEqual(orig, encyprted[16:], len(data))
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
+		if len(encyprted) - sz != SaltSize + AesEncryptedSizeDiff {
+			t.Fatalf("size diff failed [%d vs. %d]", len(encyprted) - sz, SaltSize + AesSaltSize)
+		}
 
-		decrypted := EncryptLevelTwo(key, encyprted, false)
+		d2 := make([]byte, len(encyprted))
+		copy(d2, encyprted)
+		d2[sz/2]++ // change at least one bit
+		d2, err = EncryptLevelThree(key, d2, false)
+		if err == nil {
+			t.Fatal("decrypted fake data: false positive")
+		}
+
+		decrypted, err := EncryptLevelThree(key, encyprted, false)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if !bytes.Equal(decrypted, orig) {
 			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
 		}
@@ -222,6 +234,9 @@ func TestEncryptionLevelFour(t *testing.T) {
 		ok := primitives.IsDeepNotEqual(orig, encyprted[16:], len(data))
 		if !ok {
 			t.Fatal("deep non-equal test failed")
+		}
+		if len(encyprted) != sz * 2 + SaltSize + AesEncryptedSizeDiff {
+			t.Fatalf("len(encyprted) failed [%d vs. %d]", len(encyprted), sz * 2 + SaltSize + AesEncryptedSizeDiff)
 		}
 
 		d2 := make([]byte, len(encyprted))
@@ -263,6 +278,10 @@ func TestEncryptionLevelFive(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
+		paddedSize := primitives.FindNextPowerOfTwo(sz + 4)
+		if len(encyprted) != paddedSize * 2 + SaltSize + AesEncryptedSizeDiff {
+			t.Fatalf("len(encyprted) failed [%d vs. %d]", len(encyprted), sz * 2 + SaltSize + AesEncryptedSizeDiff)
+		}
 
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
@@ -291,69 +310,56 @@ func TestEncryptionSteg(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 4; i++ {
-		keysz := (mrand.Int() % 64) + 7
+	multiplier := 1
+	for i := 0; i < 8; i++ {
+		keysz := (mrand.Int() % 64) + 13
 		key := generateRandomBytes(t)
 		key = key[:keysz]
-		data := generateRandomBytes(t)
+		keySteg := generateRandomBytes(t)
+		keySteg = keySteg[:keysz]
+
 		steg := generateRandomBytes(t)
-		if len(data) > len(steg) {
-			data = data[:len(steg)]
-		} else {
-			steg = steg[:len(data)]
-		}
-		sz := len(data)
-		origData := make([]byte, sz)
-		origSteg := make([]byte, sz)
-		copy(origData, data)
+		origSteg := make([]byte, len(steg))
 		copy(origSteg, steg)
 
-		encyprted, err := EncryptSteg(key, data, steg)
+		encyprtedSteg, err := EncryptLevelFive(keySteg, steg, true)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("Error encrypting l.5: %s", err.Error())
 		}
+		origEncryptedSteg := make([]byte, len(encyprtedSteg))
+		copy(origEncryptedSteg, encyprtedSteg)
 
-		decryptedData, decryptedSteg, err := DecryptSteg(key, encyprted)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(decryptedData, origData) {
-			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
-		}
-		if !bytes.Equal(decryptedSteg, origSteg) {
-			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
-		}
-	}
-}
-
-func TestEncryptionCompatibility(t *testing.T) {
-	seed := time.Now().Unix()
-	mrand.Seed(seed)
-
-	for i := 0; i < 4; i++ {
-		keysz := (mrand.Int() % 64) + 7
-		key := generateRandomBytes(t)
-		key = key[:keysz]
-		data := generateRandomBytes(t)
-		sz := len(data)
-		origData := make([]byte, sz)
+		data := generateRandomBytesMinSize(t, len(encyprtedSteg) * multiplier + 37)
+		origData := make([]byte, len(data))
 		copy(origData, data)
 
-		encyprted, err := EncryptLevelFour(key, data, true)
+		encyprted, err := EncryptSteg(key, data, encyprtedSteg)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("EncryptSteg error: %s", err.Error())
 		}
 
-		decryptedData, _, err := DecryptSteg(key, encyprted)
+		decryptedData, raw, err := DecryptSteg(key, encyprted)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("DecryptSteg error: %s", err.Error())
 		}
 		if !bytes.Equal(decryptedData, origData) {
-			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
+			t.Fatalf("failed to decrypt data, round %d with seed %d", i, seed)
+		}
+		if !bytes.Equal(raw[:len(origEncryptedSteg)], origEncryptedSteg) {
+			t.Fatalf("failed to decrypt raw steg, round %d with seed %d", i, seed)
+		}
+
+		decryptedSteg, err := DecryptStegContentOfUnknownSize(keySteg, raw)
+		if err != nil {
+			t.Fatalf("DecryptStegContentOfUnknownSize error: %s", err.Error())
+		}
+		if !bytes.Equal(decryptedSteg, origSteg) {
+			t.Fatalf("decrypted produced wrong result, round %d with seed %d", i, seed)
+		}
+
+		multiplier *= 2
+		if multiplier == 0 {
+			multiplier = 1
 		}
 	}
-
-	// todo: vice versa [EncryptSteg + DecryptLevelFour]
-	// todo: switch to v.5
 }
-

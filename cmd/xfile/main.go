@@ -24,7 +24,48 @@ func help() {
 	fmt.Println("\t 2 encryption level")
 	fmt.Println("\t 3 encryption level")
 	fmt.Println("\t 4 encryption level")
+	fmt.Println("\t 5 encryption level (default)")
+	//fmt.Println("\t 6 encrypt/decrypt steganographic content")
+	//fmt.Println("\t 7 decrypt steganographic content of unknown size")
 	fmt.Println("\t h help")
+}
+
+func getEncryptionLevel(flags string) int {
+	if strings.Contains(flags, "0") {
+		return 0
+	} else if strings.Contains(flags, "1") {
+		return 1
+	} else if strings.Contains(flags, "2") {
+		return 2
+	} else if strings.Contains(flags, "3") {
+		return 3
+	} else if strings.Contains(flags, "4") {
+		return 4
+	} else if strings.Contains(flags, "5") {
+		return 5
+	}
+	return 5 // default level 5
+}
+
+func crypt(key []byte, data []byte, encrypt bool, level int) ([]byte, error) {
+	if level == 0 {
+		crutils.EncryptInplaceLevelZero(key, data)
+		return data, nil
+	} else if level == 1 {
+		crutils.EncryptInplaceLevelOne(key, data, encrypt)
+		return data, nil
+	} else if level == 2 {
+		data = crutils.EncryptLevelTwo(key, data, encrypt)
+		return data, nil
+	} else if level == 3 {
+		return crutils.EncryptLevelThree(key, data, encrypt)
+	} else if level == 4 {
+		return crutils.EncryptLevelFour(key, data, encrypt)
+	} else if level == 5 {
+		return crutils.EncryptLevelFive(key, data, encrypt)
+	} else {
+		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
+	}
 }
 
 func getPassword(flags string) []byte {
@@ -85,40 +126,6 @@ func main() {
 	}
 
 	saveData(dstFile, res)
-}
-
-func crypt(key []byte, data []byte, encrypt bool, level int) ([]byte, error) {
-	if level == 0 {
-		crutils.EncryptInplaceLevelZero(key, data)
-		return data, nil
-	} else if level == 1 {
-		crutils.EncryptInplaceLevelOne(key, data, encrypt)
-		return data, nil
-	} else if level == 2 {
-		return crutils.EncryptLevelThree(key, data, encrypt)
-	} else if level == 3 {
-		data = crutils.EncryptLevelTwo(key, data, encrypt)
-		return data, nil
-	} else if level == 4 {
-		return crutils.EncryptLevelFour(key, data, encrypt)
-	} else {
-		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
-	}
-}
-
-func getEncryptionLevel(flags string) int {
-	if strings.Contains(flags, "0") {
-		return 0
-	} else if strings.Contains(flags, "1") {
-		return 1
-	} else if strings.Contains(flags, "2") {
-		return 2
-	} else if strings.Contains(flags, "3") {
-		return 3
-	} else if strings.Contains(flags, "4") {
-		return 4
-	}
-	return 2 // default level 2
 }
 
 func loadFile(fname string) []byte {

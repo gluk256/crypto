@@ -16,6 +16,7 @@ const (
 	AesSaltSize = 12
 	AesEncryptedSizeDiff = 16
 	SaltSize = 16
+	EncryptedSizeDiff = AesEncryptedSizeDiff + SaltSize
 	RcxIterations = 1025
 )
 
@@ -90,7 +91,7 @@ func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool) {
 	}
 }
 
-// spacing is like a hidden salt
+// spacing is like a hidden salt, since level one encryption is a block cipher
 func EncryptLevelTwo(key []byte, data []byte, encrypt bool) []byte {
 	if encrypt { // encryption
 		data = addSpacing(data, true)
@@ -116,7 +117,7 @@ func EncryptLevelFour(key []byte, data []byte, encrypt bool) ([]byte, error) {
 // with padding, which allows to conceal the content size
 func EncryptLevelFive(key []byte, data []byte, encrypt bool) ([]byte, error) {
 	if encrypt {
-		data = addPadding(data, true)
+		data, _ = addPadding(data, 0, true)
 	}
 	res, err := EncryptWithSaltAndSpacing(key, data, encrypt)
 	if !encrypt {
@@ -197,26 +198,68 @@ func EncryptWithSaltAndSpacing(key []byte, data []byte, encrypt bool) ([]byte, e
 	return res, err
 }
 
-// with steganographic content
+// encrypt with steganographic content as spacing
 func EncryptSteg(key []byte, data []byte, steg []byte) ([]byte, error) {
-	if len(data) != len(steg) {
-		return nil, errors.New(fmt.Sprintf("data size is not equal steg size [%d vs. %d]", len(data), len(steg)))
+	// add padding
+	var err error
+	data, _ = addPadding(data, 0, true)
+	if len(data) < len(steg) + 4 {
+		return nil, errors.New(fmt.Sprintf("data size is less than necessary [%d vs. %d]", len(data), len(steg) + 4))
 	}
+	steg, err = addPadding(steg, len(data), false) // no mark - steg content should be indistinguishable from random
+	if err != nil {
+		return nil, err
+	}
+
+	// create spacing from data and steg
 	b := make([]byte, 0, len(data)*2)
 	for i := 0; i < len(data); i++ {
 		b = append(b, data[i])
 		b = append(b, steg[i])
 	}
+
 	res, err := EncryptWithSalt(key, b, true, SaltSize)
+	AnnihilateData(data)
+	AnnihilateData(steg)
 	return res, err
 }
 
-// with steganographic content
+// decrypt data and extract raw steganographic content
 func DecryptSteg(key []byte, src []byte) ([]byte, []byte, error) {
 	res, err := EncryptWithSalt(key, src, false, SaltSize)
 	if err != nil {
 		return nil, nil, err
 	}
 	data, steg := splitSpacing(res, true)
+	data, err = removePadding(data)
 	return data, steg, err
+}
+
+// steganographic content is obviously of unknown size.
+// however, we know that the size of original unencrypted steg content was power_of_two;
+// so, we try all possible sizes (31 at most, but in reality much less).
+func DecryptStegContentOfUnknownSize(key []byte, steg []byte) ([]byte, error) {
+	for sz := getMaxRawStegSize(len(steg)); sz > 0; sz /= 2 {
+		trySize := sz + EncryptedSizeDiff
+		content := make([]byte, trySize)
+		copy(content, steg[:trySize])
+		res, err := EncryptWithSaltAndSpacing(key, content, false)
+		if err == nil {
+			res, err = removePadding(res)
+			if err != nil {
+				err = errors.New("xxx " + err.Error())
+			}
+			return res, err
+		}
+	}
+	return nil, errors.New("failed to decrypt steganographic content")
+}
+
+// returns maximum possible size of raw steganographic content (without salt)
+func getMaxRawStegSize(total int) int {
+	raw := primitives.FindNextPowerOfTwo(total - EncryptedSizeDiff)
+	for raw + EncryptedSizeDiff > total {
+		raw /= 2
+	}
+	return raw
 }

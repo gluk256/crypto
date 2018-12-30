@@ -92,10 +92,14 @@ func splitSpacing(data []byte, destroy bool) ([]byte, []byte) {
 }
 
 // the size of content before encryption must be power of two
-func addPadding(data []byte, mark bool) []byte {
+func addPadding(data []byte, newSize int, mark bool) ([]byte, error) {
 	sz := len(data)
-	newSz := primitives.FindNextPowerOfTwo(sz + 4)
-	rnd := make([]byte, newSz)
+	if newSize <= 0 {
+		newSize = primitives.FindNextPowerOfTwo(sz + 4)
+	} else if newSize < sz + 4 {
+		return data, errors.New("padding failed: data is too bit")
+	}
+	rnd := make([]byte, newSize)
 	Rand(rnd)
 	copy(rnd, data)
 	AnnihilateData(data)
@@ -103,10 +107,10 @@ func addPadding(data []byte, mark bool) []byte {
 	if mark {
 		b := uint16(uint32(sz) >> 16)
 		a := uint16(sz)
-		data[newSz-2], data[newSz-1] = rcx.Uint2bytes(b)
-		data[newSz-4], data[newSz-3] = rcx.Uint2bytes(a)
+		data[newSize-2], data[newSize-1] = rcx.Uint2bytes(b)
+		data[newSize-4], data[newSize-3] = rcx.Uint2bytes(a)
 	}
-	return data
+	return data, nil
 }
 
 func removePadding(data []byte) ([]byte, error) {

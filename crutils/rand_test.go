@@ -61,6 +61,16 @@ func generateRandomBytes(t *testing.T) []byte {
 	return b
 }
 
+func generateRandomBytesMinSize(t *testing.T, minsize int) []byte {
+	sz := mrand.Intn(256) + minsize
+	b := make([]byte, sz)
+	_, err := mrand.Read(b)
+	if err != nil {
+		t.Fatal("failed to generate random bytes")
+	}
+	return b
+}
+
 func TestEncryptKeccak(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
