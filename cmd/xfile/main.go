@@ -22,6 +22,7 @@ func help() {
 	fmt.Println("\t 0 encryption level")
 	fmt.Println("\t 1 encryption level")
 	fmt.Println("\t 2 encryption level")
+	fmt.Println("\t 3 encryption level")
 	fmt.Println("\t 4 encryption level")
 	fmt.Println("\t h help")
 }
@@ -94,7 +95,10 @@ func crypt(key []byte, data []byte, encrypt bool, level int) ([]byte, error) {
 		crutils.EncryptInplaceLevelOne(key, data, encrypt)
 		return data, nil
 	} else if level == 2 {
-		return crutils.EncryptLevelTwo(key, data, encrypt)
+		return crutils.EncryptLevelThree(key, data, encrypt)
+	} else if level == 3 {
+		data = crutils.EncryptLevelTwo(key, data, encrypt)
+		return data, nil
 	} else if level == 4 {
 		return crutils.EncryptLevelFour(key, data, encrypt)
 	} else {

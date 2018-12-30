@@ -423,7 +423,7 @@ func FileSaveSteg(arg []string) {
 		return
 	}
 
-	encryptedSteg, err := crutils.EncryptLevelTwo(keySteg, stegContent, true)
+	encryptedSteg, err := crutils.EncryptLevelThree(keySteg, stegContent, true)
 	if err != nil {
 		fmt.Printf(">>> Error encrypting steg: %s\n", err)
 		return
@@ -504,7 +504,7 @@ func stegDecrypt(arg []string) bool {
 		return false
 	}
 
-	b, err := crutils.EncryptLevelTwo(key, content, false)
+	b, err := crutils.EncryptLevelThree(key, content, false)
 	if err != nil {
 		fmt.Printf(">>> Error: %s\n", err)
 		return false

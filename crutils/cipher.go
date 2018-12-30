@@ -76,7 +76,7 @@ func EncryptInplaceLevelZero(key []byte, data []byte) {
 	EncryptInplaceKeccak(key, data)
 }
 
-// keccak + rcx, no salt, no padding.
+// keccak + rcx, no salt, no spacing/padding.
 // rcx is a block cipher with block size of RcxIterations * 2.
 // in case of encryption, keccak should be applied before rcx,
 // in which case it will contribute to the security of the block cipher.
@@ -90,7 +90,22 @@ func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool) {
 	}
 }
 
-func EncryptLevelTwo(key []byte, data []byte, encrypt bool) ([]byte, error) {
+// spacing is like a hidden salt
+func EncryptLevelTwo(key []byte, data []byte, encrypt bool) []byte {
+	if encrypt { // encryption
+		data = addSpacing(data, true)
+	}
+
+	EncryptInplaceLevelOne(key, data, encrypt)
+
+	if !encrypt { // decryption
+		data, _ = splitSpacing(data, true)
+	}
+
+	return data
+}
+
+func EncryptLevelThree(key []byte, data []byte, encrypt bool) ([]byte, error) {
 	return EncryptWithSalt(key, data, encrypt, SaltSize)
 }
 
@@ -98,6 +113,7 @@ func EncryptLevelFour(key []byte, data []byte, encrypt bool) ([]byte, error) {
 	return EncryptWithSaltAndSpacing(key, data, encrypt)
 }
 
+// with padding, which allows to conceal the content size
 func EncryptLevelFive(key []byte, data []byte, encrypt bool) ([]byte, error) {
 	if encrypt {
 		data = addPadding(data, true)

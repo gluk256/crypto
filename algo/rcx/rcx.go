@@ -64,7 +64,7 @@ func (x *RCX) encryptCascade(d []byte, iterations int) {
 	}
 }
 
-// this func expects the number of iterations to be odd
+// this func expects the number of iterations to be odd, decryption == encryption
 func EncryptInplace(key []byte, d []byte, iterations int, encrypt bool) {
 	var x RCX
 	x.InitKey(key)
