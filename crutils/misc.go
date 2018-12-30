@@ -62,7 +62,7 @@ func HexDecode(src []byte) ([]byte, error) {
 	return dst, nil
 }
 
-func addSpacing(data []byte, destroy bool) []byte {
+func addSpacing(data []byte) []byte {
 	b := make([]byte, 0, len(data)*2)
 	rnd := make([]byte, len(data))
 	Rand(rnd)
@@ -70,13 +70,11 @@ func addSpacing(data []byte, destroy bool) []byte {
 		b = append(b, data[i])
 		b = append(b, rnd[i])
 	}
-	if destroy {
-		AnnihilateData(data)
-	}
+	AnnihilateData(data)
 	return b
 }
 
-func splitSpacing(data []byte, destroy bool) ([]byte, []byte) {
+func splitSpacing(data []byte) ([]byte, []byte) {
 	b := make([]byte, 0, len(data)/2)
 	s := make([]byte, 0, len(data)/2)
 	for i := 0; i < len(data); i += 2 {
@@ -85,9 +83,7 @@ func splitSpacing(data []byte, destroy bool) ([]byte, []byte) {
 			s = append(s, data[i+1])
 		}
 	}
-	if destroy {
-		AnnihilateData(data)
-	}
+	AnnihilateData(data)
 	return b, s
 }
 

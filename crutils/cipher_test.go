@@ -363,3 +363,28 @@ func TestEncryptionSteg(t *testing.T) {
 		}
 	}
 }
+
+func TestPadding(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	var b, s, zero []byte
+	zero = make([]byte, 1024*8)
+	b = generateRandomBytes(t)
+	b = addSpacing(b)
+	b, s = splitSpacing(b)
+	ok := primitives.IsDeepNotEqual(s, zero, len(s))
+	if !ok {
+		t.Fatalf("spacing failed with seed %d", seed)
+	}
+
+	sz := len(b)
+	p, err := addPadding(b, 1024, false)
+	if err != nil {
+		t.Fatalf("weird error with seed %d", seed)
+	}
+	ok = primitives.IsDeepNotEqual(p[sz:1024], zero, 1024-sz)
+	if !ok {
+		t.Fatalf("padding failed with seed %d", seed)
+	}
+}
