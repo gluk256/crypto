@@ -207,17 +207,6 @@ func TestCascade(t *testing.T) {
 	}
 }
 
-func BenchmarkRCX(b *testing.B) {
-	key := "7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e"
-	y := make([]byte, 1000000)
-	var cipher RCX
-	cipher.InitKey([]byte(key))
-
-	for i := 0; i < b.N; i++ {
-		cipher.encryptCascade(y, iterations)
-	}
-}
-
 func TestAvalanche(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)

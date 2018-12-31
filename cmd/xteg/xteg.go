@@ -91,12 +91,12 @@ func crypt(key []byte, data []byte, encrypt bool, level int) ([]byte, error) {
 		crutils.EncryptInplaceLevelZero(key, data)
 		return data, nil
 	} else if level == 1 {
-		crutils.EncryptInplaceLevelOne(key, data, encrypt)
+		crutils.EncryptInplaceLevelOne(key, data, encrypt, false)
 		return data, nil
 	} else if level == 2 {
-		return crutils.EncryptLevelThree(key, data, encrypt)
+		return crutils.EncryptLevelThree(key, data, encrypt, false)
 	} else if level == 4 {
-		return crutils.EncryptLevelFour(key, data, encrypt)
+		return crutils.EncryptLevelFour(key, data, encrypt, false)
 	} else {
 		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
 	}

@@ -423,12 +423,12 @@ func FileSaveSteg(arg []string) {
 		return
 	}
 
-	encryptedSteg, err := crutils.EncryptLevelThree(keySteg, stegContent, true)
+	encryptedSteg, err := crutils.EncryptLevelFive(keySteg, stegContent, true, false)
 	if err != nil {
 		fmt.Printf(">>> Error encrypting steg: %s\n", err)
 		return
 	}
-	res, err := crutils.EncryptSteg(keyPlain, plainContent, encryptedSteg)
+	res, err := crutils.EncryptSteg(keyPlain, plainContent, encryptedSteg, false)
 	if err != nil {
 		fmt.Printf(">>> Error encrypting cur: %s\n", err)
 		return
@@ -450,7 +450,7 @@ func encryptData(args []string, d []byte) []byte {
 		fmt.Println(">>> Error: wrong key")
 		return nil
 	}
-	res, err := crutils.EncryptLevelFour(key, d, true)
+	res, err := crutils.EncryptLevelFive(key, d, true, false)
 	if err != nil {
 		fmt.Printf(">>> Error: %s\n", err)
 		return nil
@@ -474,7 +474,7 @@ func contentDecrypt(arg []string) bool {
 		return false
 	}
 
-	b, s, err := crutils.DecryptSteg(key, content)
+	b, s, err := crutils.DecryptSteg(key, content, false)
 	if err != nil {
 		fmt.Printf(">>> Error: %s\n", err)
 		return false
@@ -495,8 +495,8 @@ func stegDecrypt(arg []string) bool {
 		hide = strings.Contains(arg[1], "h")
 	}
 
-	content := make([]byte, len(items[cur].pad))
-	copy(content, items[cur].pad)
+	stegContent := make([]byte, len(items[cur].pad))
+	copy(stegContent, items[cur].pad)
 
 	key := getPassword(!insecure, false)
 	if len(key) == 0 {
@@ -504,7 +504,7 @@ func stegDecrypt(arg []string) bool {
 		return false
 	}
 
-	b, err := crutils.EncryptLevelThree(key, content, false)
+	b, err := crutils.DecryptStegContentOfUnknownSize(key, stegContent, false)
 	if err != nil {
 		fmt.Printf(">>> Error: %s\n", err)
 		return false

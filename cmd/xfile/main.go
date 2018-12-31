@@ -47,22 +47,22 @@ func getEncryptionLevel(flags string) int {
 	return 5 // default level 5
 }
 
-func crypt(key []byte, data []byte, encrypt bool, level int) ([]byte, error) {
+func crypt(key []byte, data []byte, encrypt bool, quick bool, level int) ([]byte, error) {
 	if level == 0 {
 		crutils.EncryptInplaceLevelZero(key, data)
 		return data, nil
 	} else if level == 1 {
-		crutils.EncryptInplaceLevelOne(key, data, encrypt)
+		crutils.EncryptInplaceLevelOne(key, data, encrypt, quick)
 		return data, nil
 	} else if level == 2 {
-		data = crutils.EncryptLevelTwo(key, data, encrypt)
+		data = crutils.EncryptLevelTwo(key, data, encrypt, quick)
 		return data, nil
 	} else if level == 3 {
-		return crutils.EncryptLevelThree(key, data, encrypt)
+		return crutils.EncryptLevelThree(key, data, encrypt, quick)
 	} else if level == 4 {
-		return crutils.EncryptLevelFour(key, data, encrypt)
+		return crutils.EncryptLevelFour(key, data, encrypt, quick)
 	} else if level == 5 {
-		return crutils.EncryptLevelFive(key, data, encrypt)
+		return crutils.EncryptLevelFive(key, data, encrypt, quick)
 	} else {
 		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
 	}
@@ -113,7 +113,8 @@ func main() {
 		crutils.ProveDestruction()
 	}()
 
-	res, err := crypt(key, data, encrypt, level)
+	quick := strings.Contains(flags, "q")
+	res, err := crypt(key, data, encrypt, quick, level)
 	if err != nil {
 		fmt.Printf("Error encrypting/decrypting: %s\n", err.Error())
 		return

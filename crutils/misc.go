@@ -93,7 +93,7 @@ func addPadding(data []byte, newSize int, mark bool) ([]byte, error) {
 	if newSize <= 0 {
 		newSize = primitives.FindNextPowerOfTwo(sz + 4)
 	} else if newSize < sz + 4 {
-		return data, errors.New("padding failed: data is too bit")
+		return data, errors.New("padding failed: new size is too small")
 	}
 	rnd := make([]byte, newSize)
 	Rand(rnd)
