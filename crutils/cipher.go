@@ -19,6 +19,22 @@ const (
 	EncryptedSizeDiff = AesEncryptedSizeDiff + SaltSize
 	RcxIterationsDefault = 511
 	RcxIterationsQuick = 37
+	DefaultRollover = 1024 * 256
+)
+
+const (
+	offset = 256
+	begK1 = offset
+	endK1 = begK1 + offset
+	begK2 = endK1 + offset
+	endK2 = begK2 + offset
+	begRcxKey = endK2 + offset
+	endRcxKey = begRcxKey + offset
+	begAesKey = endRcxKey + offset
+	endAesKey = begAesKey + AesKeySize
+	begAesSalt = endAesKey + offset
+	endAesSalt = begAesSalt + AesSaltSize
+	keyHolderSize = endAesSalt
 )
 
 func EncryptInplaceKeccak(key []byte, data []byte) {
@@ -67,21 +83,18 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	return decrypted, err
 }
 
-// rc4 + keccak, xor only, no salt, no spacing/padding, decryption == encryption
+// keccak + rc4, xor only, no salt, no spacing/padding
+// len(encrypted) == len(plaintext)
 func EncryptInplaceLevelZero(key []byte, data []byte) {
-	dummy := make([]byte, 1024*216)
-	var rc4 rcx.RC4
-	rc4.InitKey(key)
-	rc4.XorInplace(dummy) // roll rc4 forward
-	rc4.XorInplace(data)
-
+	rcx.EncryptInplaceRC4(key, data, DefaultRollover)
 	EncryptInplaceKeccak(key, data)
 }
 
 // keccak + rcx, no salt, no spacing/padding.
 // this is a block cipher with block size of RcxIterations * 2.
-// in case of encryption, keccak should be applied before rcx,
+// keccak should be applied before rcx (in case of encryption),
 // in which case it will contribute to the security of the block cipher.
+// len(encrypted) == len(plaintext)
 func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool, quick bool) {
 	iterations := RcxIterationsDefault
 	if quick {
@@ -90,14 +103,15 @@ func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool, quick bool) {
 
 	if encrypt {
 		EncryptInplaceKeccak(key, data)
-		rcx.EncryptInplace(key, data, iterations, encrypt)
+		rcx.EncryptInplaceRCX(key, data, iterations, encrypt)
 	} else {
-		rcx.EncryptInplace(key, data, iterations, encrypt)
+		rcx.EncryptInplaceRCX(key, data, iterations, encrypt)
 		DecryptInplaceKeccak(key, data)
 	}
 }
 
-// spacing is like a hidden salt, since level one encryption is a block cipher
+// keccak + rcx with randomized spacing, no salt.
+// randomized spacing significantly enhances the underlying block cipher
 func EncryptLevelTwo(key []byte, data []byte, encrypt bool, quick bool) []byte {
 	if encrypt { // encryption
 		data = addSpacing(data)
@@ -112,50 +126,11 @@ func EncryptLevelTwo(key []byte, data []byte, encrypt bool, quick bool) []byte {
 	return data
 }
 
-func EncryptLevelThree(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	return EncryptWithSalt(key, data, encrypt, quick)
-}
-
-func EncryptLevelFour(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	return EncryptWithSaltAndSpacing(key, data, encrypt, quick)
-}
-
-// with padding, which allows to conceal the content size
-func EncryptLevelFive(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	if encrypt {
-		data, _ = addPadding(data, 0, true)
-	}
-	res, err := EncryptWithSaltAndSpacing(key, data, encrypt, quick)
-	if !encrypt {
-		res, err = removePadding(res)
-	}
-	return res, err
-}
-
-// keccak + rxc + aes + keccak, with salt, no spacing, no padding
-func EncryptWithSalt(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	const (
-		offset = 256
-		begK1 = offset
-		endK1 = begK1 + offset
-		begK2 = endK1 + offset
-		endK2 = begK2 + offset
-		begRcxKey = endK2 + offset
-		endRcxKey = begRcxKey + offset
-		begAesKey = endRcxKey + offset
-		endAesKey = begAesKey + AesKeySize
-		begAesSalt = endAesKey + offset
-		endAesSalt = begAesSalt + AesSaltSize
-		keyHolderSize = endAesSalt
-	)
-
-	iterations := RcxIterationsDefault
-	if quick {
-		iterations = RcxIterationsQuick
-	}
-
+// keccak + rc4 + aes + keccak, xor only, with salt, no spacing/padding, very quick
+func EncryptInplaceLevelThree(key []byte, data []byte, encrypt bool) ([]byte, error) {
 	var res, salt []byte
 	var err error
+
 	if encrypt {
 		salt = make([]byte, SaltSize)
 		err = StochasticRand(salt)
@@ -173,7 +148,7 @@ func EncryptWithSalt(key []byte, data []byte, encrypt bool, quick bool) ([]byte,
 
 	if encrypt {
 		EncryptInplaceKeccak(keyholder[begK1:endK1], data)
-		rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], data, iterations, encrypt)
+		rcx.EncryptInplaceRC4(keyholder[begRcxKey:endRcxKey], data, DefaultRollover)
 		res, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
 		if err == nil {
 			EncryptInplaceKeccak(keyholder[begK2:endK2], res)
@@ -184,7 +159,7 @@ func EncryptWithSalt(key []byte, data []byte, encrypt bool, quick bool) ([]byte,
 		EncryptInplaceKeccak(keyholder[begK2:endK2], data)
 		res, err = DecryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
 		if err == nil {
-			rcx.EncryptInplace(keyholder[begRcxKey:endRcxKey], res, iterations, encrypt)
+			rcx.EncryptInplaceRC4(keyholder[begRcxKey:endRcxKey], res, DefaultRollover)
 			DecryptInplaceKeccak(keyholder[begK1:endK1], res)
 		}
 	}
@@ -194,7 +169,78 @@ func EncryptWithSalt(key []byte, data []byte, encrypt bool, quick bool) ([]byte,
 	return res, err
 }
 
-// spacing is like a hidden salt, and hence more secure
+// keccak + rcx + aes + keccak, with salt, no spacing, no padding
+func EncryptLevelFour(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
+	return EncryptWithSalt(key, data, encrypt, quick)
+}
+
+// keccak + rcx + aes + keccak, with salt and spacing, no padding.
+// randomized spacing significantly enhances the underlying block cipher.
+func EncryptLevelFive(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
+	return EncryptWithSaltAndSpacing(key, data, encrypt, quick)
+}
+
+// keccak + rcx + aes + keccak, with salt, spacing and padding.
+// padding allows to conceal the content size.
+func EncryptLevelSix(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
+	if encrypt {
+		data, _ = addPadding(data, 0, true)
+	}
+	res, err := EncryptWithSaltAndSpacing(key, data, encrypt, quick)
+	if !encrypt {
+		res, err = removePadding(res)
+	}
+	return res, err
+}
+
+// keccak + rcx + aes + keccak, with salt, no spacing, no padding
+func EncryptWithSalt(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
+	var res, salt []byte
+	var err error
+	iterations := RcxIterationsDefault
+	if quick {
+		iterations = RcxIterationsQuick
+	}
+
+	if encrypt {
+		salt = make([]byte, SaltSize)
+		err = StochasticRand(salt)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Stochastic rand failed: %s", err.Error()))
+		}
+	} else {
+		salt = data[len(data)-SaltSize:]
+	}
+
+	fullkey := make([]byte, 0, SaltSize + len(key))
+	fullkey = append(fullkey, salt...)
+	fullkey = append(fullkey, key...)
+	keyholder := keccak.Digest(fullkey, keyHolderSize)
+
+	if encrypt {
+		EncryptInplaceKeccak(keyholder[begK1:endK1], data)
+		rcx.EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data, iterations, encrypt)
+		res, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
+		if err == nil {
+			EncryptInplaceKeccak(keyholder[begK2:endK2], res)
+			res = append(res, salt...)
+		}
+	} else {
+		data = data[:len(data)-SaltSize]
+		EncryptInplaceKeccak(keyholder[begK2:endK2], data)
+		res, err = DecryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
+		if err == nil {
+			rcx.EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], res, iterations, encrypt)
+			DecryptInplaceKeccak(keyholder[begK1:endK1], res)
+		}
+	}
+
+	AnnihilateData(fullkey)
+	AnnihilateData(keyholder)
+	return res, err
+}
+
+// randomized spacing significantly enhances the underlying block cipher
 func EncryptWithSaltAndSpacing(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
 	if encrypt { // encryption
 		data = addSpacing(data)

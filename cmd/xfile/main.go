@@ -12,21 +12,25 @@ import (
 )
 
 func help() {
-	fmt.Println("xfile encrypts/decrypts a file (encryption level one)")
+	fmt.Println("xfile encrypts/decrypts a file")
 	fmt.Println("USAGE: xfile flags srcFile [dstFile]")
 	fmt.Println("\t e encrypt")
 	fmt.Println("\t d decrypt")
 	fmt.Println("\t r random password")
 	fmt.Println("\t s secure password input")
 	fmt.Println("\t x extra secure password input")
-	fmt.Println("\t 0 rc4 + keccak, xor only, no salt, no spacing/padding, decryption == encryption")
-	fmt.Println("\t 1 block cipher (keccak + rcx), no salt, no spacing/padding")
-	fmt.Println("\t 2 same as l.1 with spacing (hidden salt)")
-	fmt.Println("\t 3 keccak + rxc + aes + keccak, with salt, no spacing/padding")
-	fmt.Println("\t 4 same as l.3 with spacing")
-	fmt.Println("\t 5 same as l.3 with padding and spacing (default level)")
-	//fmt.Println("\t 6 decrypt data of unknown size (same algo as in l.5)")
-	//fmt.Println("\t 7 encrypt/decrypt with possible steganographic content")
+	fmt.Println("\t q quick encryption for block ciphers (for huge files, less secure)")
+	fmt.Println("\t p print decrypted content as text, don't save")
+	fmt.Println("\t g interactive grep (print specific text lines only)")
+	fmt.Println("\t G interactive grep with secure input")
+	fmt.Println("\t 0 keccak + rc4, no salt, no spacing/padding (xor only)")
+	fmt.Println("\t 1 keccak + rcx, no salt, no spacing/padding (block cipher)")
+	fmt.Println("\t 2 keccak + rcx, with spacing, no salt, no padding (block cipher)")
+	fmt.Println("\t 3 keccak + rc4 + aes + keccak, with salt, very quick (xor only)")
+	fmt.Println("\t 4 keccak + rcx + aes + keccak, with salt (block cipher)")
+	fmt.Println("\t 5 keccak + rcx + aes + keccak, with salt and spacing")
+	fmt.Println("\t 6 keccak + rcx + aes + keccak, with salt, spacing and padding")
+	fmt.Println("\t 9 decrypt data of unknown size (encrypted with default level)")
 	fmt.Println("\t h help")
 }
 
@@ -43,8 +47,12 @@ func getEncryptionLevel(flags string) int {
 		return 4
 	} else if strings.Contains(flags, "5") {
 		return 5
+	} else if strings.Contains(flags, "6") {
+		return 6
+	} else if strings.Contains(flags, "9") {
+		return 9
 	}
-	return 5 // default level 5
+	return 6 // default level
 }
 
 func crypt(key []byte, data []byte, encrypt bool, quick bool, level int) ([]byte, error) {
@@ -58,11 +66,15 @@ func crypt(key []byte, data []byte, encrypt bool, quick bool, level int) ([]byte
 		data = crutils.EncryptLevelTwo(key, data, encrypt, quick)
 		return data, nil
 	} else if level == 3 {
-		return crutils.EncryptLevelThree(key, data, encrypt, quick)
+		return crutils.EncryptInplaceLevelThree(key, data, encrypt)
 	} else if level == 4 {
 		return crutils.EncryptLevelFour(key, data, encrypt, quick)
 	} else if level == 5 {
 		return crutils.EncryptLevelFive(key, data, encrypt, quick)
+	} else if level == 6 {
+		return crutils.EncryptLevelSix(key, data, encrypt, quick)
+	} else if level == 9 {
+		return crutils.DecryptStegContentOfUnknownSize(key, data, quick)
 	} else {
 		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
 	}
@@ -108,6 +120,11 @@ func main() {
 
 	data := loadFile(srcFile)
 	key := getPassword(flags)
+	if len(key) < 2 {
+		fmt.Println(">>> Error: password too short")
+		return
+	}
+
 	defer func() {
 		crutils.AnnihilateData(key)
 		crutils.ProveDestruction()
@@ -120,13 +137,19 @@ func main() {
 		return
 	}
 
-	if len(os.Args) > 3 {
-		dstFile = os.Args[3]
+	if strings.Contains(flags, "g") || strings.Contains(flags, "G") {
+		runGrep(flags, res)
+	} else if strings.Contains(flags, "p") {
+		fmt.Print(string(res))
+		fmt.Println()
 	} else {
-		dstFile = getFileName()
+		if len(os.Args) > 3 {
+			dstFile = os.Args[3]
+		} else {
+			dstFile = getFileName()
+		}
+		saveData(dstFile, res)
 	}
-
-	saveData(dstFile, res)
 }
 
 func loadFile(fname string) []byte {
@@ -177,3 +200,29 @@ func getFileName() string {
 	return filename
 }
 
+func runGrep(flags string, content []byte) {
+	lines := strings.Split(string(content), "\n")
+	var s []byte
+	secure := strings.Contains(flags, "G")
+	for {
+		fmt.Print("please enter text: ")
+		if secure {
+			s = terminal.SecureInput(false)
+		} else {
+			s = terminal.PasswordModeInput()
+		}
+		if string(s) == "q" {
+			break
+		}
+		found := false
+		for _, ln := range lines {
+			if strings.Contains(ln, string(s)) {
+				fmt.Println(ln)
+				found = true
+			}
+		}
+		if !found {
+			fmt.Println(">>> Requested text not found")
+		}
+	}
+}

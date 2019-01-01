@@ -1,3 +1,5 @@
+package wtf // todo: delete this
+/*
 package main
 
 import (
@@ -12,18 +14,72 @@ import (
 )
 
 func help() {
-	fmt.Println("xteg encrypts/decrypts a file (encryption level one)")
-	fmt.Println("USAGE: xfile flags srcFile [dstFile]")
+	fmt.Println("xteg encrypts/decrypts a file with possible steganographic content")
+	fmt.Println("wrapper file's encryption level is six")
+	fmt.Println("USAGE: xfile flags srcFile")
 	fmt.Println("\t e encrypt")
 	fmt.Println("\t d decrypt")
 	fmt.Println("\t r random password")
 	fmt.Println("\t s secure password input")
 	fmt.Println("\t x extra secure password input")
-	fmt.Println("\t 1 encryption level")
-	fmt.Println("\t 2 encryption level")
-	fmt.Println("\t 3 encryption level")
-	fmt.Println("\t 4 encryption level")
+	fmt.Println("\t q quick encryption (for huge files, less secure)")
+	fmt.Println("\t p print steganographic content, don't save")
+	fmt.Println("\t g interactive grep (print specific lines only)")
+	fmt.Println("\t 0 keccak + rc4 (xor only), no salt, no spacing/padding")
+	fmt.Println("\t 1 keccak + rcx (block cipher), no salt, no spacing/padding")
+	fmt.Println("\t 2 keccak + rcx (block cipher), with spacing, no salt, no padding")
+	fmt.Println("\t 3 keccak + rc4 + aes + keccak (xor only), with salt, very quick")
+	fmt.Println("\t 4 keccak + rcx + aes + keccak (block cipher), with salt")
+	fmt.Println("\t 5 keccak + rcx + aes + keccak, with salt and spacing")
+	fmt.Println("\t 6 keccak + rcx + aes + keccak, with salt, spacing and padding")
+	fmt.Println("\t 9 decrypt data of unknown size (encrypted with default level")
 	fmt.Println("\t h help")
+}
+
+func getEncryptionLevel(flags string) int {
+	if strings.Contains(flags, "0") {
+		return 0
+	} else if strings.Contains(flags, "1") {
+		return 1
+	} else if strings.Contains(flags, "2") {
+		return 2
+	} else if strings.Contains(flags, "3") {
+		return 3
+	} else if strings.Contains(flags, "4") {
+		return 4
+	} else if strings.Contains(flags, "5") {
+		return 5
+	} else if strings.Contains(flags, "6") {
+		return 6
+	} else if strings.Contains(flags, "9") {
+		return 9
+	}
+	return 6 // default level
+}
+
+func crypt(key []byte, data []byte, encrypt bool, quick bool, level int) ([]byte, error) {
+	if level == 0 {
+		crutils.EncryptInplaceLevelZero(key, data)
+		return data, nil
+	} else if level == 1 {
+		crutils.EncryptInplaceLevelOne(key, data, encrypt, quick)
+		return data, nil
+	} else if level == 2 {
+		data = crutils.EncryptLevelTwo(key, data, encrypt, quick)
+		return data, nil
+	} else if level == 3 {
+		return crutils.EncryptInplaceLevelThree(key, data, encrypt)
+	} else if level == 4 {
+		return crutils.EncryptLevelFour(key, data, encrypt, quick)
+	} else if level == 5 {
+		return crutils.EncryptLevelFive(key, data, encrypt, quick)
+	} else if level == 6 {
+		return crutils.EncryptLevelSix(key, data, encrypt, quick)
+	} else if level == 9 {
+		return crutils.DecryptStegContentOfUnknownSize(key, data, quick)
+	} else {
+		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
+	}
 }
 
 func getPassword(flags string) []byte {
@@ -71,7 +127,8 @@ func main() {
 		crutils.ProveDestruction()
 	}()
 
-	res, err := crypt(key, data, encrypt, level)
+	quick := strings.Contains(flags, "q")
+	res, err := crypt(key, data, encrypt, quick, level)
 	if err != nil {
 		fmt.Printf("Error encrypting/decrypting: %s\n", err.Error())
 		return
@@ -84,37 +141,6 @@ func main() {
 	}
 
 	saveData(dstFile, res)
-}
-
-func crypt(key []byte, data []byte, encrypt bool, level int) ([]byte, error) {
-	if level == 0 {
-		crutils.EncryptInplaceLevelZero(key, data)
-		return data, nil
-	} else if level == 1 {
-		crutils.EncryptInplaceLevelOne(key, data, encrypt, false)
-		return data, nil
-	} else if level == 2 {
-		return crutils.EncryptLevelThree(key, data, encrypt, false)
-	} else if level == 4 {
-		return crutils.EncryptLevelFour(key, data, encrypt, false)
-	} else {
-		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
-	}
-}
-
-func getEncryptionLevel(flags string) int {
-	if strings.Contains(flags, "0") {
-		return 0
-	} else if strings.Contains(flags, "1") {
-		return 1
-	} else if strings.Contains(flags, "2") {
-		return 2
-	} else if strings.Contains(flags, "3") {
-		return 3
-	} else if strings.Contains(flags, "4") {
-		return 4
-	}
-	return 2 // default level 2
 }
 
 func loadFile(fname string) []byte {
@@ -164,4 +190,4 @@ func getFileName() string {
 	}
 	return filename
 }
-
+*/

@@ -1,5 +1,7 @@
 package rcx
 
+// this package does not import any dependencies
+
 type RC4 struct {
 	s [256]byte
 	i, j byte
@@ -28,4 +30,12 @@ func (c *RC4) XorInplace(data []byte) {
 		x := c.s[c.i] + c.s[c.j]
 		data[n] ^= c.s[x]
 	}
+}
+
+func EncryptInplaceRC4(key []byte, data []byte, rollover int) {
+	dummy := make([]byte, rollover)
+	var rc4 RC4
+	rc4.InitKey(key)
+	rc4.XorInplace(dummy) // roll rc4 forward
+	rc4.XorInplace(data)
 }

@@ -101,6 +101,30 @@ func TestEncryptionRC4(t *testing.T) {
 	}
 }
 
+func TestRollover(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 64; i++ {
+		key := generateRandomBytes(t, false)
+		x := generateRandomBytes(t, false)
+		y := make([]byte, len(x))
+		copy(y, x)
+
+		rollover := mrand.Int() % 16000
+		EncryptInplaceRC4(key, y, rollover)
+		ok := primitives.IsDeepNotEqual(x, y, len(x))
+		if !ok {
+			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
+		}
+
+		EncryptInplaceRC4(key, y, rollover)
+		if !bytes.Equal(x, y) {
+			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
+		}
+	}
+}
+
 func TestConversion(t *testing.T) {
 	a := byte(0xad)
 	b := byte(0xde)
@@ -249,7 +273,7 @@ func TestEncryptionRCX(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		EncryptInplace(key, y, iterations, true)
+		EncryptInplaceRCX(key, y, iterations, true)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -258,7 +282,7 @@ func TestEncryptionRCX(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		EncryptInplace(key, y, iterations, false)
+		EncryptInplaceRCX(key, y, iterations, false)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d\n%x\n%x", i, seed, x, y)
 		}
@@ -284,7 +308,7 @@ func TestEncryptionRcxZero(t *testing.T) {
 		cipher.XorInplace(arr)
 		cipher.XorInplace(z)
 
-		EncryptInplace(key, y, 0, true)
+		EncryptInplaceRCX(key, y, 0, true)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
