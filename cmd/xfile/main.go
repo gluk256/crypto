@@ -33,8 +33,8 @@ func help() {
 	fmt.Println("\t 4 keccak + rcx + aes + keccak, with salt (block cipher)")
 	fmt.Println("\t 5 keccak + rcx + aes + keccak, with salt and spacing")
 	fmt.Println("\t 6 keccak + rcx + aes + keccak, with salt, spacing and padding")
-	fmt.Println("\t 8 encrypt/decrypt with possible steganographic content")
-	fmt.Println("\t 9 decrypt data of unknown size (encrypted with default level)")
+	fmt.Println("\t 8 decrypt data of unknown size (encrypted with default level)")
+	fmt.Println("\t 9 encrypt/decrypt with possible steganographic content")
 	fmt.Println("\t h help")
 }
 
@@ -80,13 +80,13 @@ func crypt(key []byte, data []byte, encrypt bool, quick bool, level int) ([]byte
 	} else if level == 6 {
 		return crutils.EncryptLevelSix(key, data, encrypt, quick)
 	} else if level == 8 {
+		return crutils.DecryptStegContentOfUnknownSize(key, data, quick)
+	} else if level == 9 {
 		if encrypt {
 			return crutils.EncryptSteg(key, data, stegContent, quick)
 		} else {
 			return stegDecrypt(key, data, quick)
 		}
-	} else if level == 9 {
-		return crutils.DecryptStegContentOfUnknownSize(key, data, quick)
 	} else {
 		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
 	}
@@ -165,7 +165,7 @@ func main() {
 	}
 
 	data := loadFile(srcFile) // calls os.Exit on error
-	if strings.Contains(flags, "8") && strings.Contains(flags, "e") {
+	if strings.Contains(flags, "9") && strings.Contains(flags, "e") {
 		loadStegContent(data) // calls os.Exit on error
 	}
 
