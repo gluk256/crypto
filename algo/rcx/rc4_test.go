@@ -1,9 +1,9 @@
 package rcx
 
 import (
+	"bytes"
 	"encoding/hex"
 	"testing"
-	"bytes"
 	"time"
 	mrand "math/rand"
 
@@ -231,7 +231,7 @@ func TestCascade(t *testing.T) {
 	}
 }
 
-func TestAvalanche(t *testing.T) {
+func TestAvalancheRcx(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -259,6 +259,41 @@ func TestAvalanche(t *testing.T) {
 		ok := primitives.IsDeepNotEqual(x, y, len(x))
 		if !ok {
 			t.Fatalf("failed deep check, round %d with seed %d and len=%d", i, seed, len(x))
+		}
+	}
+}
+
+func TestAvalancheRC4(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 1024; i++ {
+		var done bool
+		var a, b RC4
+
+		key := generateRandomBytes(t, false)
+		a.InitKey(key)
+		b.InitKey(key)
+		k := byte(mrand.Int())
+		n := byte(mrand.Int())
+		if k == n {
+			n++
+		}
+		b.s[k], b.s[n] = b.s[n], b.s[k] // swap two random elements
+
+		// usually it takes no more than 3 iterations, but we allow 8
+		for j := 0; j < 8; j++ {
+			y := make([]byte, 256)
+			x := make([]byte, 256)
+			a.XorInplace(x)
+			b.XorInplace(y)
+			done = primitives.IsDeepNotEqual(x, y, len(x))
+			if done {
+				break
+			}
+		}
+		if !done {
+			t.Fatalf("failed with seed %d", seed)
 		}
 	}
 }
