@@ -106,18 +106,18 @@ func (d *Keccak512) Write(p []byte) {
 
 	for len(p) > 0 {
 		if len(d.buf) == 0 && len(p) >= Rate {
-			// The fast path; absorb a full "rate" bytes of input and apply the permutation.
+			// fast path: absorb a full "rate" bytes of input and apply the permutation
 			xorIn(d, p[:Rate])
 			p = p[Rate:]
 			keccakF1600(&d.a)
 		} else {
-			// The slow path; buffer the input until we can fill the sponge, and then xor it in.
-			todo := Rate - len(d.buf)
-			if todo > len(p) {
-				todo = len(p)
+			// slow path: buffer the input until we can fill the sponge, and then xor it in
+			leftover := Rate - len(d.buf)
+			if leftover > len(p) {
+				leftover = len(p)
 			}
-			d.buf = append(d.buf, p[:todo]...)
-			p = p[todo:]
+			d.buf = append(d.buf, p[:leftover]...)
+			p = p[leftover:]
 
 			// If the sponge is full, apply the permutation.
 			if len(d.buf) == Rate {
