@@ -33,7 +33,7 @@ func help() {
 	fmt.Println("\t 4 keccak + rcx + aes + keccak, with salt (block cipher)")
 	fmt.Println("\t 5 keccak + rcx + aes + keccak, with salt and spacing")
 	fmt.Println("\t 6 keccak + rcx + aes + keccak, with salt, spacing and padding")
-	fmt.Println("\t 8 decrypt data of unknown size (encrypted with default level)")
+	//fmt.Println("\t 8 decrypt data of unknown size (encrypted with default level)")
 	fmt.Println("\t 9 encrypt/decrypt with possible steganographic content")
 	fmt.Println("\t h help")
 }
@@ -53,8 +53,8 @@ func getEncryptionLevel(flags string) int {
 		return 5
 	} else if strings.Contains(flags, "6") {
 		return 6
-	} else if strings.Contains(flags, "8") {
-		return 8
+	//} else if strings.Contains(flags, "8") {
+	//	return 8
 	} else if strings.Contains(flags, "9") {
 		return 9
 	}
@@ -79,8 +79,8 @@ func crypt(key []byte, data []byte, encrypt bool, quick bool, level int) ([]byte
 		return crutils.EncryptLevelFive(key, data, encrypt, quick)
 	} else if level == 6 {
 		return crutils.EncryptLevelSix(key, data, encrypt, quick)
-	} else if level == 8 {
-		return crutils.DecryptStegContentOfUnknownSize(key, data, quick)
+	//} else if level == 8 {
+	//	return crutils.DecryptStegContentOfUnknownSize(key, data, quick)
 	} else if level == 9 {
 		if encrypt {
 			return crutils.EncryptSteg(key, data, stegContent, quick)
