@@ -9,6 +9,7 @@ import (
 
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
+	"github.com/gluk256/crypto/algo/primitives"
 )
 
 func help() {
@@ -19,6 +20,8 @@ func help() {
 	fmt.Println("\t r random password")
 	fmt.Println("\t s secure password input")
 	fmt.Println("\t x extra secure password input")
+	fmt.Println("\t S secure password input for steganographic content decryption")
+	fmt.Println("\t X extra secure password input for steganographic content decryption")
 	fmt.Println("\t q quick encryption for block ciphers (for huge files, less secure)")
 	fmt.Println("\t p print decrypted content as text, don't save")
 	fmt.Println("\t g interactive grep (print specific text lines only)")
@@ -30,6 +33,7 @@ func help() {
 	fmt.Println("\t 4 keccak + rcx + aes + keccak, with salt (block cipher)")
 	fmt.Println("\t 5 keccak + rcx + aes + keccak, with salt and spacing")
 	fmt.Println("\t 6 keccak + rcx + aes + keccak, with salt, spacing and padding")
+	fmt.Println("\t 8 encrypt/decrypt with possible steganographic content")
 	fmt.Println("\t 9 decrypt data of unknown size (encrypted with default level)")
 	fmt.Println("\t h help")
 }
@@ -49,6 +53,8 @@ func getEncryptionLevel(flags string) int {
 		return 5
 	} else if strings.Contains(flags, "6") {
 		return 6
+	} else if strings.Contains(flags, "8") {
+		return 8
 	} else if strings.Contains(flags, "9") {
 		return 9
 	}
@@ -73,11 +79,37 @@ func crypt(key []byte, data []byte, encrypt bool, quick bool, level int) ([]byte
 		return crutils.EncryptLevelFive(key, data, encrypt, quick)
 	} else if level == 6 {
 		return crutils.EncryptLevelSix(key, data, encrypt, quick)
+	} else if level == 8 {
+		if encrypt {
+			return crutils.EncryptSteg(key, data, stegContent, quick)
+		} else {
+			return stegDecrypt(key, data, quick)
+		}
 	} else if level == 9 {
 		return crutils.DecryptStegContentOfUnknownSize(key, data, quick)
 	} else {
 		return nil, errors.New(fmt.Sprintf("Unknown level %d", level))
 	}
+}
+
+func stegDecrypt(key []byte, data []byte, quick bool) ([]byte, error) {
+	_, steg, err := crutils.DecryptSteg(key, data, quick)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Print("please enter the password for steganographic content: ")
+	var keySteg []byte
+	if strings.Contains(os.Args[1], "S") {
+		keySteg = terminal.SecureInput(false)
+	} else if strings.Contains(os.Args[1], "X") {
+		keySteg = terminal.SecureInput(true)
+	} else {
+		keySteg = terminal.PasswordModeInput()
+	}
+
+	steg, err = crutils.DecryptStegContentOfUnknownSize(keySteg, steg, quick)
+	return steg, err
 }
 
 func getPassword(flags string) []byte {
@@ -98,13 +130,27 @@ func getPassword(flags string) []byte {
 	return res
 }
 
+var stegContent []byte
+
+func loadStegContent(plainContent []byte) {
+	fmt.Print("please enter the file name of steganographic content: ")
+	filename := terminal.PlainTextInput()
+	stegContent = loadFile(string(filename))
+	plainSize := primitives.FindNextPowerOfTwo(len(plainContent))
+	if plainSize < len(stegContent) + 4 {
+		fmt.Printf(">>> Error: plain and steg sizes mismatch [%d vs. %d]\n ", plainSize, len(stegContent) + 4)
+		os.Exit(0)
+	}
+}
+
 func main() {
+	var dstFile string
+	var err error
 	if len(os.Args) < 3 {
 		help()
 		return
 	}
 
-	var dstFile string
 	flags := os.Args[1]
 	srcFile := os.Args[2]
 	if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
@@ -118,13 +164,16 @@ func main() {
 		encrypt = false
 	}
 
-	data := loadFile(srcFile)
+	data := loadFile(srcFile) // calls os.Exit on error
+	if strings.Contains(flags, "8") && strings.Contains(flags, "e") {
+		loadStegContent(data) // calls os.Exit on error
+	}
+
 	key := getPassword(flags)
 	if len(key) < 2 {
 		fmt.Println(">>> Error: password too short")
 		return
 	}
-
 	defer func() {
 		crutils.AnnihilateData(key)
 		crutils.ProveDestruction()
@@ -132,24 +181,27 @@ func main() {
 
 	quick := strings.Contains(flags, "q")
 	res, err := crypt(key, data, encrypt, quick, level)
+	defer crutils.AnnihilateData(res)
 	if err != nil {
 		fmt.Printf("Error encrypting/decrypting: %s\n", err.Error())
 		return
 	}
 
-	if strings.Contains(flags, "g") || strings.Contains(flags, "G") {
-		runGrep(flags, res)
-	} else if strings.Contains(flags, "p") {
-		fmt.Print(string(res))
-		fmt.Println()
-	} else {
-		if len(os.Args) > 3 {
-			dstFile = os.Args[3]
-		} else {
-			dstFile = getFileName()
+	if !encrypt { // in case of decryption
+		if strings.Contains(flags, "g") || strings.Contains(flags, "G") {
+			runGrep(flags, res)
+			return
+		} else if strings.Contains(flags, "p") {
+			fmt.Print(string(res))
+			fmt.Println()
+			return
 		}
-		saveData(dstFile, res)
 	}
+
+	if len(os.Args) > 3 {
+		dstFile = os.Args[3]
+	}
+	saveData(dstFile, res)
 }
 
 func loadFile(fname string) []byte {
@@ -165,6 +217,9 @@ func saveData(filename string, data []byte) {
 	if len(data) == 0 {
 		fmt.Println("Error: content is absent")
 		return
+	}
+	if len(filename) == 0 {
+		filename = getFileName()
 	}
 
 	const ntries = 5
