@@ -38,8 +38,8 @@ func StochasticRand(dst []byte) error {
 		mathrand := make([]byte, len(dst))
 		_, err = mrand.Read(mathrand)
 		primitives.XorInplace(dst, mathrand, len(dst))
-		AnnihilateData(mathrand)
 		RandXor(dst)
+		AnnihilateData(mathrand)
 	}
 	return err
 }

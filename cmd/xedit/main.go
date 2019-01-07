@@ -22,15 +22,16 @@ type Content struct {
 }
 
 const (
-	MaxItems = 2
 	version = 2
+	MaxItems = 2
+	steg = 1
 )
 
 var (
 	witness keccak.Keccak512
 	items   [MaxItems]Content
 	cur     int
-	steg    int
+	//steg    int
 )
 
 func main() {
@@ -67,7 +68,6 @@ func main() {
 
 func initialize() {
 	crutils.CollectEntropy()
-	steg = -1
 	for i := 0; i < MaxItems; i++ {
 		items[i].console = list.New()
 	}
@@ -86,9 +86,10 @@ func processCommand(cmd string) {
 		cat()
 	case "reset":
 		Reset(arg)
-	case "steg": // mark/unmark steganographic content
-		MarkSteg()
-	case "next":
+	case "switch":
+		cur = (cur + 1) % 2
+		cat()
+	case "sw":
 		cur = (cur + 1) % 2
 		cat()
 	case "info":
@@ -324,15 +325,6 @@ func info() {
 	fmt.Printf("len(0) = %d, len(1) = %d, \n", len(items[0].src), len(items[1].src))
 }
 
-func MarkSteg() {
-	if steg < 0 {
-		steg = cur
-	} else {
-		steg = -1
-	}
-	info()
-}
-
 func confirm(question string) bool {
 	fmt.Printf("%s ", question)
 	s := terminal.PlainTextInput()
@@ -510,7 +502,6 @@ func stegDecrypt(arg []string) bool {
 		return false
 	}
 
-	steg = (cur + 1) % 2
 	items[steg].src = b
 	items[steg].key = key
 	if !hide {

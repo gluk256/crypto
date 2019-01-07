@@ -63,6 +63,10 @@ func TestAes(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
+		ok = primitives.IsDeepNotEqual(encrypted[AesEncryptedSizeDiff:], data, len(data))
+		if !ok {
+			t.Fatal("deep non-equal test failed")
+		}
 
 		decrypted, err := DecryptAES(key, salt, encrypted)
 		if err != nil {
@@ -455,11 +459,65 @@ func BenchmarkKeccak(b *testing.B) {
 	}
 }
 
+func BenchmarkAES(b *testing.B) {
+	const sz = 1000000
+	key := []byte("7eab42de4c3ceb9235fc91acffe746b2")
+	salt := key[:AesSaltSize]
+	d := make([]byte, sz)
+	for i := 0; i < b.N; i++ {
+		encrypted, err := EncryptAES(key, salt, d)
+		if err != nil {
+			b.Fatal(err.Error())
+		}
+		if len(encrypted) - sz != AesEncryptedSizeDiff {
+			b.Fatalf("unexpected size diff: %d", len(encrypted) - sz)
+		}
+	}
+}
+
+func BenchmarkRc4(b *testing.B) {
+	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
+	d := make([]byte, 1000000)
+	for i := 0; i < b.N; i++ {
+		rcx.EncryptInplaceRC4(key, d, 0)
+	}
+}
+
 func BenchmarkRCX(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
 		rcx.EncryptInplaceRCX(key, d, RcxIterationsDefault, true)
+	}
+}
+
+func BenchmarkRcxQuick(b *testing.B) {
+	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
+	d := make([]byte, 1000000)
+	for i := 0; i < b.N; i++ {
+		rcx.EncryptInplaceRCX(key, d, RcxIterationsQuick, true)
+	}
+}
+
+func BenchmarkRcxWithoutKeySchedule(b *testing.B) {
+	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
+	d := make([]byte, 1000000)
+	var x rcx.RCX
+	x.InitKey(key)
+
+	for i := 0; i < b.N; i++ {
+		x.EncryptCascade(d, RcxIterationsDefault)
+	}
+}
+
+func BenchmarkRcxQuickWithoutKeySchedule(b *testing.B) {
+	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
+	d := make([]byte, 1000000)
+	var x rcx.RCX
+	x.InitKey(key)
+
+	for i := 0; i < b.N; i++ {
+		x.EncryptCascade(d, RcxIterationsQuick)
 	}
 }
 

@@ -58,7 +58,7 @@ func (x *RCX) encryptSingleRun(d []byte) {
 
 // this func expects the number of iterations to be odd,
 // len(data)%4 == 0, and len(data) > 4
-func (x *RCX) encryptCascade(d []byte, iterations int) {
+func (x *RCX) EncryptCascade(d []byte, iterations int) {
 	x.encryptSingleRun(d)
 	for i := 0; i < iterations/2; i++ {
 		x.encryptSingleRun(d[2:len(d)-2])
@@ -78,7 +78,7 @@ func EncryptInplaceRCX(key []byte, d []byte, iterations int, encrypt bool) {
 	sz := len(d)
 	if iterations > 0 && sz > 4 {
 		odd := sz % 4
-		x.encryptCascade(d[:sz-odd], iterations)
+		x.EncryptCascade(d[:sz-odd], iterations)
 	}
 
 	if !encrypt { // in case of decryption
