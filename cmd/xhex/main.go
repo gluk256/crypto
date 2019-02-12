@@ -55,7 +55,7 @@ func main() {
 func getPassword(randpass, secure bool) []byte {
 	var res []byte
 	if randpass {
-		res = crutils.RandPass(16)
+		res = crutils.GenerateRandomPassword(16)
 		fmt.Println(string(res))
 	} else if secure {
 		res = terminal.SecureInput(false)

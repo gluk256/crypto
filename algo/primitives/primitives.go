@@ -1,5 +1,7 @@
 package primitives
 
+// this package must not import any dependencies
+
 func XorInplace(dst []byte, gamma []byte, sz int) {
 	for i := 0; i < sz; i++ {
 		dst[i] ^= gamma[i]

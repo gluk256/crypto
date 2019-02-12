@@ -63,8 +63,8 @@ func ProveDestruction() {
 	fmt.Printf("proof of destruction: %x\n", b)
 }
 
-func RandPass(sz int) []byte {
-	var arr = []byte("abcdefghijklmnopqrstuvwxyz0123456789") // you can add arbitrary chars
+func GenerateRandomPassword(sz int) []byte {
+	var arr = []byte("abcdefghijklmnopqrstuvwxyz0123456789") // you can add arbitrary ANCII characters
 	var res []byte
 	for i := 0; i < sz; i++ {
 		b := make([]byte, len(arr))

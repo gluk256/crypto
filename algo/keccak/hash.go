@@ -2,7 +2,6 @@ package keccak
 
 import (
 	"unsafe"
-
 	"github.com/gluk256/crypto/algo/primitives"
 )
 
@@ -31,11 +30,11 @@ func copyOut(d *Keccak512, buf []byte) {
 func (d *Keccak512) absorb() {
 	xorIn(d, d.buf)
 	d.buf = d.storage[:0]
-	keccakF1600(&d.a)
+	f1600(&d.a)
 }
 
 func (d *Keccak512) squeeze() {
-	keccakF1600(&d.a)
+	f1600(&d.a)
 	d.buf = d.storage[:Rate]
 	copyOut(d, d.buf)
 }
@@ -109,7 +108,7 @@ func (d *Keccak512) Write(p []byte) {
 			// fast path: absorb a full "rate" bytes of input and apply the permutation
 			xorIn(d, p[:Rate])
 			p = p[Rate:]
-			keccakF1600(&d.a)
+			f1600(&d.a)
 		} else {
 			// slow path: buffer the input until we can fill the sponge, and then xor it in
 			leftover := Rate - len(d.buf)

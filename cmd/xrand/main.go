@@ -14,7 +14,7 @@ func main() {
 		fmt.Printf("%x\n", b)
 	} else {
 		for x := 0; x < 8; x++ {
-			s := crutils.RandPass(16)
+			s := crutils.GenerateRandomPassword(16)
 			fmt.Println(string(s))
 		}
 	}

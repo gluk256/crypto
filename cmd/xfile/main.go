@@ -115,7 +115,7 @@ func stegDecrypt(key []byte, data []byte, quick bool) ([]byte, error) {
 func getPassword(flags string) []byte {
 	var res []byte
 	if strings.Contains(flags, "r") {
-		res = crutils.RandPass(20)
+		res = crutils.GenerateRandomPassword(20)
 		fmt.Println(string(res))
 	} else if strings.Contains(flags, "s") {
 		res = terminal.SecureInput(false)

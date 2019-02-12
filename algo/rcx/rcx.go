@@ -1,6 +1,6 @@
 package rcx
 
-// this package does not import any dependencies
+// this package must not import any dependencies
 
 // RCX is a block cipher with block_size = 2 * number_of_iterations
 // this cipher is very simple, optimized for readability

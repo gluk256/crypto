@@ -1,6 +1,6 @@
 package rcx
 
-// this package does not import any dependencies
+// this package must not import any dependencies
 
 type RC4 struct {
 	s [256]byte
