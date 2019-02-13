@@ -42,12 +42,9 @@ func EncryptInplaceKeccak(key []byte, data []byte) {
 	d.Write(key)
 	d.ReadXor(data)
 
-	// cleanup internal state
-	const sz = keccak.Rate * 4
-	b := make([]byte, sz)
-	d.ReadXor(b)
-	primitives.ReverseBytes(b[sz/2:])
-	witness.Write(b)
+	b := make([]byte, keccak.Rate * 4)
+	d.ReadXor(b) // cleanup internal state
+	AnnihilateData(b) // prevent compiler optimization
 }
 
 func DecryptInplaceKeccak(key []byte, data []byte) {

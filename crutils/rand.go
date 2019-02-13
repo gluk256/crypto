@@ -12,8 +12,8 @@ import (
 )
 
 var entropy keccak.Keccak512
-var witness keccak.Keccak512
-var accumulator = make([]byte, keccak.Rate)
+var witnessOfDataDestruction keccak.Keccak512
+var tmp = make([]byte, keccak.Rate)
 
 func CollectEntropy() {
 	b := make([]byte, 8)
@@ -24,12 +24,12 @@ func CollectEntropy() {
 
 func Rand(dst []byte) {
 	entropy.Read(dst)
-	entropy.ReadXor(accumulator) // overwrite internal state
+	entropy.ReadXor(tmp) // overwrite internal state
 }
 
 func RandXor(dst []byte) {
 	entropy.ReadXor(dst)
-	entropy.ReadXor(accumulator) // overwrite internal state
+	entropy.ReadXor(tmp) // overwrite internal state
 }
 
 func StochasticRand(dst []byte) error {
@@ -46,20 +46,20 @@ func StochasticRand(dst []byte) error {
 
 func AnnihilateData(b []byte) {
 	if len(b) > 0 {
-		// overwrite; prevent compiler optimization
+		// overwrite data, prevent compiler optimization
 		RandXor(b)
 		sz := len(b)
 		div := int(b[sz-1] & 0x3) + 2
 		primitives.ReverseBytes(b[sz/div:])
-		witness.Write(b)
+		witnessOfDataDestruction.Write(b)
 	}
 }
 
 // this function should be called before the program exits
 func ProveDestruction() {
 	b := make([]byte, 32)
-	witness.Write(accumulator)
-	witness.Read(b)
+	witnessOfDataDestruction.Write(tmp)
+	witnessOfDataDestruction.Read(b)
 	fmt.Printf("proof of destruction: %x\n", b)
 }
 

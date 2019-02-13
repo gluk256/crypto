@@ -1,6 +1,6 @@
 // This file is a modified copy of the of the golang implementation.
-// Copyright 2014 The Go Authors. Use of this source code is governed by the
-// license that can be found in the license file of the original golang implementation.
+// Use of this source code is governed by the license that can be
+// found in the license file of the original golang implementation.
 
 package keccak
 
