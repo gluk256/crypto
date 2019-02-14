@@ -30,11 +30,11 @@ func copyOut(d *Keccak512, buf []byte) {
 func (d *Keccak512) absorb() {
 	xorIn(d, d.buf)
 	d.buf = d.storage[:0]
-	f1600(&d.a)
+	kf(&d.a)
 }
 
 func (d *Keccak512) squeeze() {
-	f1600(&d.a)
+	kf(&d.a)
 	d.buf = d.storage[:Rate]
 	copyOut(d, d.buf)
 }
@@ -108,7 +108,7 @@ func (d *Keccak512) Write(p []byte) {
 			// fast path: absorb a full "rate" bytes of input and apply the permutation
 			xorIn(d, p[:Rate])
 			p = p[Rate:]
-			f1600(&d.a)
+			kf(&d.a)
 		} else {
 			// slow path: buffer the input until we can fill the sponge, and then xor it in
 			leftover := Rate - len(d.buf)
