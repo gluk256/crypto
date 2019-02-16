@@ -7,19 +7,18 @@ type RC4 struct {
 	i, j byte
 }
 
+func (c *RC4) Reset() {
+	c.j = 0
+}
+
 func (c *RC4) InitKey(key []byte) {
 	for i := 0; i < 256; i++ {
 		c.s[i] = byte(i)
 	}
-
-	var j byte
 	for i := 0; i < 256; i++ {
-		j += c.s[i] + key[i % len(key)]
-		c.s[i], c.s[j] = c.s[j], c.s[i]
+		c.j += c.s[i] + key[i % len(key)]
+		c.s[i], c.s[c.j] = c.s[c.j], c.s[i]
 	}
-
-	c.i = 0
-	c.j = 0
 }
 
 func (c *RC4) XorInplace(data []byte) {
@@ -36,6 +35,6 @@ func EncryptInplaceRC4(key []byte, data []byte, rollover int) {
 	dummy := make([]byte, rollover)
 	var rc4 RC4
 	rc4.InitKey(key)
-	rc4.XorInplace(dummy) // roll rc4 forward
+	rc4.XorInplace(dummy) // roll forward
 	rc4.XorInplace(data)
 }

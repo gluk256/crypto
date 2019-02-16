@@ -47,8 +47,8 @@ func (d *Keccak512) finalize() {
 	}
 	// Pad with this instance's domain-separator bits. We know that there's
 	// at least one byte of space in d.buf because, if it were full,
-	// permute would have been called to empty it. dsbyte also contains the
-	// first one bit for the padding. See the comment in the state struct.
+	// permute would have been called to empty it.
+	// dsbyte also contains the first one bit for the padding.
 	const dsbyte = byte(0x01)
 	d.buf = append(d.buf, dsbyte)
 	zerosStart := len(d.buf)

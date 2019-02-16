@@ -6,8 +6,8 @@ package rcx
 // this cipher is very simple, optimized for readability
 
 type RCX struct {
-	r RC4
-	f [256 * 256]uint16
+	rc4 RC4
+	f   [256 * 256]uint16
 }
 
 func Bytes2uint(a, b byte) uint16 {
@@ -23,7 +23,7 @@ func Uint2bytes(i uint16) (byte, byte) {
 }
 
 func (x *RCX) InitKey(key []byte) {
-	x.r.InitKey(key)
+	x.rc4.InitKey(key)
 	x.shuffle()
 }
 
@@ -35,7 +35,7 @@ func (x *RCX) shuffle() {
 	var cnt uint16
 	for i := 0; i < 1024 * 8; i++ {
 		arr := make([]byte, 512)
-		x.r.XorInplace(arr[:])
+		x.rc4.XorInplace(arr[:])
 		for j := 0; j < 512; j += 2 {
 			v := Bytes2uint(arr[j], arr[j+1])
 			x.f[cnt], x.f[v] = x.f[v], x.f[cnt]
@@ -72,7 +72,7 @@ func EncryptInplaceRCX(key []byte, d []byte, iterations int, encrypt bool) {
 	x.InitKey(key)
 
 	if encrypt { // in case of encryption
-		x.r.XorInplace(d)
+		x.rc4.XorInplace(d)
 	}
 
 	sz := len(d)
@@ -82,6 +82,6 @@ func EncryptInplaceRCX(key []byte, d []byte, iterations int, encrypt bool) {
 	}
 
 	if !encrypt { // in case of decryption
-		x.r.XorInplace(d)
+		x.rc4.XorInplace(d)
 	}
 }

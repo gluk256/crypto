@@ -7,6 +7,7 @@ import (
 
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
+	"github.com/gluk256/crypto/algo/rcx"
 )
 
 func help() {
@@ -45,11 +46,24 @@ func main() {
 		fmt.Printf("Error: %s\n", err.Error())
 		return
 	}
-
 	pass := getPassword(randpass, secure)
-	crutils.EncryptInplaceLevelZero(pass, b)
+
+	//crutils.EncryptInplaceLevelZero(pass, b)
+	encrypt(pass, b)
+
 	crutils.AnnihilateData(pass)
 	fmt.Printf("%x\n", b)
+}
+
+func encrypt(key []byte, data []byte) {
+	crutils.EncryptInplaceKeccak(key, data)
+
+	dummy := make([]byte, crutils.DefaultRollover)
+	var rc4 rcx.RC4
+	rc4.InitKey(key)
+	rc4.Reset()
+	rc4.XorInplace(dummy) // roll forward
+	rc4.XorInplace(data)
 }
 
 func getPassword(randpass, secure bool) []byte {
