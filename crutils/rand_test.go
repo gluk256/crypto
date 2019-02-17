@@ -7,6 +7,7 @@ import (
 	mrand "math/rand"
 
 	"github.com/gluk256/crypto/algo/primitives"
+	"github.com/gluk256/crypto/algo/rcx"
 )
 
 func TestRand(t *testing.T) {
@@ -90,7 +91,7 @@ func TestEncryptKeccak(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		DecryptInplaceKeccak(key, y)
+		EncryptInplaceKeccak(key, y)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -107,7 +108,8 @@ func TestEncryptSimplest(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		EncryptInplaceLevelZero(key, y)
+		rcx.EncryptInplaceRC4(key, y)
+		EncryptInplaceKeccak(key, y)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -116,7 +118,8 @@ func TestEncryptSimplest(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		EncryptInplaceLevelZero(key, y)
+		rcx.EncryptInplaceRC4(key, y)
+		EncryptInplaceKeccak(key, y)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}

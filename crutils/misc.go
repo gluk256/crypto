@@ -112,13 +112,13 @@ func addPadding(data []byte, newSize int, mark bool) ([]byte, error) {
 func removePadding(data []byte) ([]byte, error) {
 	sz := len(data)
 	if sz < 4 {
-		return nil, errors.New("Can not remove padding")
+		return data, errors.New("Can not remove padding")
 	}
 	b := rcx.Bytes2uint(data[sz-2], data[sz-1])
 	a := rcx.Bytes2uint(data[sz-4], data[sz-3])
 	newSize := int(a) + int(b) << 16
 	if newSize > sz {
-		return nil, errors.New(fmt.Sprintf("error removing padding: wrong sizes [%d vs. %d]", newSize, sz))
+		return data, errors.New(fmt.Sprintf("error removing padding: wrong sizes [%d vs. %d]", newSize, sz))
 	}
 	return data[:newSize], nil
 }

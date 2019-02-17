@@ -15,10 +15,8 @@ const (
 	AesKeySize = 32
 	AesSaltSize = 12
 	AesEncryptedSizeDiff = 16
-	SaltSize = 16
-	EncryptedSizeDiff = AesEncryptedSizeDiff + SaltSize
-	RcxIterationsDefault = 511
-	RcxIterationsQuick = 37
+	SaltSize = 32
+	EncryptedSizeDiffSteg = AesEncryptedSizeDiff + SaltSize
 	DefaultRollover = 1024 * 256
 )
 
@@ -37,18 +35,38 @@ const (
 	keyHolderSize = endAesSalt
 )
 
+const (
+	RcxFlag     = byte(0x01)
+	AesFlag     = byte(0x02)
+	PaddingFlag = byte(0x04)
+	SpacingFlag = byte(0x08)
+	QuickFlag   = byte(0x10)
+	DefaultFlag = AesFlag | RcxFlag | SpacingFlag | PaddingFlag
+)
+
+func isRcx(flags byte) bool {
+	return (flags & RcxFlag) != 0
+}
+
+func isAes(flags byte) bool {
+	return (flags & AesFlag) != 0
+}
+
+func isSpacing(flags byte) bool {
+	return (flags & SpacingFlag) != 0
+}
+
+func isPadding(flags byte) bool {
+	return (flags & PaddingFlag) != 0
+}
+
 func EncryptInplaceKeccak(key []byte, data []byte) {
 	var d keccak.Keccak512
 	d.Write(key)
 	d.ReadXor(data)
-
 	b := make([]byte, keccak.Rate * 4)
 	d.ReadXor(b) // cleanup internal state
 	AnnihilateData(b) // prevent compiler optimization
-}
-
-func DecryptInplaceKeccak(key []byte, data []byte) {
-	EncryptInplaceKeccak(key, data)
 }
 
 // don't forget to clear the data
@@ -80,186 +98,115 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	return decrypted, err
 }
 
-// keccak + rc4, xor only, no salt, no spacing/padding
-// len(encrypted) == len(plaintext)
-func EncryptInplaceLevelZero(key []byte, data []byte) {
-	rcx.EncryptInplaceRC4(key, data, DefaultRollover)
-	EncryptInplaceKeccak(key, data)
-}
-
-// keccak + rcx, no salt, no spacing/padding.
-// this is a block cipher with block size of RcxIterations * 2.
-// keccak should be applied before rcx (in case of encryption),
-// in which case it will contribute to the security of the block cipher.
-// len(encrypted) == len(plaintext)
-func EncryptInplaceLevelOne(key []byte, data []byte, encrypt bool, quick bool) {
-	iterations := RcxIterationsDefault
-	if quick {
-		iterations = RcxIterationsQuick
-	}
-
-	if encrypt {
-		EncryptInplaceKeccak(key, data)
-		rcx.EncryptInplaceRCX(key, data, iterations, encrypt)
-	} else {
-		rcx.EncryptInplaceRCX(key, data, iterations, encrypt)
-		DecryptInplaceKeccak(key, data)
-	}
-}
-
-// keccak + rcx with randomized spacing, no salt.
-// randomized spacing significantly enhances the underlying block cipher
-func EncryptLevelTwo(key []byte, data []byte, encrypt bool, quick bool) []byte {
-	if encrypt { // encryption
-		data = addSpacing(data)
-	}
-
-	EncryptInplaceLevelOne(key, data, encrypt, quick)
-
-	if !encrypt { // decryption
-		data, _ = splitSpacing(data)
-	}
-
-	return data
-}
-
-// keccak + rc4 + aes + keccak, xor only, with salt, no spacing/padding, very quick
-func EncryptInplaceLevelThree(key []byte, data []byte, encrypt bool) ([]byte, error) {
-	var res, salt []byte
-	var err error
-
-	if encrypt {
-		salt = make([]byte, SaltSize)
-		err = StochasticRand(salt)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Stochastic rand failed: %s", err.Error()))
-		}
-	} else {
-		salt = data[len(data)-SaltSize:]
-	}
-
-	fullkey := make([]byte, 0, SaltSize + len(key))
-	fullkey = append(fullkey, salt...)
-	fullkey = append(fullkey, key...)
-	keyholder := keccak.Digest(fullkey, keyHolderSize)
-
-	if encrypt {
-		EncryptInplaceKeccak(keyholder[begK1:endK1], data)
-		rcx.EncryptInplaceRC4(keyholder[begRcxKey:endRcxKey], data, DefaultRollover)
-		res, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
-		if err == nil {
-			EncryptInplaceKeccak(keyholder[begK2:endK2], res)
-			res = append(res, salt...)
-		}
-	} else {
-		data = data[:len(data)-SaltSize]
-		EncryptInplaceKeccak(keyholder[begK2:endK2], data)
-		res, err = DecryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
-		if err == nil {
-			rcx.EncryptInplaceRC4(keyholder[begRcxKey:endRcxKey], res, DefaultRollover)
-			DecryptInplaceKeccak(keyholder[begK1:endK1], res)
-		}
-	}
-
-	AnnihilateData(fullkey)
-	AnnihilateData(keyholder)
-	return res, err
-}
-
-// keccak + rcx + aes + keccak, with salt, no spacing, no padding
-func EncryptLevelFour(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	return EncryptWithSalt(key, data, encrypt, quick)
-}
-
-// keccak + rcx + aes + keccak, with salt and spacing, no padding.
-// randomized spacing significantly enhances the underlying block cipher.
-func EncryptLevelFive(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	return EncryptWithSaltAndSpacing(key, data, encrypt, quick)
-}
-
-// keccak + rcx + aes + keccak, with salt, spacing and padding.
-// padding allows to conceal the content size.
-func EncryptLevelSix(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	if encrypt {
+func Encrypt(key []byte, data []byte, flags byte) ([]byte, error) {
+	if isPadding(flags) {
 		data, _ = addPadding(data, 0, true)
 	}
-	res, err := EncryptWithSaltAndSpacing(key, data, encrypt, quick)
-	if !encrypt {
+	if isSpacing(flags) {
+		data = addSpacing(data)
+	}
+	salt, err := generateSalt()
+	if err != nil {
+		return nil, err
+	}
+	keyholder := generateKeys(key, salt)
+	defer AnnihilateData(keyholder)
+
+	EncryptInplaceKeccak(keyholder[begK1:endK1], data)
+	if isRcx(flags) {
+		rcx.EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data, (flags & QuickFlag) != 0)
+	} else {
+		rcx.EncryptInplaceRC4(keyholder[begRcxKey:endRcxKey], data)
+	}
+	if isAes(flags) {
+		data, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
+		if err != nil {
+			return nil, err
+		}
+		EncryptInplaceKeccak(keyholder[begK2:endK2], data)
+	}
+	salt[SaltSize-1] = flags
+	data = append(data, salt...)
+	return data, nil
+}
+
+func Decrypt(key []byte, data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, errors.New("no data")
+	} else {
+		return decryptWithFlags(key, data, data[len(data)-1])
+	}
+}
+
+func decryptWithFlags(key []byte, data []byte, flags byte) (res []byte, err error) {
+	if len(data) <= SaltSize {
+		return nil, errors.New("salt consumed the data")
+	}
+	res = data[:len(data)-SaltSize]
+	salt := data[len(data)-SaltSize:]
+	keyholder := generateKeys(key, salt)
+	defer AnnihilateData(keyholder)
+
+	if isAes(flags) {
+		EncryptInplaceKeccak(keyholder[begK2:endK2], res)
+		res, err = DecryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], res)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if isRcx(flags) {
+		rcx.DecryptInplaceRCX(keyholder[begRcxKey:endRcxKey], res, (flags & QuickFlag) != 0)
+	} else {
+		rcx.EncryptInplaceRC4(keyholder[begRcxKey:endRcxKey], res)
+	}
+	EncryptInplaceKeccak(keyholder[begK1:endK1], res)
+
+	if isSpacing(flags) {
+		res, _ = splitSpacing(res)
+	}
+	if isPadding(flags) {
 		res, err = removePadding(res)
 	}
 	return res, err
 }
 
-// keccak + rcx + aes + keccak, with salt, no spacing, no padding
-func EncryptWithSalt(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	var res, salt []byte
-	var err error
-	iterations := RcxIterationsDefault
-	if quick {
-		iterations = RcxIterationsQuick
+func generateSalt() ([]byte, error) {
+	salt := make([]byte, SaltSize)
+	err := StochasticRand(salt)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Stochastic rand failed: %s", err.Error()))
 	}
-
-	if encrypt {
-		salt = make([]byte, SaltSize)
-		err = StochasticRand(salt)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Stochastic rand failed: %s", err.Error()))
-		}
-	} else {
-		salt = data[len(data)-SaltSize:]
-	}
-
-	fullkey := make([]byte, 0, SaltSize + len(key))
-	fullkey = append(fullkey, salt...)
-	fullkey = append(fullkey, key...)
-	keyholder := keccak.Digest(fullkey, keyHolderSize)
-
-	if encrypt {
-		EncryptInplaceKeccak(keyholder[begK1:endK1], data)
-		rcx.EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data, iterations, encrypt)
-		res, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
-		if err == nil {
-			EncryptInplaceKeccak(keyholder[begK2:endK2], res)
-			res = append(res, salt...)
-		}
-	} else {
-		data = data[:len(data)-SaltSize]
-		EncryptInplaceKeccak(keyholder[begK2:endK2], data)
-		res, err = DecryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
-		if err == nil {
-			rcx.EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], res, iterations, encrypt)
-			DecryptInplaceKeccak(keyholder[begK1:endK1], res)
-		}
-	}
-
-	AnnihilateData(fullkey)
-	AnnihilateData(keyholder)
-	return res, err
+	return salt, err
 }
 
-// randomized spacing significantly enhances the underlying block cipher
-func EncryptWithSaltAndSpacing(key []byte, data []byte, encrypt bool, quick bool) ([]byte, error) {
-	if encrypt { // encryption
-		data = addSpacing(data)
+func generateKeys(key []byte, salt []byte) []byte {
+	fullkey := make([]byte, 0, len(key) + len(salt))
+	fullkey = append(fullkey, key...)
+	fullkey = append(fullkey, salt...)
+	fullkey = fullkey[:len(fullkey)-1]
+	keyholder := keccak.Digest(fullkey, keyHolderSize)
+	AnnihilateData(fullkey)
+	return keyholder
+}
+
+// returns maximum possible size of raw steganographic content (without salt)
+func getMaxRawStegSize(total int) int {
+	raw := primitives.FindNextPowerOfTwo(total - EncryptedSizeDiffSteg)
+	for raw + EncryptedSizeDiffSteg > total {
+		raw /= 2
 	}
-
-	res, err := EncryptWithSalt(key, data, encrypt, quick)
-
-	if !encrypt && err == nil { // decryption
-		res, _ = splitSpacing(res)
-	}
-
-	return res, err
+	return raw
 }
 
 // encrypt with steganographic content as spacing
 func EncryptSteg(key []byte, data []byte, steg []byte, quick bool) ([]byte, error) {
 	var err error
 	data, _ = addPadding(data, 0, true)
-	if len(data) < len(steg) + 4 {
-		return nil, errors.New(fmt.Sprintf("data size is less than necessary [%d vs. %d]", len(data), len(steg) + 4))
+	if len(data) < len(steg) + 4 { // four bytes for padding bytes
+		return nil, errors.New(fmt.Sprintf("data size is less than necessary [%d vs. %d]", len(data), len(steg)+4))
 	}
-	steg, err = addPadding(steg, len(data), false) // no mark - steg content should be indistinguishable from random
+	Rand(steg[len(steg)-1:]) // destroy flags
+	steg, err = addPadding(steg, len(data), false) // no mark: steg content must be indistinguishable from random gamma
 	if err != nil {
 		return nil, err
 	}
@@ -271,15 +218,20 @@ func EncryptSteg(key []byte, data []byte, steg []byte, quick bool) ([]byte, erro
 		b = append(b, steg[i])
 	}
 
-	res, err := EncryptWithSalt(key, b, true, quick)
+	flags := AesFlag | RcxFlag
+	if quick {
+		flags |= QuickFlag
+	}
+
+	res, err := Encrypt(key, b, flags)
 	AnnihilateData(data)
 	AnnihilateData(steg)
 	return res, err
 }
 
 // decrypt data and extract raw steganographic content
-func DecryptSteg(key []byte, src []byte, quick bool) ([]byte, []byte, error) {
-	res, err := EncryptWithSalt(key, src, false, quick)
+func DecryptSteg(key []byte, src []byte) ([]byte, []byte, error) {
+	res, err := Decrypt(key, src)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -290,29 +242,16 @@ func DecryptSteg(key []byte, src []byte, quick bool) ([]byte, []byte, error) {
 
 // steganographic content is obviously of unknown size.
 // however, we know that the size of original unencrypted steg content was power_of_two;
-// so, we try all possible sizes (31 at most, but in reality much less).
-func DecryptStegContentOfUnknownSize(key []byte, steg []byte, quick bool) ([]byte, error) {
+// so, we try all possible sizes (31 iterations at most, but in reality much less).
+func DecryptStegContentOfUnknownSize(key []byte, steg []byte) ([]byte, error) {
 	for sz := getMaxRawStegSize(len(steg)); sz > 0; sz /= 2 {
-		trySize := sz + EncryptedSizeDiff
+		trySize := sz + EncryptedSizeDiffSteg
 		content := make([]byte, trySize)
 		copy(content, steg[:trySize])
-		res, err := EncryptWithSaltAndSpacing(key, content, false, quick)
+		res, err := decryptWithFlags(key, content, DefaultFlag)
 		if err == nil {
-			res, err = removePadding(res)
-			if err != nil {
-				err = errors.New("xxx " + err.Error())
-			}
 			return res, err
 		}
 	}
 	return nil, errors.New("failed to decrypt steganographic content")
-}
-
-// returns maximum possible size of raw steganographic content (without salt)
-func getMaxRawStegSize(total int) int {
-	raw := primitives.FindNextPowerOfTwo(total - EncryptedSizeDiff)
-	for raw + EncryptedSizeDiff > total {
-		raw /= 2
-	}
-	return raw
 }

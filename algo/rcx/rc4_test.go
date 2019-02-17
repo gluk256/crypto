@@ -10,8 +10,6 @@ import (
 	"github.com/gluk256/crypto/algo/primitives"
 )
 
-const iterations = 1025 // must be odd
-
 func TestKeyStream(t *testing.T) {
 	testSingleKeyStream(t, "Key", "EB9F7781B734CA72A719")
 	testSingleKeyStream(t, "Wiki", "6044DB6D41B7")
@@ -97,30 +95,6 @@ func TestEncryptionRC4(t *testing.T) {
 		}
 
 		rd.XorInplace(y)
-		if !bytes.Equal(x, y) {
-			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
-		}
-	}
-}
-
-func TestRollover(t *testing.T) {
-	seed := time.Now().Unix()
-	mrand.Seed(seed)
-
-	for i := 0; i < 64; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, false)
-		y := make([]byte, len(x))
-		copy(y, x)
-
-		rollover := mrand.Int() % 16000
-		EncryptInplaceRC4(key, y, rollover)
-		ok := primitives.IsDeepNotEqual(x, y, len(x))
-		if !ok {
-			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
-		}
-
-		EncryptInplaceRC4(key, y, rollover)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -217,7 +191,7 @@ func TestCascade(t *testing.T) {
 		var c RCX
 		c.InitKey(key)
 
-		c.EncryptCascade(y, iterations)
+		c.EncryptCascade(y, GetRcxIterations(false))
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -226,7 +200,7 @@ func TestCascade(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		c.EncryptCascade(y, iterations)
+		c.EncryptCascade(y, GetRcxIterations(false))
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -310,7 +284,7 @@ func TestEncryptionRCX(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		EncryptInplaceRCX(key, y, iterations, true)
+		EncryptInplaceRCX(key, y, false)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -319,42 +293,9 @@ func TestEncryptionRCX(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		EncryptInplaceRCX(key, y, iterations, false)
+		DecryptInplaceRCX(key, y, false)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d\n%x\n%x", i, seed, x, y)
-		}
-	}
-}
-
-// rcx encryption with zero iterations is supposed to be equal to rc4 encryption
-func TestEncryptionRcxZero(t *testing.T) {
-	seed := time.Now().Unix()
-	mrand.Seed(seed)
-
-	for i := 0; i < 32; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, true)
-		y := make([]byte, len(x))
-		z := make([]byte, len(x))
-		copy(y, x)
-		copy(z, x)
-
-		arr := make([]byte, 256*256*64)
-		var cipher RC4
-		cipher.InitKey(key)
-		cipher.XorInplace(arr)
-		cipher.XorInplace(z)
-
-		EncryptInplaceRCX(key, y, 0, true)
-		if bytes.Equal(x, y) {
-			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
-		}
-		ok := primitives.IsDeepNotEqual(x, y, len(x))
-		if !ok {
-			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
-		}
-		if !bytes.Equal(y, z) {
-			t.Fatalf("y != z, round %d with seed %d", i, seed)
 		}
 	}
 }
