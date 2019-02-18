@@ -484,7 +484,7 @@ func TestEncryptionSteg(t *testing.T) {
 			t.Fatalf("failed to decrypt raw steg, round %d with seed %d", i, seed)
 		}
 		if raw[len(origEncryptedSteg)-1] == origEncryptedSteg[len(origEncryptedSteg)-1] {
-			t.Fatal("Salt was not properly destroyed. This check is probabilistic, and may fail once in 256 times.")
+			t.Fatal("Flags were not properly destroyed. This check is probabilistic, and may fail once in 256 times.")
 		}
 
 		decryptedSteg, err := DecryptStegContentOfUnknownSize(keySteg, raw)

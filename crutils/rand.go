@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 	"encoding/binary"
-	mrand "math/rand"
+	"os"
 	crand "crypto/rand"
+	mrand "math/rand"
 
 	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/algo/primitives"
@@ -14,6 +15,16 @@ import (
 var entropy keccak.Keccak512
 var witnessOfDataDestruction keccak.Keccak512
 var tmp = make([]byte, keccak.Rate)
+
+func init() {
+	r := make([]byte, 32)
+	n, err := crand.Read(r)
+	if err != nil || n != len(r) {
+		fmt.Printf("Error in init: Crypto.Rand() failed: %s\n", err)
+		os.Exit(0)
+	}
+	entropy.Write(r)
+}
 
 func CollectEntropy() {
 	b := make([]byte, 8)
@@ -33,8 +44,8 @@ func RandXor(dst []byte) {
 }
 
 func StochasticRand(dst []byte) error {
-	_, err := crand.Read(dst)
-	if err == nil {
+	n, err := crand.Read(dst)
+	if err == nil && n == len(dst) {
 		mathrand := make([]byte, len(dst))
 		_, err = mrand.Read(mathrand)
 		primitives.XorInplace(dst, mathrand, len(dst))
