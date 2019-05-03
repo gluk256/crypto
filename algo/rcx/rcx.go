@@ -34,11 +34,13 @@ func (x *RCX) shuffle() {
 
 	var cnt uint16
 	for i := 0; i < 1024 * 8; i++ {
-		arr := make([]byte, 512)
-		x.rc4.XorInplace(arr[:])
-		for j := 0; j < 512; j += 2 {
-			v := Bytes2uint(arr[j], arr[j+1])
-			x.f[cnt], x.f[v] = x.f[v], x.f[cnt]
+		a1 := make([]byte, 256)
+		a2 := make([]byte, 256)
+		x.rc4.XorInplace(a1[:])
+		x.rc4.XorInplace(a2[:])
+		for j := 0; j < 256; j++ {
+			z := Bytes2uint(a1[j], a2[j])
+			x.f[cnt], x.f[z] = x.f[z], x.f[cnt]
 			cnt++
 		}
 	}
@@ -67,10 +69,10 @@ func (x *RCX) EncryptCascade(d []byte, iterations int) {
 }
 
 func EncryptInplaceRCX(key []byte, d []byte, quick bool) {
-	sz := len(d)
 	var x RCX
 	x.InitKey(key)
 	x.rc4.XorInplace(d)
+	sz := len(d)
 	if sz > 4 {
 		odd := sz % 4
 		x.EncryptCascade(d[:sz-odd], GetRcxIterations(quick))
@@ -78,9 +80,9 @@ func EncryptInplaceRCX(key []byte, d []byte, quick bool) {
 }
 
 func DecryptInplaceRCX(key []byte, d []byte, quick bool) {
-	sz := len(d)
 	var x RCX
 	x.InitKey(key)
+	sz := len(d)
 	if sz > 4 {
 		odd := sz % 4
 		x.EncryptCascade(d[:sz-odd], GetRcxIterations(quick))

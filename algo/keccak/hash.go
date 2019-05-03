@@ -63,60 +63,60 @@ func (d *Keccak512) finalize() {
 	d.absorbing = false
 }
 
-func (d *Keccak512) read(out []byte, xor bool) {
-	if d.absorbing {
-		d.finalize()
+func (k *Keccak512) read(dst []byte, xor bool) {
+	if k.absorbing {
+		k.finalize()
 	}
 
-	for len(out) > 0 {
+	for len(dst) > 0 {
 		var n int
 		if xor {
-			n = primitives.Min(len(out), len(d.buf))
-			primitives.XorInplace(out, d.buf, n)
+			n = primitives.Min(len(dst), len(k.buf))
+			primitives.XorInplace(dst, k.buf, n)
 		} else {
-			n = copy(out, d.buf)
+			n = copy(dst, k.buf)
 		}
 
-		d.buf = d.buf[n:]
-		out = out[n:]
+		k.buf = k.buf[n:]
+		dst = dst[n:]
 
 		// apply the permutation if the sponge was squeezed dry
-		if len(d.buf) == 0 {
-			d.squeeze()
+		if len(k.buf) == 0 {
+			k.squeeze()
 		}
 	}
 }
 
-func (d *Keccak512) Read(out []byte) {
-	d.read(out, false)
+func (k *Keccak512) Read(dst []byte) {
+	k.read(dst, false)
 }
 
-func (d *Keccak512) ReadXor(out []byte) {
-	d.read(out, true)
+func (k *Keccak512) ReadXor(dst []byte) {
+	k.read(dst, true)
 }
 
 // Write absorbs more data into the hash's state. It produces an error
 // if more data is written to the ShakeHash after writing
-func (d *Keccak512) Write(p []byte) {
+func (d *Keccak512) Write(src []byte) {
 	d.absorbing = true
 	if d.buf == nil {
 		d.buf = d.storage[:0]
 	}
 
-	for len(p) > 0 {
-		if len(d.buf) == 0 && len(p) >= Rate {
+	for len(src) > 0 {
+		if len(d.buf) == 0 && len(src) >= Rate {
 			// fast path: absorb a full "rate" bytes of input and apply the permutation
-			xorIn(d, p[:Rate])
-			p = p[Rate:]
+			xorIn(d, src[:Rate])
+			src = src[Rate:]
 			kf(&d.a)
 		} else {
 			// slow path: buffer the input until we can fill the sponge, and then xor it in
 			leftover := Rate - len(d.buf)
-			if leftover > len(p) {
-				leftover = len(p)
+			if leftover > len(src) {
+				leftover = len(src)
 			}
-			d.buf = append(d.buf, p[:leftover]...)
-			p = p[leftover:]
+			d.buf = append(d.buf, src[:leftover]...)
+			src = src[leftover:]
 
 			// If the sponge is full, apply the permutation.
 			if len(d.buf) == Rate {
@@ -126,9 +126,9 @@ func (d *Keccak512) Write(p []byte) {
 	}
 }
 
-func Digest(in []byte, sz int) []byte {
+func Digest(src []byte, sz int) []byte {
 	var d Keccak512
-	d.Write(in)
+	d.Write(src)
 	out := make([]byte, sz)
 	d.Read(out)
 	return out

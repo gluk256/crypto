@@ -72,6 +72,9 @@ func EncryptInplaceKeccak(key []byte, data []byte) {
 // don't forget to clear the data
 // key is expected to be 32 bytes, salt 12 bytes
 func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
+	if len(key) != AesKeySize {
+		fmt.Errorf("wrong key size %d", len(key))
+	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -86,6 +89,9 @@ func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 
 // don't forget to clear the data
 func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
+	if len(key) != AesKeySize {
+		fmt.Errorf("wrong key size %d", len(key))
+	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
