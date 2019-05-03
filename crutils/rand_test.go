@@ -16,7 +16,7 @@ func TestRand(t *testing.T) {
 	b2 := make([]byte, sz)
 	b3 := make([]byte, sz)
 	b4 := make([]byte, sz)
-	Rand(sample)
+	Randomize(sample)
 	copy(b2, sample)
 	copy(b3, sample)
 	copy(b4, sample)
@@ -33,7 +33,7 @@ func TestRand(t *testing.T) {
 		t.Fatal("RandXor failed deep check")
 	}
 
-	Rand(b3)
+	Randomize(b3)
 	if bytes.Equal(b3, sample) {
 		t.Fatal("Rand failed")
 	}

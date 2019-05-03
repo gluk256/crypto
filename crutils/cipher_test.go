@@ -1,24 +1,26 @@
 package crutils
 
 import (
-	"time"
 	"bytes"
+	"fmt"
 	mrand "math/rand"
 	"testing"
+	"time"
 
 	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/algo/rcx"
-	"fmt"
 )
 
 func TestPadding(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	var b, s, zero []byte
+	var b, s, r, zero []byte
 	zero = make([]byte, 1024*8)
 	b = generateRandomBytes(t)
-	b = addSpacing(b)
+	r = make([]byte, len(b))
+	Randomize(r)
+	b = addSpacing(b, r)
 	b, s = splitSpacing(b)
 	ok := primitives.IsDeepNotEqual(s, zero, len(s))
 	if !ok {
@@ -116,7 +118,7 @@ func TestEncryptionLevelZero(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		data, err = Encrypt(key, data, 0)
+		data, err = Encrypt(key, data)
 		if err != nil {
 			t.Fatalf("error: %s, round %d with seed %d", err, i, seed)
 		}
@@ -124,14 +126,12 @@ func TestEncryptionLevelZero(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		if len(data) != len(orig) + SaltSize {
-			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(data), len(orig) + SaltSize)
-		}
-		if data[len(data)-1] != 0 {
-			t.Fatalf("flags not set, round %d with seed %d", i, seed)
+		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		if len(data) != expectedSize {
+			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(data), expectedSize)
 		}
 
-		data, err = Decrypt(key, data)
+		data, _, err = Decrypt(key, data)
 		if err != nil {
 			t.Fatalf("error: %s, round %d with seed %d", err, i, seed)
 		}
@@ -142,7 +142,6 @@ func TestEncryptionLevelZero(t *testing.T) {
 }
 
 func TestEncryptionLevelOne(t *testing.T) {
-	const flags = RcxFlag
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -155,7 +154,7 @@ func TestEncryptionLevelOne(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		data, err := Encrypt(key, data, flags)
+		data, err := Encrypt(key, data)
 		if err != nil {
 			t.Fatalf("encrypt failed: %s", err)
 		}
@@ -163,21 +162,19 @@ func TestEncryptionLevelOne(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		if len(data) != len(orig) + SaltSize {
-			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(data), len(orig) + SaltSize)
-		}
-		if data[len(data)-1] != flags {
-			t.Fatalf("flags not set, round %d with seed %d", i, seed)
+		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		if len(data) != expectedSize {
+			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(data), expectedSize)
 		}
 
 		d2 := make([]byte, len(data))
 		copy(d2, data)
 		d2[sz/2]++ // change at least one bit
-		d2, err = Decrypt(key, d2)
-		if err != nil {
-			t.Fatalf("encrypt failed: %s, round %d with seed %d", err, i, seed)
+		d2, _, err = Decrypt(key, d2)
+		if err == nil {
+			t.Fatalf("decrypt false positive, round %d with seed %d", i, seed)
 		}
-		data, err = Decrypt(key, data)
+		data, _, err = Decrypt(key, data)
 		if err != nil {
 			t.Fatalf("encrypt failed: %s, round %d with seed %d", err, i, seed)
 		}
@@ -185,16 +182,10 @@ func TestEncryptionLevelOne(t *testing.T) {
 		if !bytes.Equal(data, orig) {
 			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
 		}
-
-		ok = primitives.IsDeepNotEqual(data, d2, sz)
-		if !ok {
-			t.Fatalf("decryption false positive, despite changing byte %d, round %d with seed %d", sz/2, i, seed)
-		}
 	}
 }
 
 func TestEncryptionLevelTwo(t *testing.T) {
-	const flags = RcxFlag | SpacingFlag
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -207,7 +198,7 @@ func TestEncryptionLevelTwo(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		encyprted, err := Encrypt(key, data, flags)
+		encyprted, err := Encrypt(key, data)
 		if err != nil {
 			t.Fatalf("encrypt failed: %s", err)
 		}
@@ -215,26 +206,20 @@ func TestEncryptionLevelTwo(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		if len(encyprted) != len(orig) * 2 + SaltSize {
-			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), len(orig) * 2)
-		}
-		if encyprted[len(encyprted)-1] != flags {
-			t.Fatalf("flags not set, round %d with seed %d", i, seed)
+		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		if len(encyprted) != expectedSize {
+			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), expectedSize)
 		}
 
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
 		d2[sz/2]++ // change at least one bit
-		d2, err = Decrypt(key, d2)
-		if err != nil {
-			t.Fatalf("decrypt failed: %s", err)
-		}
-		ok = primitives.IsDeepNotEqual(d2, orig, len(orig))
-		if !ok {
-			t.Fatal("decrypted fake data: false positive")
+		d2, _, err = Decrypt(key, d2)
+		if err == nil {
+			t.Fatal("decrypt false positive")
 		}
 
-		decrypted, err := Decrypt(key, encyprted)
+		decrypted, _, err := Decrypt(key, encyprted)
 		if err != nil {
 			t.Fatalf("decrypt failed: %s", err)
 		}
@@ -245,7 +230,6 @@ func TestEncryptionLevelTwo(t *testing.T) {
 }
 
 func TestEncryptionLevelThree(t *testing.T) {
-	const flags = AesFlag
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -258,7 +242,7 @@ func TestEncryptionLevelThree(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		encyprted, err := Encrypt(key, data, flags)
+		encyprted, err := Encrypt(key, data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -266,22 +250,20 @@ func TestEncryptionLevelThree(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		if len(encyprted) != len(orig) + EncryptedSizeDiffSteg {
-			t.Fatalf("len(encyprted) failed [%d vs. %d]", len(encyprted), len(orig) + EncryptedSizeDiffSteg)
-		}
-		if encyprted[len(encyprted)-1] != flags {
-			t.Fatalf("flags not set, round %d with seed %d", i, seed)
+		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		if len(encyprted) != expectedSize {
+			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), expectedSize)
 		}
 
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
 		d2[sz/2]++ // change at least one bit
-		d2, err = Decrypt(key, d2)
+		d2, _, err = Decrypt(key, d2)
 		if err == nil {
 			t.Fatal("false positive")
 		}
 
-		decrypted, err := Decrypt(key, encyprted)
+		decrypted, _, err := Decrypt(key, encyprted)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -292,7 +274,6 @@ func TestEncryptionLevelThree(t *testing.T) {
 }
 
 func TestEncryptionLevelFour(t *testing.T) {
-	const flags = AesFlag | RcxFlag
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -305,7 +286,7 @@ func TestEncryptionLevelFour(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		encyprted, err := Encrypt(key, data, flags)
+		encyprted, err := Encrypt(key, data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -313,22 +294,20 @@ func TestEncryptionLevelFour(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		if len(encyprted) - sz != SaltSize + AesEncryptedSizeDiff {
-			t.Fatalf("size diff failed [%d vs. %d]", len(encyprted) - sz, SaltSize + AesSaltSize)
-		}
-		if encyprted[len(encyprted)-1] != flags {
-			t.Fatalf("flags not set, round %d with seed %d", i, seed)
+		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		if len(encyprted) != expectedSize {
+			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), expectedSize)
 		}
 
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
 		d2[sz/2]++ // change at least one bit
-		d2, err = Decrypt(key, d2)
+		d2, _, err = Decrypt(key, d2)
 		if err == nil {
 			t.Fatal("decrypted fake data: false positive")
 		}
 
-		decrypted, err := Decrypt(key, encyprted)
+		decrypted, _, err := Decrypt(key, encyprted)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -341,7 +320,6 @@ func TestEncryptionLevelFour(t *testing.T) {
 }
 
 func TestEncryptionLevelFive(t *testing.T) {
-	const flags = AesFlag | RcxFlag | SpacingFlag
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -354,7 +332,7 @@ func TestEncryptionLevelFive(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		encyprted, err := Encrypt(key, data, flags)
+		encyprted, err := Encrypt(key, data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -362,22 +340,20 @@ func TestEncryptionLevelFive(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		if len(encyprted) != sz * 2 + SaltSize + AesEncryptedSizeDiff {
-			t.Fatalf("len(encyprted) failed [%d vs. %d]", len(encyprted), sz * 2 + SaltSize + AesEncryptedSizeDiff)
-		}
-		if encyprted[len(encyprted)-1] != flags {
-			t.Fatalf("flags not set, round %d with seed %d", i, seed)
+		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		if len(encyprted) != expectedSize {
+			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), expectedSize)
 		}
 
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
 		d2[sz/2]++ // change at least one bit
-		_, err = Decrypt(key, d2)
+		_, _, err = Decrypt(key, d2)
 		if err == nil {
 			t.Fatal("decrypted fake data: false positive")
 		}
 
-		decrypted, err := Decrypt(key, encyprted)
+		decrypted, _, err := Decrypt(key, encyprted)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -388,7 +364,6 @@ func TestEncryptionLevelFive(t *testing.T) {
 }
 
 func TestEncryptionLevelSix(t *testing.T) {
-	const flags = DefaultFlag
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -401,16 +376,13 @@ func TestEncryptionLevelSix(t *testing.T) {
 		orig := make([]byte, sz)
 		copy(orig, data)
 
-		encyprted, err := Encrypt(key, data, flags)
+		encyprted, err := Encrypt(key, data)
 		if err != nil {
 			t.Fatal(err)
 		}
 		ok := primitives.IsDeepNotEqual(orig, encyprted, len(data))
 		if !ok {
 			t.Fatal("deep non-equal test failed")
-		}
-		if encyprted[len(encyprted)-1] != flags {
-			t.Fatalf("flags not set, round %d with seed %d", i, seed)
 		}
 		paddedSize := primitives.FindNextPowerOfTwo(sz + 4)
 		if len(encyprted) != paddedSize * 2 + SaltSize + AesEncryptedSizeDiff {
@@ -420,12 +392,12 @@ func TestEncryptionLevelSix(t *testing.T) {
 		d2 := make([]byte, len(encyprted))
 		copy(d2, encyprted)
 		d2[sz/2]++ // change at least one bit
-		_, err = Decrypt(key, d2)
+		_, _, err = Decrypt(key, d2)
 		if err == nil {
 			t.Fatal("decrypted fake data: false positive")
 		}
 
-		decrypted, err := Decrypt(key, encyprted)
+		decrypted, _, err := Decrypt(key, encyprted)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -441,7 +413,6 @@ func TestEncryptionLevelSix(t *testing.T) {
 }
 
 func TestEncryptionSteg(t *testing.T) {
-	const flags = AesFlag | RcxFlag | SpacingFlag | PaddingFlag
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
@@ -457,7 +428,7 @@ func TestEncryptionSteg(t *testing.T) {
 		origSteg := make([]byte, len(steg))
 		copy(origSteg, steg)
 
-		encyprtedSteg, err := Encrypt(keySteg, steg, flags)
+		encyprtedSteg, err := Encrypt(keySteg, steg)
 		if err != nil {
 			t.Fatalf("Error encrypting l.5: %s", err.Error())
 		}
@@ -468,12 +439,12 @@ func TestEncryptionSteg(t *testing.T) {
 		origData := make([]byte, len(data))
 		copy(origData, data)
 
-		encryprted, err := EncryptSteg(key, data, encyprtedSteg, false)
+		encryprted, err := EncryptSteg(key, data, encyprtedSteg)
 		if err != nil {
 			t.Fatalf("EncryptSteg error: %s", err.Error())
 		}
 
-		decryptedData, raw, err := DecryptSteg(key, encryprted)
+		decryptedData, raw, err := Decrypt(key, encryprted)
 		if err != nil {
 			t.Fatalf("DecryptSteg error: %s", err.Error())
 		}
@@ -483,11 +454,8 @@ func TestEncryptionSteg(t *testing.T) {
 		if !bytes.Equal(raw[:len(origEncryptedSteg)-1], origEncryptedSteg[:len(origEncryptedSteg)-1]) {
 			t.Fatalf("failed to decrypt raw steg, round %d with seed %d", i, seed)
 		}
-		if raw[len(origEncryptedSteg)-1] == origEncryptedSteg[len(origEncryptedSteg)-1] {
-			t.Fatal("Flags were not properly destroyed. This check is probabilistic, and may fail once in 256 times.")
-		}
 
-		decryptedSteg, err := DecryptStegContentOfUnknownSize(keySteg, raw)
+		decryptedSteg, _, err := DecryptStegContentOfUnknownSize(keySteg, raw)
 		if err != nil {
 			t.Fatalf("DecryptStegContentOfUnknownSize error: %s", err.Error())
 		}
@@ -506,16 +474,17 @@ func TestStegSize(t *testing.T) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	data := make([]byte, 124)
 	steg := make([]byte, len(data))
-	encryprted, err := EncryptSteg(key, data, steg, false)
+	encryprted, err := EncryptSteg(key, data, steg)
 	if err != nil {
 		t.Fatalf("EncryptSteg error: %s", err.Error())
 	}
-	const expected = 128 * 2 + EncryptedSizeDiffSteg
+	const expected = 128 * 2 + EncryptedSizeDiff
 	if len(encryprted) != expected {
 		t.Fatalf("Wrong len(encrypted): %d vs. %d", len(encryprted), expected)
 	}
 }
 
+// 0.01 sec/Mb
 func BenchmarkKeccak(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
@@ -524,6 +493,7 @@ func BenchmarkKeccak(b *testing.B) {
 	}
 }
 
+// 0.001 sec/Mb
 func BenchmarkAES(b *testing.B) {
 	const sz = 1000000
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b2")
@@ -540,6 +510,7 @@ func BenchmarkAES(b *testing.B) {
 	}
 }
 
+// 0.01 sec/Mb
 func BenchmarkRc4(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
@@ -548,6 +519,7 @@ func BenchmarkRc4(b *testing.B) {
 	}
 }
 
+// 0.5 sec/Mb
 func BenchmarkRCX(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
@@ -556,6 +528,7 @@ func BenchmarkRCX(b *testing.B) {
 	}
 }
 
+// 0.07 sec/Mb
 func BenchmarkRcxQuick(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
@@ -564,6 +537,7 @@ func BenchmarkRcxQuick(b *testing.B) {
 	}
 }
 
+// 0.5 sec/Mb
 func BenchmarkRcxWithoutKeySchedule(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
@@ -575,6 +549,7 @@ func BenchmarkRcxWithoutKeySchedule(b *testing.B) {
 	}
 }
 
+// 0.035 sec/Mb
 func BenchmarkRcxQuickWithoutKeySchedule(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
@@ -586,47 +561,55 @@ func BenchmarkRcxQuickWithoutKeySchedule(b *testing.B) {
 	}
 }
 
+// 0.002 sec/Mb
+func BenchmarkRcxQuickestWithoutKeySchedule(b *testing.B) {
+	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
+	d := make([]byte, 1000000)
+	var x rcx.RCX
+	x.InitKey(key)
+
+	for i := 0; i < b.N; i++ {
+		x.EncryptCascade(d, 3)
+	}
+}
+
 func BenchmarkL0(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		Encrypt(key, data, 0)
+		Encrypt(key, data)
 	}
 }
 
 func BenchmarkL1(b *testing.B) {
-	const flags = RcxFlag
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		Encrypt(key, data, flags)
+		Encrypt(key, data)
 	}
 }
 
 func BenchmarkL1quick(b *testing.B) {
-	const flags = RcxFlag | QuickFlag
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		Encrypt(key, data, flags)
+		Encrypt(key, data)
 	}
 }
 
 func BenchmarkL2(b *testing.B) {
-	const flags = RcxFlag | SpacingFlag
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		Encrypt(key, data, flags)
+		Encrypt(key, data)
 	}
 }
 
 func BenchmarkL2quick(b *testing.B) {
-	const flags = RcxFlag | SpacingFlag | QuickFlag
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		Encrypt(key, data, flags)
+		Encrypt(key, data)
 	}
 }
 
@@ -634,7 +617,7 @@ func BenchmarkL3(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data, AesFlag)
+		_, err := Encrypt(key, data)
 		if err != nil {
 			b.Fatalf("Benchmark L3 error: %s", err.Error())
 		}
@@ -645,7 +628,7 @@ func BenchmarkL4(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data, AesFlag | RcxFlag)
+		_, err := Encrypt(key, data)
 		if err != nil {
 			b.Fatalf("Benchmark L4 error: %s", err.Error())
 		}
@@ -656,7 +639,7 @@ func BenchmarkL4quick(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data, AesFlag | RcxFlag | QuickFlag)
+		_, err := Encrypt(key, data)
 		if err != nil {
 			b.Fatalf("Benchmark L4 error: %s", err.Error())
 		}
@@ -667,7 +650,7 @@ func BenchmarkL5(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data, AesFlag | RcxFlag | SpacingFlag)
+		_, err := Encrypt(key, data)
 		if err != nil {
 			b.Fatalf("Benchmark L5 error: %s", err.Error())
 		}
@@ -678,7 +661,7 @@ func BenchmarkL5quick(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data, AesFlag | RcxFlag | SpacingFlag | QuickFlag)
+		_, err := Encrypt(key, data)
 		if err != nil {
 			b.Fatalf("Benchmark L5 error: %s", err.Error())
 		}
@@ -689,7 +672,7 @@ func BenchmarkL6(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data, DefaultFlag)
+		_, err := Encrypt(key, data)
 		if err != nil {
 			b.Fatalf("Benchmark L6 error: %s", err.Error())
 		}
@@ -700,7 +683,7 @@ func BenchmarkL6quick(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data, DefaultFlag | QuickFlag)
+		_, err := Encrypt(key, data)
 		if err != nil {
 			b.Fatalf("Benchmark L6 error: %s", err.Error())
 		}
@@ -713,7 +696,7 @@ func BenchmarkSteg(b *testing.B) {
 	steg := make([]byte, len(data))
 
 	for i := 0; i < b.N; i++ {
-		_, err := EncryptSteg(key, data, steg, false)
+		_, err := EncryptSteg(key, data, steg)
 		if err != nil {
 			b.Fatalf("EncryptSteg error: %s", err.Error())
 		}
@@ -726,7 +709,7 @@ func BenchmarkStegQuick(b *testing.B) {
 	steg := make([]byte, len(data))
 
 	for i := 0; i < b.N; i++ {
-		_, err := EncryptSteg(key, data, steg, true)
+		_, err := EncryptSteg(key, data, steg)
 		if err != nil {
 			b.Fatalf("EncryptSteg error: %s", err.Error())
 		}
@@ -739,7 +722,7 @@ func BenchmarkStegQuickBigData(b *testing.B) {
 	steg := make([]byte, len(data))
 
 	for i := 0; i < b.N; i++ {
-		_, err := EncryptSteg(key, data, steg, true)
+		_, err := EncryptSteg(key, data, steg)
 		if err != nil {
 			b.Fatalf("EncryptSteg error: %s", err.Error())
 		}

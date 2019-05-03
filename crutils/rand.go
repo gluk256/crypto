@@ -33,7 +33,7 @@ func CollectEntropy() {
 	entropy.Write(b)
 }
 
-func Rand(dst []byte) {
+func Randomize(dst []byte) {
 	entropy.Read(dst)
 	entropy.ReadXor(tmp) // overwrite internal state
 }

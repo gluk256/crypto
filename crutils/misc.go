@@ -62,13 +62,11 @@ func HexDecode(src []byte) ([]byte, error) {
 	return dst, nil
 }
 
-func addSpacing(data []byte) []byte {
+func addSpacing(data []byte, spacing []byte) []byte {
 	b := make([]byte, 0, len(data)*2)
-	rnd := make([]byte, len(data))
-	Rand(rnd)
 	for i := 0; i < len(data); i++ {
 		b = append(b, data[i])
-		b = append(b, rnd[i])
+		b = append(b, spacing[i])
 	}
 	AnnihilateData(data)
 	return b
@@ -92,11 +90,14 @@ func addPadding(data []byte, newSize int, mark bool) ([]byte, error) {
 	sz := len(data)
 	if newSize <= 0 {
 		newSize = primitives.FindNextPowerOfTwo(sz + 4)
+		if newSize < MinDataSize {
+			newSize = MinDataSize
+		}
 	} else if newSize < sz + 4 {
 		return data, errors.New("padding failed: new size is too small")
 	}
 	rnd := make([]byte, newSize)
-	Rand(rnd)
+	Randomize(rnd)
 	copy(rnd, data)
 	AnnihilateData(data)
 	data = rnd
