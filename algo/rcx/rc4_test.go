@@ -101,6 +101,37 @@ func TestEncryptionRC4(t *testing.T) {
 	}
 }
 
+func TestEncryptionMix(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 8; i++ {
+		key := generateRandomBytes(t, false)
+		x := generateRandomBytes(t, false)
+		y := make([]byte, len(x))
+		copy(y, x)
+
+		var re RC4
+		re.InitKey(key)
+		dummy := make([]byte, 1024*8*512)
+		re.XorInplace(dummy) // roll forward
+
+		re.XorInplace(y)
+		if bytes.Equal(x, y) {
+			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
+		}
+		ok := primitives.IsDeepNotEqual(x, y, len(x))
+		if !ok {
+			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
+		}
+
+		DecryptInplaceRCX(key, y, 0)
+		if !bytes.Equal(x, y) {
+			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
+		}
+	}
+}
+
 func TestConversion(t *testing.T) {
 	a := byte(0xad)
 	b := byte(0xde)
@@ -126,7 +157,7 @@ func TestSingleRunRCX(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -182,7 +213,7 @@ func TestCascade(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -191,7 +222,7 @@ func TestCascade(t *testing.T) {
 		var c RCX
 		c.InitKey(key)
 
-		c.EncryptCascade(y, GetRcxIterations(false))
+		c.EncryptCascade(y, 511)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -200,7 +231,7 @@ func TestCascade(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		c.EncryptCascade(y, GetRcxIterations(false))
+		c.EncryptCascade(y, 511)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -211,7 +242,7 @@ func TestAvalancheRcx(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -278,13 +309,13 @@ func TestEncryptionRCX(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, false)
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		EncryptInplaceRCX(key, y, false)
+		EncryptInplaceRCX(key, y, 511)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -293,7 +324,7 @@ func TestEncryptionRCX(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		DecryptInplaceRCX(key, y, false)
+		DecryptInplaceRCX(key, y, 511)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d\n%x\n%x", i, seed, x, y)
 		}

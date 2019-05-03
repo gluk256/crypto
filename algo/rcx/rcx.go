@@ -68,32 +68,24 @@ func (x *RCX) EncryptCascade(d []byte, iterations int) {
 	}
 }
 
-func EncryptInplaceRCX(key []byte, d []byte, quick bool) {
+func EncryptInplaceRCX(key []byte, d []byte, iterations int) {
 	var x RCX
 	x.InitKey(key)
 	x.rc4.XorInplace(d)
 	sz := len(d)
-	if sz > 4 {
+	if sz > 4 && iterations > 0 {
 		odd := sz % 4
-		x.EncryptCascade(d[:sz-odd], GetRcxIterations(quick))
+		x.EncryptCascade(d[:sz-odd], iterations)
 	}
 }
 
-func DecryptInplaceRCX(key []byte, d []byte, quick bool) {
+func DecryptInplaceRCX(key []byte, d []byte, iterations int) {
 	var x RCX
 	x.InitKey(key)
 	sz := len(d)
-	if sz > 4 {
+	if sz > 4 && iterations > 0 {
 		odd := sz % 4
-		x.EncryptCascade(d[:sz-odd], GetRcxIterations(quick))
+		x.EncryptCascade(d[:sz-odd], iterations)
 	}
 	x.rc4.XorInplace(d)
-}
-
-func GetRcxIterations(quick bool) int {
-	if quick {
-		return 37
-	} else {
-		return 511
-	}
 }

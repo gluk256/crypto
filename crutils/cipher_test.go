@@ -552,7 +552,7 @@ func BenchmarkRCX(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		rcx.EncryptInplaceRCX(key, d, false)
+		rcx.EncryptInplaceRCX(key, d, 511)
 	}
 }
 
@@ -560,7 +560,7 @@ func BenchmarkRcxQuick(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		rcx.EncryptInplaceRCX(key, d, false)
+		rcx.EncryptInplaceRCX(key, d, 37)
 	}
 }
 
@@ -571,7 +571,7 @@ func BenchmarkRcxWithoutKeySchedule(b *testing.B) {
 	x.InitKey(key)
 
 	for i := 0; i < b.N; i++ {
-		x.EncryptCascade(d, rcx.GetRcxIterations(false))
+		x.EncryptCascade(d, 511)
 	}
 }
 
@@ -582,7 +582,7 @@ func BenchmarkRcxQuickWithoutKeySchedule(b *testing.B) {
 	x.InitKey(key)
 
 	for i := 0; i < b.N; i++ {
-		x.EncryptCascade(d, rcx.GetRcxIterations(true))
+		x.EncryptCascade(d, 37)
 	}
 }
 

@@ -120,7 +120,11 @@ func Encrypt(key []byte, data []byte, flags byte) ([]byte, error) {
 
 	EncryptInplaceKeccak(keyholder[begK1:endK1], data)
 	if isRcx(flags) {
-		rcx.EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data, (flags & QuickFlag) != 0)
+		interations := 511
+		if (flags & QuickFlag) != 0 {
+			interations = 37
+		}
+		rcx.EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data, interations)
 	} else {
 		rcx.EncryptInplaceRC4(keyholder[begRcxKey:endRcxKey], data)
 	}
@@ -161,7 +165,11 @@ func decryptWithFlags(key []byte, data []byte, flags byte) (res []byte, err erro
 		}
 	}
 	if isRcx(flags) {
-		rcx.DecryptInplaceRCX(keyholder[begRcxKey:endRcxKey], res, (flags & QuickFlag) != 0)
+		interations := 511
+		if (flags & QuickFlag) != 0 {
+			interations = 37
+		}
+		rcx.DecryptInplaceRCX(keyholder[begRcxKey:endRcxKey], res, interations)
 	} else {
 		rcx.EncryptInplaceRC4(keyholder[begRcxKey:endRcxKey], res)
 	}
