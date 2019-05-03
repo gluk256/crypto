@@ -49,21 +49,17 @@ func calculateIterations(sz int) int {
 		return 63
 	} else if sz < Mb * 16 {
 		return 31
-	} else if sz < Mb * 25 {
+	} else if sz < Mb * 24 {
 		return 25
-	} else if sz < Mb * 40 {
+	} else if sz < Mb * 35 {
 		return 19
-	} else if sz < Mb * 70 {
+	} else if sz < Mb * 45 {
 		return 15
-	} else if sz < Mb * 120 {
-		return 13
-	} else if sz < Mb * 180 {
+	} else if sz < Mb * 60 {
 		return 11
-	} else if sz < Mb * 300 {
-		return 9
-	} else if sz < Mb * 450 {
+	} else if sz < Mb * 80 {
 		return 7
-	} else if sz < Mb * 700 {
+	} else if sz < Mb * 100 {
 		return 5
 	} else {
 		return 3
