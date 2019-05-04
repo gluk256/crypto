@@ -126,7 +126,7 @@ func TestEncryptionLevelZero(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		expectedSize := primitives.FindNextPowerOfTwo(sz+4) * 2 + EncryptedSizeDiff
 		if len(data) != expectedSize {
 			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(data), expectedSize)
 		}
@@ -162,7 +162,7 @@ func TestEncryptionLevelOne(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		expectedSize := primitives.FindNextPowerOfTwo(sz+4) * 2 + EncryptedSizeDiff
 		if len(data) != expectedSize {
 			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(data), expectedSize)
 		}
@@ -206,7 +206,7 @@ func TestEncryptionLevelTwo(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		expectedSize := primitives.FindNextPowerOfTwo(sz+4) * 2 + EncryptedSizeDiff
 		if len(encyprted) != expectedSize {
 			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), expectedSize)
 		}
@@ -250,9 +250,9 @@ func TestEncryptionLevelThree(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		expectedSize := primitives.FindNextPowerOfTwo(sz+4) * 2 + EncryptedSizeDiff
 		if len(encyprted) != expectedSize {
-			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), expectedSize)
+			t.Fatalf("len(encrypted) failed [%d vs. %d], with orig size %d", len(encyprted), expectedSize, sz)
 		}
 
 		d2 := make([]byte, len(encyprted))
@@ -294,7 +294,7 @@ func TestEncryptionLevelFour(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		expectedSize := primitives.FindNextPowerOfTwo(sz+4) * 2 + EncryptedSizeDiff
 		if len(encyprted) != expectedSize {
 			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), expectedSize)
 		}
@@ -340,7 +340,7 @@ func TestEncryptionLevelFive(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		expectedSize := primitives.FindNextPowerOfTwo(sz) * 2 + EncryptedSizeDiff
+		expectedSize := primitives.FindNextPowerOfTwo(sz+4) * 2 + EncryptedSizeDiff
 		if len(encyprted) != expectedSize {
 			t.Fatalf("len(encrypted) failed [%d vs. %d]", len(encyprted), expectedSize)
 		}
@@ -384,7 +384,7 @@ func TestEncryptionLevelSix(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		paddedSize := primitives.FindNextPowerOfTwo(sz + 4)
+		paddedSize := primitives.FindNextPowerOfTwo(sz+4)
 		if len(encyprted) != paddedSize * 2 + SaltSize + AesEncryptedSizeDiff {
 			t.Fatalf("len(encyprted) failed [%d vs. %d]", len(encyprted), sz * 2 + SaltSize + AesEncryptedSizeDiff)
 		}
@@ -685,7 +685,7 @@ func BenchmarkL128(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error()
+			b.Fatalf(err.Error())
 		}
 	}
 }
@@ -697,7 +697,7 @@ func BenchmarkL256(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error()
+			b.Fatalf(err.Error())
 		}
 	}
 }
@@ -709,7 +709,7 @@ func BenchmarkL512(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error()
+			b.Fatalf(err.Error())
 		}
 	}
 }

@@ -36,10 +36,13 @@ const (
 )
 
 func calculateIterations(sz int) int {
-	const Mb = 1024 * 1024
-	if sz < 128 * 1024 {
+	const Kb = 1024
+	const Mb = Kb * 1024
+	if sz < Kb * 32 {
+		return 2047
+	} else if sz < Kb * 128 {
 		return 1023
-	} else if sz < Mb {
+	} else if sz < Mb * 1 {
 		return 511
 	} else if sz < Mb * 2 {
 		return 255
@@ -75,7 +78,6 @@ func EncryptInplaceKeccak(key []byte, data []byte) {
 	AnnihilateData(b) // prevent compiler optimization
 }
 
-// don't forget to clear the data
 // key is expected to be 32 bytes, salt 12 bytes
 func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	if len(key) != AesKeySize {
@@ -90,10 +92,11 @@ func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 		return nil, err
 	}
 	encrypted := aesgcm.Seal(nil, salt, data, nil)
+	AnnihilateData(data)
 	return encrypted, err
 }
 
-// don't forget to clear the data
+// key is expected to be 32 bytes, salt 12 bytes
 func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	if len(key) != AesKeySize {
 		fmt.Errorf("wrong key size %d", len(key))
@@ -107,6 +110,9 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 		return nil, err
 	}
 	decrypted, err := aesgcm.Open(nil, salt, data, nil)
+	if err != nil {
+		AnnihilateData(data)
+	}
 	return decrypted, err
 }
 
