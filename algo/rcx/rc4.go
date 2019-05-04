@@ -7,10 +7,6 @@ type RC4 struct {
 	i, j byte
 }
 
-func (c *RC4) Reset() {
-	c.j = 0
-}
-
 func (c *RC4) InitKey(key []byte) {
 	for i := 0; i < 256; i++ {
 		c.s[i] = byte(i)

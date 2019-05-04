@@ -35,7 +35,7 @@ func testSingleKeyStream(t *testing.T, key string, expected string) {
 
 	var r RC4
 	r.InitKey([]byte(key))
-	r.Reset()
+	r.j = 0
 	r.XorInplace(data)
 	if !bytes.Equal(data, exp) {
 		t.Fatalf("wrong keystream, key: %s", key)
@@ -49,7 +49,7 @@ func testSingleEncrypt(t *testing.T, key string, data string, expected string) {
 
 	var r RC4
 	r.InitKey([]byte(key))
-	r.Reset()
+	r.j = 0
 	r.XorInplace(d)
 	if !bytes.Equal(d, exp) {
 		t.Fatalf("encryption failed, key: %s", key)
