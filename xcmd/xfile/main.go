@@ -41,11 +41,11 @@ func help() {
 	fmt.Println("\t\t 9 encrypt/decrypt with possible steganographic content")
 }
 
+/*
 func getEncryptionFlags(flags string) (b byte, steg bool) {
 	if strings.Contains(flags, "q") {
 		b |= crutils.QuickFlag
 	}
-
 	if strings.Contains(flags, "9") {
 		b |= crutils.RcxFlag | crutils.AesFlag | crutils.SpacingFlag | crutils.PaddingFlag
 		steg = true
@@ -66,12 +66,12 @@ func getEncryptionFlags(flags string) (b byte, steg bool) {
 	} else {
 		b |= crutils.RcxFlag | crutils.AesFlag | crutils.SpacingFlag | crutils.PaddingFlag // default
 	}
-
 	return b, steg
 }
+*/
 
 func stegDecrypt(key []byte, data []byte) ([]byte, error) {
-	_, steg, err := crutils.DecryptSteg(key, data)
+	_, steg, err := crutils.Decrypt(key, data)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func stegDecrypt(key []byte, data []byte) ([]byte, error) {
 		keySteg = terminal.PasswordModeInput()
 	}
 
-	steg, err = crutils.DecryptStegContentOfUnknownSize(keySteg, steg)
+	steg, _, err = crutils.DecryptStegContentOfUnknownSize(keySteg, steg)
 	return steg, err
 }
 
@@ -134,7 +134,8 @@ func main() {
 		return
 	}
 
-	flags, steg := getEncryptionFlags(cmdFlags)
+	//flags, steg := getEncryptionFlags(cmdFlags)
+	steg := strings.Contains(cmdFlags, "x") || strings.Contains(cmdFlags, "X")
 	encrypt := strings.Contains(cmdFlags, "e")
 	if strings.Contains(cmdFlags, "d") {
 		encrypt = false
