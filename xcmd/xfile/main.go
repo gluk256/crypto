@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
-	"github.com/gluk256/crypto/algo/primitives"
 )
 
 var stegContent []byte
@@ -18,27 +18,21 @@ func help() {
 	fmt.Println("USAGE: xfile flags srcFile [dstFile]")
 	fmt.Println("\t h help")
 	fmt.Println("\t s secure password input")
-	fmt.Println("\t x extra secure password input")
-
-	fmt.Println("\t d decrypt")
-	fmt.Println("\t\t S secure password input for steganographic content decryption")
-	fmt.Println("\t\t X extra secure password input for steganographic content decryption")
-	fmt.Println("\t\t p print decrypted content as text, don't save")
-	fmt.Println("\t\t g interactive grep (print specific text lines only)")
-	fmt.Println("\t\t G interactive grep with secure input")
+	fmt.Println("\t S extra secure password input")
 
 	fmt.Println("\t e encrypt")
 	fmt.Println("\t\t r random password")
-	fmt.Println("\t\t q quick encryption for block ciphers (for huge files, less secure)")
-	fmt.Println("\t\t 0 keccak + rc4, no spacing/padding (xor only)")
-	fmt.Println("\t\t 1 keccak + rcx, no spacing/padding (block cipher)")
-	fmt.Println("\t\t 2 keccak + rcx, with spacing, no padding (block cipher)")
-	fmt.Println("\t\t 3 keccak + rc4 + aes + keccak (xor only)")
-	fmt.Println("\t\t 4 keccak + rcx + aes + keccak")
-	fmt.Println("\t\t 5 keccak + rcx + aes + keccak, with spacing")
-	fmt.Println("\t\t 6 keccak + rcx + aes + keccak, with spacing and padding")
-	//fmt.Println("\t\t 8 decrypt data of unknown size (encrypted with default level)")
 	fmt.Println("\t\t 9 encrypt/decrypt with possible steganographic content")
+
+	fmt.Println("\t d decrypt")
+	fmt.Println("\t\t p print decrypted content as text, don't save")
+	fmt.Println("\t\t g interactive grep (print specific text lines only)")
+	fmt.Println("\t\t G interactive grep with secure input")
+	fmt.Println("\t\t x steg")
+
+	fmt.Println("\t x steg")
+	fmt.Println("\t y steg secure")
+	fmt.Println("\t z steg extra secure")
 }
 
 /*
@@ -70,6 +64,8 @@ func getEncryptionFlags(flags string) (b byte, steg bool) {
 }
 */
 
+
+// todo: review
 func stegDecrypt(key []byte, data []byte) ([]byte, error) {
 	_, steg, err := crutils.Decrypt(key, data)
 	if err != nil {
@@ -97,7 +93,7 @@ func getPassword(flags string) []byte {
 		fmt.Println(string(res))
 	} else if strings.Contains(flags, "s") {
 		res = terminal.SecureInput(false)
-	} else if strings.Contains(flags, "x") {
+	} else if strings.Contains(flags, "S") {
 		res = terminal.SecureInput(true)
 	} else {
 		for len(res) == 0 {
@@ -109,7 +105,7 @@ func getPassword(flags string) []byte {
 }
 
 func loadStegContent(plainContent []byte) {
-	fmt.Print("please enter the file name of steganographic content: ")
+	fmt.Print("please enter the name of file with steganographic content: ")
 	filename := terminal.PlainTextInput()
 	stegContent = loadFile(string(filename))
 	plainSize := primitives.FindNextPowerOfTwo(len(plainContent))
@@ -120,9 +116,9 @@ func loadStegContent(plainContent []byte) {
 }
 
 func main() {
-	var dstFile string
-	var res []byte
 	var err error
+	var res []byte
+	var dstFile string
 	if len(os.Args) < 3 {
 		help()
 		return
@@ -187,7 +183,7 @@ func main() {
 	if len(os.Args) > 3 {
 		dstFile = os.Args[3]
 	}
-	saveData(dstFile, res)
+	saveData(dstFile, res) // may call os.Exit
 }
 
 func loadFile(fname string) []byte {
@@ -204,41 +200,39 @@ func saveData(filename string, data []byte) {
 		fmt.Println("Error: content is absent")
 		return
 	}
-	if len(filename) == 0 {
-		filename = getFileName()
-	}
 
-	const ntries = 5
-	for i := 0; i < ntries; i++ {
+	for i := 0; i < 8; i++ {
+		if len(filename) == 0 || i > 0 {
+			filename = getFileName()
+		}
+
 		err := ioutil.WriteFile(filename, data, 0666)
 		if err == nil {
 			return
 		} else {
 			fmt.Printf("Failed to save file: %s \n", err)
 		}
-
-		filename = getFileName()
-		if len(filename) == 0 {
-			fmt.Println("Error: empty filename, please try again")
-		} else  if len(filename) > 64 {
-			fmt.Println("Error: illegal filename. Exit.")
-			return
-		}
 	}
 
-	fmt.Printf("Failed to save file after %d tries. Exit. \n", ntries)
+	fmt.Println("Failed to save file after max tries. Exit.")
+	os.Exit(0)
 }
 
 func getFileName() string {
-	var filename string
-	fmt.Println("Enter dst file name: ")
-	f := terminal.PlainTextInput()
-	if f == nil {
-		return ""
-	} else {
-		filename = string(f)
+	for i := 0; i < 64; i++ {
+		fmt.Println("Enter dst file name: ")
+		f := terminal.PlainTextInput()
+		if len(f) == 0 {
+			fmt.Println("Error: empty filename, please try again")
+		} else if len(f) > 80 {
+			fmt.Println("Error: filename too long, please try again")
+		} else {
+			return string(f)
+		}
 	}
-	return filename
+	fmt.Println("Error: filename input failed. Eixt.")
+	os.Exit(0)
+	return ""
 }
 
 func runGrep(flags string, content []byte) {
