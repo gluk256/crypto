@@ -69,6 +69,7 @@ func addSpacing(data []byte, spacing []byte) []byte {
 		b = append(b, spacing[i])
 	}
 	AnnihilateData(data)
+	AnnihilateData(spacing)
 	return b
 }
 

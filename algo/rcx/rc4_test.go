@@ -275,32 +275,23 @@ func TestAvalancheRC4(t *testing.T) {
 	mrand.Seed(seed)
 
 	for i := 0; i < 1024; i++ {
-		var done bool
-		var a, b RC4
-
 		key := generateRandomBytes(t, false)
+		var a, b RC4
 		a.InitKey(key)
 		b.InitKey(key)
-		k := byte(mrand.Int())
-		n := byte(mrand.Int())
-		if k == n {
-			n++
-		}
-		b.s[k], b.s[n] = b.s[n], b.s[k] // swap two random elements
+		b.s[0], b.s[1] = b.s[1], b.s[0]
 
 		// usually it takes no more than 3 iterations, but we allow 8
-		for j := 0; j < 8; j++ {
+		var done bool
+		for j := 0; j < 8 && !done; j++ {
 			y := make([]byte, 256)
 			x := make([]byte, 256)
 			a.XorInplace(x)
 			b.XorInplace(y)
 			done = primitives.IsDeepNotEqual(x, y, len(x))
-			if done {
-				break
-			}
 		}
 		if !done {
-			t.Fatalf("failed with seed %d", seed)
+			t.Fatalf("failed with seed %d, iter %d", seed, i)
 		}
 	}
 }

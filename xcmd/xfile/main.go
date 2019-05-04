@@ -156,15 +156,15 @@ func main() {
 
 	if steg {
 		if encrypt {
-			res, err = crutils.EncryptSteg(key, data, stegContent, (flags & crutils.QuickFlag) != 0)
+			res, err = crutils.EncryptSteg(key, data, stegContent)
 		} else {
 			res, err = stegDecrypt(key, data)
 		}
 	} else {
 		if encrypt {
-			res, err = crutils.Encrypt(key, data, flags)
+			res, err = crutils.Encrypt(key, data)
 		} else {
-			res, err = crutils.Decrypt(key, data)
+			res, _, err = crutils.Decrypt(key, data)
 		}
 	}
 

@@ -126,7 +126,23 @@ func Encrypt(key []byte, data []byte) ([]byte, error) {
 	return encryptWithSpacing(key, data, spacing)
 }
 
-// data must be already padded
+// encrypt with steganographic content as spacing
+func EncryptSteg(key []byte, data []byte, steg []byte) (res []byte, err error) {
+	data, _ = addPadding(data, 0, true)
+	if len(data) < len(steg) + 4 { // four bytes for padding size
+		return nil, fmt.Errorf("data size is less than necessary [%d vs. %d]", len(data), len(steg)+4)
+	}
+	steg, err = addPadding(steg, len(data), false) // no mark: steg content must be indistinguishable from random gamma
+	if err != nil {
+		return nil, err
+	}
+
+	res, err = encryptWithSpacing(key, data, steg)
+	return res, err
+}
+
+// data must be already padded.
+// don't forget to annihilate the key!
 func encryptWithSpacing(key []byte, data []byte, spacing []byte) ([]byte, error) {
 	salt, err := generateSalt()
 	if err != nil {
@@ -147,6 +163,7 @@ func encryptWithSpacing(key []byte, data []byte, spacing []byte) ([]byte, error)
 	return data, nil
 }
 
+// don't forget to annihilate the key!
 func Decrypt(key []byte, data []byte) (res []byte, spacing []byte, err error) {
 	if len(data) <= SaltSize {
 		return nil, nil, fmt.Errorf("data size %d, less than salt size %d", len(data), SaltSize)
@@ -198,25 +215,7 @@ func generateKeys(key []byte, salt []byte) []byte {
 	fullkey := make([]byte, 0, len(key) + len(salt))
 	fullkey = append(fullkey, key...)
 	fullkey = append(fullkey, salt...)
-	fullkey = fullkey[:len(fullkey)-1]
 	keyholder := keccak.Digest(fullkey, keyHolderSize)
 	AnnihilateData(fullkey)
 	return keyholder
-}
-
-// encrypt with steganographic content as spacing
-func EncryptSteg(key []byte, data []byte, steg []byte) (res []byte, err error) {
-	data, _ = addPadding(data, 0, true)
-	if len(data) < len(steg) + 4 { // four bytes for padding size
-		return nil, fmt.Errorf("data size is less than necessary [%d vs. %d]", len(data), len(steg)+4)
-	}
-	steg, err = addPadding(steg, len(data), false) // no mark: steg content must be indistinguishable from random gamma
-	if err != nil {
-		return nil, err
-	}
-
-	res, err = encryptWithSpacing(key, data, steg)
-	AnnihilateData(data)
-	AnnihilateData(steg)
-	return res, err
 }
