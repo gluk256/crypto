@@ -92,7 +92,9 @@ func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 		return nil, err
 	}
 	encrypted := aesgcm.Seal(nil, salt, data, nil)
-	AnnihilateData(data)
+	if len(data) < 1024 * 1024 {
+		AnnihilateData(data)
+	}
 	return encrypted, err
 }
 
@@ -110,7 +112,7 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 		return nil, err
 	}
 	decrypted, err := aesgcm.Open(nil, salt, data, nil)
-	if err != nil {
+	if err != nil && len(data) < 1024 * 1024 {
 		AnnihilateData(data)
 	}
 	return decrypted, err
