@@ -47,23 +47,18 @@ func main() {
 		return
 	}
 	pass := getPassword(randpass, secure)
-
-	//crutils.EncryptInplaceLevelZero(pass, b)
 	encrypt(pass, b)
-
 	crutils.AnnihilateData(pass)
 	fmt.Printf("%x\n", b)
 }
 
 func encrypt(key []byte, data []byte) {
-	crutils.EncryptInplaceKeccak(key, data)
-
 	dummy := make([]byte, crutils.DefaultRollover)
 	var rc4 rcx.RC4
 	rc4.InitKey(key)
-	rc4.Reset()
 	rc4.XorInplace(dummy) // roll forward
 	rc4.XorInplace(data)
+	crutils.EncryptInplaceKeccak(key, data)
 }
 
 func getPassword(randpass, secure bool) []byte {
