@@ -72,7 +72,7 @@ func IsPowerOfTwo(i uint64) bool {
 }
 
 func FindNextPowerOfTwo(n int) int {
-	x := 2
+	x := 1
 	for i := 0; i < 32; i++ {
 		if x >= n {
 			return x
