@@ -26,6 +26,9 @@ func help() {
 	fmt.Println("\t\t p print decrypted content as text, don't save")
 	fmt.Println("\t\t g interactive grep (print specific text lines only)")
 	fmt.Println("\t\t G interactive grep with secure input")
+
+	fmt.Println("\t l load file")
+	fmt.Println("\t\t i insert file content into another file as steganographic content")
 }
 
 func processCommandArgs() (flags string, srcFile string, dstFile string) {
@@ -59,8 +62,25 @@ func main() {
 	if strings.Contains(flags, "d") {
 		data := loadDataFromFile(srcFile, crutils.MinDataSize + crutils.EncryptedSizeDiff)
 		processDecryption(flags, data, dstFile)
-	} else {
+	} else if strings.Contains(flags, "e") {
 		processEncryption(flags, srcFile, dstFile, nil)
+	} else {
+		loadFile(flags, srcFile, dstFile)
+	}
+}
+
+func loadFile(flags string, srcFile string, dstFile string) {
+	data := loadDataFromFile(srcFile, 0) // may call os.Exit
+	fmt.Print("What do you want to do with loaded content? Please enter the command [ied]: ")
+	cmd := string(terminal.PlainTextInput())
+	if strings.Contains(cmd, "d") {
+		processDecryption(flags, data, dstFile)
+	} else if strings.Contains(cmd, "e") {
+		processEncryption(flags, srcFile, dstFile, nil)
+	} else if strings.Contains(cmd, "i") {
+		processEncryption(flags, "", dstFile, data)
+	} else {
+		fmt.Println("Wrong command. Exit.")
 	}
 }
 
