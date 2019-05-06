@@ -61,7 +61,7 @@ func main() {
 	flags, srcFile, dstFile := processCommandArgs()
 	if strings.Contains(flags, "d") {
 		data := loadDataFromFile(srcFile, crutils.MinDataSize + crutils.EncryptedSizeDiff)
-		processDecryption(flags, data, dstFile)
+		processDecryption(flags, data, dstFile, false)
 	} else if strings.Contains(flags, "e") {
 		processEncryption(flags, srcFile, dstFile, nil)
 	} else {
@@ -74,7 +74,7 @@ func loadFile(flags string, srcFile string, dstFile string) {
 	fmt.Print("What do you want to do with loaded content? Please enter the command [ied]: ")
 	cmd := string(terminal.PlainTextInput())
 	if strings.Contains(cmd, "d") {
-		processDecryption(flags, data, dstFile)
+		processDecryption(flags, data, dstFile, false)
 	} else if strings.Contains(cmd, "e") {
 		processEncryption(flags, srcFile, dstFile, nil)
 	} else if strings.Contains(cmd, "i") {
@@ -84,10 +84,14 @@ func loadFile(flags string, srcFile string, dstFile string) {
 	}
 }
 
-func decrypt(flags string, data []byte) (decrypted []byte, steg []byte, err error) {
+func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, steg []byte, err error) {
 	for {
 		key := getPassword(flags)
-		decrypted, steg, err = crutils.Decrypt(key, data)
+		if unknownSize {
+			decrypted, steg, err = crutils.DecryptStegContentOfUnknownSize(key, data)
+		} else {
+			decrypted, steg, err = crutils.Decrypt(key, data)
+		}
 		crutils.AnnihilateData(key)
 		if err == nil {
 			return decrypted, steg, err
@@ -102,14 +106,14 @@ func decrypt(flags string, data []byte) (decrypted []byte, steg []byte, err erro
 	return decrypted, steg, err
 }
 
-func processDecryption(flags string, data []byte, dstFile string) {
-	decrypted, steg, err := decrypt(flags, data)
+func processDecryption(flags string, data []byte, dstFile string, unknownSize bool) {
+	decrypted, steg, err := decrypt(flags, data, unknownSize)
 	if err != nil {
 		return
 	}
 
 	if !strings.Contains(flags, "f") {
-		fmt.Print("What do you want to do with decrypted content? Please enter the flags [Ggpsxf]: ")
+		fmt.Print("What do you want to do with decrypted content? Please enter the command [Ggpsxfd]: ")
 		flags = string(terminal.PlainTextInput())
 	}
 
@@ -123,7 +127,7 @@ func processDecryption(flags string, data []byte, dstFile string) {
 		fmt.Print(string(decrypted))
 		fmt.Println()
 	} else {
-		processDecryption(flags, steg, dstFile) // recursively decrypt steg content
+		processDecryption(flags, steg, dstFile, true) // recursively decrypt steg content
 	}
 
 	crutils.AnnihilateData(decrypted)
@@ -149,7 +153,7 @@ func processEncryption(flags string, srcFile string, dstFile string, steg []byte
 	}
 
 	if !strings.Contains(flags, "f") {
-		fmt.Print("What do you want to do with encrypted content? Please enter the flags [rsxf]: ")
+		fmt.Print("What do you want to do with encrypted content? Please enter the command [rsxfe]: ")
 		flags = string(terminal.PlainTextInput())
 	}
 
