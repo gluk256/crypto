@@ -40,7 +40,6 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 	}
 	if len(os.Args) > 3 {
 		dstFile = os.Args[3]
-		flags += "f"
 	}
 
 	if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
