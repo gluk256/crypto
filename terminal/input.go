@@ -40,6 +40,7 @@ func randNum() int {
 	if err != nil || j != sz {
 		panic("error in randNum(): " + err.Error())
 	}
+	crutils.RandXor(stochastic)
 	for _, j := range(stochastic) {
 		sum += int(j)
 	}
