@@ -201,21 +201,3 @@ func DecryptStegContentOfUnknownSize(key []byte, steg []byte) ([]byte, []byte, e
 	}
 	return nil, nil, errors.New("failed to decrypt steganographic content")
 }
-
-func generateSalt() ([]byte, error) {
-	salt := make([]byte, SaltSize)
-	err := StochasticRand(salt)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Stochastic rand failed: %s", err.Error()))
-	}
-	return salt, err
-}
-
-func generateKeys(key []byte, salt []byte) []byte {
-	fullkey := make([]byte, 0, len(key) + len(salt))
-	fullkey = append(fullkey, key...)
-	fullkey = append(fullkey, salt...)
-	keyholder := keccak.Digest(fullkey, keyHolderSize)
-	AnnihilateData(fullkey)
-	return keyholder
-}

@@ -114,17 +114,24 @@ func TestReadXor(t *testing.T) {
 		key := generateRandomBytes(t)
 		x := generateRandomBytes(t)
 		y := make([]byte, len(x))
+		z := make([]byte, len(x))
+		gamma := make([]byte, len(y))
 		copy(y, x)
 
-		var k1, k2 Keccak512
+		var k1, k2, k3 Keccak512
 		k1.Write(key)
 		k2.Write(key)
+		k3.Write(key)
+
 		k2.ReadXor(x)
-
-		gamma := make([]byte, len(y))
 		k1.Read(gamma)
-		primitives.XorInplace(y, gamma, len(y))
+		k3.ReadXor(z)
 
+		if !bytes.Equal(z, gamma) {
+			t.Fatalf("failed round %d with seed %d", i, seed)
+		}
+
+		primitives.XorInplace(y, gamma, len(y))
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed round %d with seed %d", i, seed)
 		}

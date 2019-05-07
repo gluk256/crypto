@@ -2,11 +2,12 @@ package crutils
 
 import (
 	"crypto/sha256"
-	"fmt"
 	"errors"
+	"fmt"
 
-	"github.com/gluk256/crypto/algo/rcx"
+	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/algo/primitives"
+	"github.com/gluk256/crypto/algo/rcx"
 )
 
 func Sha2(s []byte) []byte {
@@ -123,4 +124,22 @@ func removePadding(data []byte) ([]byte, error) {
 		return data, errors.New(fmt.Sprintf("error removing padding: wrong sizes [%d vs. %d]", newSize, sz))
 	}
 	return data[:newSize], nil
+}
+
+func generateSalt() ([]byte, error) {
+	salt := make([]byte, SaltSize)
+	err := StochasticRand(salt)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Stochastic rand failed: %s", err.Error()))
+	}
+	return salt, err
+}
+
+func generateKeys(key []byte, salt []byte) []byte {
+	fullkey := make([]byte, 0, len(key) + len(salt))
+	fullkey = append(fullkey, key...)
+	fullkey = append(fullkey, salt...)
+	keyholder := keccak.Digest(fullkey, keyHolderSize)
+	AnnihilateData(fullkey)
+	return keyholder
 }
