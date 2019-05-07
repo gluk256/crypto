@@ -224,7 +224,7 @@ func TestStegSize(t *testing.T) {
 	}
 }
 
-// 0.01 sec/Mb
+// 0.017 sec/Mb
 func BenchmarkKeccak(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
