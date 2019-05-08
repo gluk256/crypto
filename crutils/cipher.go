@@ -187,7 +187,7 @@ func Decrypt(key []byte, data []byte) (res []byte, spacing []byte, err error) {
 }
 
 // steganographic content is obviously of unknown size.
-// however, we know that the size of original unencrypted steg content was power_of_two;
+// however, we assume that original unencrypted steg content was padded (size=power_of_two);
 // so, we try all possible sizes (25 iterations at most, but in reality much less).
 func DecryptStegContentOfUnknownSize(key []byte, steg []byte) ([]byte, []byte, error) {
 	for sz := len(steg) / 2; sz >= MinDataSize; sz /= 2 {
