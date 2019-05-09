@@ -29,7 +29,7 @@ var randomizer = [24]uint64 {
 	0x8000000080008008,
 }
 
-// this function is optimaized for performance and partially for readability
+// this function is optimized for performance and only partially for readability
 func fx(a *[25]uint64) {
 	var x, y [5]uint64
 	var m uint64
