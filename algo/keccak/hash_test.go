@@ -27,10 +27,9 @@ var expected = []string{
 	"0b4726f2c9b79347d1f2340ee2ba35a6d9711dd84d6bcde7907135f0c57f4cedb3205ccb2b436b81510f199e996c3b3601ec2a92456718165c62a43e09ab5c11",
 }
 
-const sz = 64
-
 func BenchmarkHash(b *testing.B) {
-	buf := make([]byte, sz)
+	const Size = 64
+	buf := make([]byte, Size)
 	var k Keccak512
 	k.Write([]byte(input[3]))
 	for i := 0; i < b.N; i++ {
@@ -39,16 +38,17 @@ func BenchmarkHash(b *testing.B) {
 }
 
 func TestHash(t *testing.T) {
-	exp := make([]byte, sz)
+	const Size = 64
+	exp := make([]byte, Size)
 	for i, text := range input {
-		hash := Digest([]byte(text), sz)
+		hash := Digest([]byte(text), Size)
 		hex.Decode(exp, []byte(expected[i]))
 		if !bytes.Equal(hash, exp) {
 			t.Fatalf("failed test number %d, result: \n[%x]", i, hash)
 		}
 	}
 
-	res := make([]byte, sz)
+	res := make([]byte, Size)
 	for i := 0; i < len(input); i++ {
 		var k Keccak512
 		k.Write([]byte(input[i]))
@@ -109,13 +109,15 @@ func digestXor(in []byte, out []byte) {
 func TestReadXor(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
+	var zeroCnt int
 
 	for i := 0; i < 1024; i++ {
 		key := generateRandomBytes(t)
 		x := generateRandomBytes(t)
-		y := make([]byte, len(x))
-		z := make([]byte, len(x))
-		gamma := make([]byte, len(y))
+		sz := len(x)
+		y := make([]byte, sz)
+		z := make([]byte, sz)
+		gamma := make([]byte, sz)
 		copy(y, x)
 
 		var k1, k2, k3 Keccak512
@@ -135,6 +137,14 @@ func TestReadXor(t *testing.T) {
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed round %d with seed %d", i, seed)
 		}
+
+		if gamma[sz-1] == byte(0) {
+			zeroCnt++
+		}
+	}
+
+	if zeroCnt > 12 {
+		t.Fatalf("failed with seed %d: zeros count = %d", seed, zeroCnt)
 	}
 }
 
@@ -174,6 +184,33 @@ func TestXorIn(t *testing.T) {
 	for i := Rate / 8; i < 25; i++ {
 		if k.a[i] != 0 {
 			t.Fatalf("a[%d] != 0", i)
+		}
+	}
+}
+
+func TestReadSequence(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 32; i++ {
+		key := generateRandomBytes(t)
+		sz := mrand.Intn(200)
+		sz += 16
+		x := make([]byte, sz*2)
+		y := make([]byte, sz)
+		z := make([]byte, sz)
+
+		var k1, k2 Keccak512
+		k1.Write(key)
+		k2.Write(key)
+
+		k1.Read(x)
+		k2.Read(y)
+		k2.Read(z)
+
+		g := append(y, z...)
+		if !bytes.Equal(x, g) {
+			t.Fatalf("failed round %d with seed %d", i, seed)
 		}
 	}
 }
