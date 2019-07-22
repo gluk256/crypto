@@ -1,11 +1,11 @@
 package keccak
 
 import (
-	"fmt"
-	"testing"
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	mrand "math/rand"
+	"testing"
 	"time"
 
 	"github.com/gluk256/crypto/algo/primitives"
@@ -149,23 +149,23 @@ func generateRandomBytes(t *testing.T) []byte {
 }
 
 func TestXorIn(t *testing.T) {
-	sample := [8]byte { 0xed, 0x01, 0xd4, 0x0a, 0xb7, 0x80, 0x15, 0xcf }
+	sample := [8]byte{0xed, 0x01, 0xd4, 0x0a, 0xb7, 0x80, 0x15, 0xcf}
 	const expected = uint64(0xcf1580b70ad401ed)
 
 	var k Keccak512
 	var b []byte
-	for i := 0; i < Rate / 8; i++ {
+	for i := 0; i < Rate/8; i++ {
 		b = append(b, sample[:]...)
 	}
 	if len(b) != Rate {
 		t.Fatal("wrong buf len")
 	}
 	for i := 0; i < Rate; i++ {
-		b[i] += byte(i/8)
+		b[i] += byte(i / 8)
 	}
-	xorIn(&k, b)
+	k.absorb(b)
 	exp := expected
-	for i := 0; i < Rate / 8; i++ {
+	for i := 0; i < Rate/8; i++ {
 		if k.a[i] != exp {
 			t.Fatalf("a[%d] != expected [%x != %x]", i, k.a[i], exp)
 		}
