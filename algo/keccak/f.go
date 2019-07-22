@@ -30,7 +30,7 @@ var randomizer = [24]uint64{
 }
 
 // this function is optimized for performance and only partially for readability
-func permuteKeccak(a *[25]uint64) {
+func permute(a *[25]uint64) {
 	var x, y [5]uint64
 	var m uint64
 

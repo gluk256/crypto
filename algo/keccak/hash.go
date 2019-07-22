@@ -53,7 +53,7 @@ func (k *Keccak512) finalize() {
 
 	k.buf[Rate-1] ^= 0x80
 	k.absorb(k.buf)
-	permuteKeccak(&k.a)
+	permute(&k.a)
 	k.squeeze()
 	k.absorbing = false
 }
@@ -76,7 +76,7 @@ func (k *Keccak512) read(dst []byte, xor bool) {
 
 		// apply the permutation if the sponge is empty
 		if len(k.buf) == 0 {
-			permuteKeccak(&k.a)
+			permute(&k.a)
 			k.squeeze()
 		}
 	}
@@ -101,7 +101,7 @@ func (k *Keccak512) Write(src []byte) {
 			// fast path: absorb a full [len==Rate] of input bytes and apply the permutation
 			k.absorb(src[:Rate])
 			src = src[Rate:]
-			permuteKeccak(&k.a)
+			permute(&k.a)
 		} else {
 			// slow path: buffer the input until we can fill the sponge, and then xor it in
 			leftover := Rate - len(k.buf)
@@ -115,7 +115,7 @@ func (k *Keccak512) Write(src []byte) {
 			if len(k.buf) == Rate {
 				k.absorb(k.buf)
 				k.buf = k.storage[:0]
-				permuteKeccak(&k.a)
+				permute(&k.a)
 			}
 		}
 	}

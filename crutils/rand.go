@@ -1,20 +1,19 @@
 package crutils
 
 import (
-	"fmt"
-	"time"
-	"encoding/binary"
-	"os"
 	crand "crypto/rand"
+	"encoding/binary"
+	"fmt"
 	mrand "math/rand"
+	"os"
+	"time"
 
 	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/algo/primitives"
 )
 
 var entropy keccak.Keccak512
-var witnessOfDataDestruction keccak.Keccak512
-var tmp = make([]byte, keccak.Rate)
+var destructionProof keccak.Keccak512
 
 func init() {
 	r := make([]byte, 32)
@@ -35,14 +34,13 @@ func CollectEntropy() {
 
 func Randomize(dst []byte) {
 	entropy.Read(dst)
-	entropy.ReadXor(tmp) // overwrite internal state
 }
 
 func RandXor(dst []byte) {
 	entropy.ReadXor(dst)
-	entropy.ReadXor(tmp) // overwrite internal state
 }
 
+// collect entropy from three independent sources
 func StochasticRand(dst []byte) error {
 	n, err := crand.Read(dst)
 	if err == nil && n == len(dst) {
@@ -57,25 +55,22 @@ func StochasticRand(dst []byte) error {
 
 func AnnihilateData(b []byte) {
 	if len(b) > 0 {
-		// overwrite data, prevent compiler optimization
 		RandXor(b)
-		sz := len(b)
-		div := int(b[sz-1] & 0x3) + 2
-		primitives.ReverseBytes(b[sz/div:])
-		witnessOfDataDestruction.Write(b)
+		destructionProof.Write(b)
+		destructionProof.ReadXor(b)
+		destructionProof.Write(b)
 	}
 }
 
 // this function should be called before the program exits
 func ProveDestruction() {
-	b := make([]byte, 32)
-	witnessOfDataDestruction.Write(tmp)
-	witnessOfDataDestruction.Read(b)
-	fmt.Printf("proof of destruction: %x\n", b)
+	b := make([]byte, 256)
+	destructionProof.Read(b)
+	fmt.Printf("Proof of destruction: %x\n", b[224:])
 }
 
 func GenerateRandomPassword(sz int) []byte {
-	var arr = []byte("abcdefghijklmnopqrstuvwxyz0123456789") // you can add arbitrary ANCII characters
+	var arr = []byte("abcdefghijklmnopqrstuvwxyz0123456789") // you can add arbitrary ASCII characters
 	var res []byte
 	for i := 0; i < sz; i++ {
 		b := make([]byte, len(arr))
@@ -84,7 +79,7 @@ func GenerateRandomPassword(sz int) []byte {
 		for j := 0; j < len(arr); j++ {
 			sum += int(b[j])
 		}
-		c := arr[sum % len(arr)]
+		c := arr[sum%len(arr)]
 		res = append(res, c)
 	}
 	return res
