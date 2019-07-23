@@ -141,6 +141,6 @@ func (k *Keccak512) RandUint64() uint64 {
 	permute(&k.a)
 	j := k.a[0] % 25
 	res := k.a[j]
-	defer permute(&k.a)
+	permute(&k.a)
 	return res
 }

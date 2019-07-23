@@ -3,19 +3,18 @@ package terminal
 import (
 	"bufio"
 	"fmt"
-	"time"
+	"math/rand"
 	"os"
 	"os/exec"
 	"runtime"
 	"syscall"
-	crand "crypto/rand"
-	mrand "math/rand"
+
 	shell "golang.org/x/crypto/ssh/terminal"
 
 	"github.com/gluk256/crypto/crutils"
 )
 
-// you can arbitrary extend the alphabet (add capital letters, special characters, etc.), but only ASCII characters are allowed
+// you can arbitrary extend the alphabet with additional ASCII characters
 var alphabetStandard = []byte("abcdefghijklmnopqrstuvwxyz 0123456789,.")
 var alphabetExt = []byte("abcdefghijklmnopqrstuvwxyz 0123456789!@#$%^&*()_+-=[];'\\,./:\"|<>?~`")
 var alphabet []byte
@@ -33,43 +32,31 @@ func printSpaced(s []byte) {
 	fmt.Print(x)
 }
 
-func randNum() int {
-	sum := time.Now().Nanosecond()
-	stochastic := make([]byte, sz)
-	j, err := crand.Read(stochastic)
-	if err != nil || j != sz {
-		panic("error in randNum(): " + err.Error())
+func shiftAlphabet() {
+	rnd, err := crutils.StochasticUint64()
+	if err != nil {
+		panic("Error in randomizeAlphabet(): " + err.Error())
 	}
-	crutils.RandXor(stochastic)
-	for _, j := range(stochastic) {
-		sum += int(j)
+	off := int(rnd % uint64(sz))
+	for i, c := range alphabet {
+		j := (i + off) % sz
+		scrambledAlphabet[j] = c
 	}
-	return sum % sz
 }
 
-func randomizeAlphabet() {
-	// shift with crand + local entropy
-	rnd := randNum()
-	for i, c := range alphabet {
-		scrambledAlphabet[(i+rnd)%sz] = c
-	}
-
-	// shuffle with mrand
-	perm := mrand.Perm(sz)
+func shuffleAlphabet() {
+	rnd := crutils.PseudorandomUint64()
+	generator := rand.New(rand.NewSource(int64(rnd)))
+	permutation := generator.Perm(sz)
 	x := scrambledAlphabet
-	for j, v := range perm {
+	for j, v := range permutation {
 		x[j], x[v] = x[v], x[j]
 	}
 }
 
-func decryptByte(c byte) (byte, bool) {
-	for i := 0; i < sz; i++ {
-		if scrambledAlphabet[i] == c {
-			r := alphabet[i]
-			return r, false
-		}
-	}
-	return byte(0), true
+func randomizeAlphabet() {
+	shiftAlphabet()
+	shuffleAlphabet()
 }
 
 func initParams(ext bool) {
@@ -85,19 +72,17 @@ func initParams(ext bool) {
 
 func resetParams() {
 	sz = 0
-	scrambledAlphabet = nil
 	alphabet = nil
+	scrambledAlphabet = nil
 }
 
 func secureRead(ext bool) []byte {
-	//fmt.Println("SecureInput version 31")
 	initParams(ext)
-	defer resetParams()
-
+	defer resetParams() // explicitly allow garbage collection
 	printSpaced(alphabet)
 	fmt.Println()
 	b := make([]byte, 1)
-	s := make([]byte, 0, 128)
+	s := make([]byte, 0, 150)
 	var next byte
 	done := false
 
@@ -112,10 +97,8 @@ func secureRead(ext bool) []byte {
 		}
 
 		switch b[0] {
-		case  27:
-			// escape: only reshuffle
-		case 127:
-			// backspace
+		case 27: // escape: only reshuffle, do nothing
+		case 127: // backspace
 			if i := len(s); i > 0 {
 				s = s[:i-1]
 			}
@@ -125,7 +108,6 @@ func secureRead(ext bool) []byte {
 				s = append(s, next)
 			}
 		}
-
 		crutils.CollectEntropy()
 	}
 
@@ -135,10 +117,21 @@ func secureRead(ext bool) []byte {
 	return s
 }
 
+func decryptByte(c byte) (byte, bool) {
+	for i := 0; i < sz; i++ {
+		if scrambledAlphabet[i] == c {
+			r := alphabet[i]
+			return r, false
+		}
+	}
+	return byte(0), true
+}
+
 func SecureInputLinux(ext bool) []byte {
+	//fmt.Println("SecureInput version 32")
 	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run() // disable input buffering
-	exec.Command("stty", "-F", "/dev/tty", "-echo").Run() // do not display entered characters on the screen
-	defer exec.Command("stty", "-F", "/dev/tty", "echo").Run() // restore the echoing state when exiting
+	exec.Command("stty", "-F", "/dev/tty", "-echo").Run()              // do not display entered characters on the screen
+	defer exec.Command("stty", "-F", "/dev/tty", "echo").Run()         // restore the echoing state when exiting
 	defer exec.Command("stty", "-F", "/dev/tty", "icanon").Run()
 	return secureRead(ext)
 }
@@ -152,7 +145,7 @@ func SecureInputTest() []byte {
 	var b []byte = make([]byte, 1)
 	for b[0] != byte(1) { // Ctrl + a
 		os.Stdin.Read(b)
-		fmt.Println("I got the byte", b, "(" + string(b) + ")")
+		fmt.Println("I got the byte", b, "("+string(b)+")")
 	}
 	return []byte("test finished")
 }

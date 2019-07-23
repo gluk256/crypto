@@ -74,6 +74,10 @@ func StochasticUint64() (uint64, error) {
 	return x, err
 }
 
+func PseudorandomUint64() uint64 {
+	return entropy.RandUint64()
+}
+
 func AnnihilateData(b []byte) {
 	if len(b) > 0 {
 		RandXor(b)

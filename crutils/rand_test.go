@@ -2,9 +2,9 @@ package crutils
 
 import (
 	"bytes"
+	mrand "math/rand"
 	"testing"
 	"time"
-	mrand "math/rand"
 
 	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/algo/rcx"
