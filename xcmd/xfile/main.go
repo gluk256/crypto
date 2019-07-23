@@ -59,7 +59,7 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 func main() {
 	flags, srcFile, dstFile := processCommandArgs()
 	if strings.Contains(flags, "d") {
-		data := loadDataFromFile(srcFile, crutils.MinDataSize + crutils.EncryptedSizeDiff)
+		data := loadDataFromFile(srcFile, crutils.MinDataSize+crutils.EncryptedSizeDiff)
 		processDecryption(flags, data, dstFile, false)
 	} else if strings.Contains(flags, "e") {
 		processEncryption(flags, srcFile, dstFile, nil)
@@ -85,7 +85,7 @@ func loadFile(flags string, srcFile string, dstFile string) {
 
 func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, steg []byte, err error) {
 	for {
-		key := getPassword(flags)
+		key := getPassword(flags) // may call os.Exit
 		if unknownSize {
 			decrypted, steg, err = crutils.DecryptStegContentOfUnknownSize(key, data)
 		} else {
@@ -143,7 +143,7 @@ func encrypt(key []byte, data []byte, steg []byte) ([]byte, error) {
 
 func processEncryption(flags string, srcFile string, dstFile string, steg []byte) {
 	data := loadDataFromFile(srcFile, len(steg)) // may call os.Exit
-	key := getPassword(flags)
+	key := getPassword(flags)                    // may call os.Exit
 	encrypted, err := encrypt(key, data, steg)
 	crutils.AnnihilateData(key)
 	if err != nil {
@@ -260,8 +260,14 @@ func runGrep(flags string, content []byte) {
 
 func getPassword(flags string) []byte {
 	var res []byte
+	var err error
 	if strings.Contains(flags, "r") {
-		res = crutils.GenerateRandomPassword(20)
+		res, err = crutils.GenerateRandomPassword(20)
+		if err != nil {
+			fmt.Printf("Critical error: %s\n", err)
+			fmt.Println("Execution aborted")
+			os.Exit(0)
+		}
 		fmt.Println(string(res))
 	} else if strings.Contains(flags, "x") {
 		res = terminal.SecureInput(true)

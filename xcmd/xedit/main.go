@@ -14,17 +14,17 @@ import (
 
 type Content struct {
 	src      []byte
-	key 	 []byte
-	pad 	 []byte
+	key      []byte
+	pad      []byte
 	console  *list.List
 	prepared bool
 	changed  bool
 }
 
 const (
-	version = 2
+	version  = 2
 	MaxItems = 2
-	steg = 1
+	steg     = 1
 )
 
 var (
@@ -63,7 +63,7 @@ func main() {
 	}
 
 	deleteAll()
-	crutils.ProveDestruction()
+	crutils.Report()
 }
 
 func initialize() {

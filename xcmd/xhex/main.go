@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/gluk256/crypto/algo/rcx"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
-	"github.com/gluk256/crypto/algo/rcx"
 )
 
 func help() {
@@ -63,9 +63,14 @@ func encrypt(key []byte, data []byte) {
 
 func getPassword(randpass, secure bool) []byte {
 	var res []byte
+	var err error
 	if randpass {
-		res = crutils.GenerateRandomPassword(16)
+		res, err = crutils.GenerateRandomPassword(16)
 		fmt.Println(string(res))
+		if err != nil {
+			fmt.Printf("ERROR: %s\n", err)
+			fmt.Println("ATTENTION!!! The data is not entirely random. Not safe to use!")
+		}
 	} else if secure {
 		res = terminal.SecureInput(false)
 	} else {

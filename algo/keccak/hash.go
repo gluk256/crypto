@@ -91,10 +91,10 @@ func (k *Keccak512) ReadXor(dst []byte) {
 }
 
 func (k *Keccak512) Write(src []byte) {
-	k.absorbing = true
-	if k.buf == nil {
+	if !k.absorbing || k.buf == nil {
 		k.buf = k.storage[:0]
 	}
+	k.absorbing = true
 
 	for len(src) > 0 {
 		if len(k.buf) == 0 && len(src) >= Rate {
@@ -126,5 +126,21 @@ func Digest(src []byte, sz int) []byte {
 	var k Keccak512
 	k.Write(src)
 	k.Read(res)
+	return res
+}
+
+// working with wntropy ////////////////////////////////////////////
+
+func (k *Keccak512) AddEntropy(e uint64) {
+	j := (k.a[0] + e) % 25
+	k.a[j] ^= e
+	permute(&k.a)
+}
+
+func (k *Keccak512) RandUint64() uint64 {
+	permute(&k.a)
+	j := k.a[0] % 25
+	res := k.a[j]
+	defer permute(&k.a)
 	return res
 }

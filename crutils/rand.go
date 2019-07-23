@@ -3,6 +3,7 @@ package crutils
 import (
 	crand "crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	mrand "math/rand"
 	"os"
@@ -16,20 +17,21 @@ var entropy keccak.Keccak512
 var destructionProof keccak.Keccak512
 
 func init() {
-	r := make([]byte, 32)
-	n, err := crand.Read(r)
-	if err != nil || n != len(r) {
+	b := make([]byte, 32)
+	n, err := crand.Read(b)
+	if err != nil || n != len(b) {
 		fmt.Printf("Error in init: Crypto.Rand() failed: %s\n", err)
 		os.Exit(0)
 	}
-	entropy.Write(r)
+	entropy.Write(b)
+	CollectEntropy()
+	entropy.Read(b)
+	destructionProof.Write(b)
 }
 
 func CollectEntropy() {
-	b := make([]byte, 8)
 	i := time.Now().UnixNano()
-	binary.LittleEndian.PutUint64(b, uint64(i))
-	entropy.Write(b)
+	entropy.AddEntropy(uint64(i))
 }
 
 func Randomize(dst []byte) {
@@ -43,44 +45,66 @@ func RandXor(dst []byte) {
 // collect entropy from three independent sources
 func StochasticRand(dst []byte) error {
 	n, err := crand.Read(dst)
-	if err == nil && n == len(dst) {
-		mathrand := make([]byte, len(dst))
-		_, err = mrand.Read(mathrand)
-		primitives.XorInplace(dst, mathrand, len(dst))
-		RandXor(dst)
-		AnnihilateData(mathrand)
+	if err == nil && n != len(dst) {
+		err = errors.New("failed to read from crand")
 	}
+	// even in case of errors, do your best
+	mathrand := make([]byte, len(dst))
+	_, err2 := mrand.Read(mathrand)
+	if err == nil {
+		err = err2
+	}
+	primitives.XorInplace(dst, mathrand, len(dst))
+	RandXor(dst)
+	AnnihilateData(mathrand)
 	return err
+}
+
+// collect entropy from three independent sources
+func StochasticUint64() (uint64, error) {
+	b := make([]byte, 8)
+	n, err := crand.Read(b)
+	if err == nil && n != 8 {
+		err = errors.New("failed to read from crand")
+	}
+	// even in case of errors, do your best
+	x := binary.LittleEndian.Uint64(b)
+	x ^= mrand.Uint64()
+	x ^= entropy.RandUint64()
+	return x, err
 }
 
 func AnnihilateData(b []byte) {
 	if len(b) > 0 {
 		RandXor(b)
 		destructionProof.Write(b)
-		destructionProof.ReadXor(b)
-		destructionProof.Write(b)
-	}
-}
-
-// this function should be called before the program exits
-func ProveDestruction() {
-	b := make([]byte, 256)
-	destructionProof.Read(b)
-	fmt.Printf("Proof of destruction: %x\n", b[224:])
-}
-
-func GenerateRandomPassword(sz int) []byte {
-	var arr = []byte("abcdefghijklmnopqrstuvwxyz0123456789") // you can add arbitrary ASCII characters
-	var res []byte
-	for i := 0; i < sz; i++ {
-		b := make([]byte, len(arr))
-		StochasticRand(b)
-		var sum int
-		for j := 0; j < len(arr); j++ {
-			sum += int(b[j])
+		if len(b) < 1024*1024 {
+			// small data are likely to contain very sensitive info (e.g. RCX cryptographic setup),
+			// and therefore it is important to prevent the compiler optimization.
+			primitives.ReverseBytes(b)
+			destructionProof.ReadXor(b)
+			destructionProof.Write(b)
 		}
-		c := arr[sum%len(arr)]
-		res = append(res, c)
 	}
-	return res
+}
+
+// this function should be called once, before the program exits
+func Report() {
+	b := make([]byte, 1032)
+	destructionProof.Read(b)
+	fmt.Printf("Proof of destruction: %x\n", b[1000:])
+}
+
+func GenerateRandomPassword(sz int) (res []byte, err error) {
+	var arr = []byte("abcdefghijklmnopqrstuvwxyz0123456789") // you can add arbitrary ASCII characters
+	res = make([]byte, 0, sz)
+	for i := 0; i < sz; i++ {
+		rnd, errX := StochasticUint64()
+		c := arr[rnd%uint64(len(arr))]
+		res = append(res, c)
+		if errX != nil && err == nil {
+			err = errX
+		}
+	}
+	return res, err
 }

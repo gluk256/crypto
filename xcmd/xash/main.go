@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	plaintext bool
-	extended bool
+	plaintext    bool
+	extended     bool
 	passwordMode bool
-	fileMode bool
-	keccakHash bool
+	fileMode     bool
+	keccakHash   bool
 )
 
 func help() {
@@ -84,7 +84,7 @@ func main() {
 		hash := keccak.Digest(src, 32)
 		fmt.Printf("%x\n", hash)
 		crutils.AnnihilateData(hash)
-		crutils.ProveDestruction()
+		crutils.Report()
 	} else {
 		hash := crutils.Sha2(src)
 		fmt.Printf("%x\n", hash)
