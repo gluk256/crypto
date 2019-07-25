@@ -3,9 +3,9 @@ package rcx
 import (
 	"bytes"
 	"encoding/hex"
+	mrand "math/rand"
 	"testing"
 	"time"
-	mrand "math/rand"
 
 	"github.com/gluk256/crypto/algo/primitives"
 )
@@ -113,7 +113,7 @@ func TestEncryptionMix(t *testing.T) {
 
 		var re RC4
 		re.InitKey(key)
-		dummy := make([]byte, 1024*8*512)
+		dummy := make([]byte, 4096*512)
 		re.XorInplace(dummy) // roll forward
 
 		re.XorInplace(y)
@@ -254,7 +254,7 @@ func TestAvalancheRcx(t *testing.T) {
 		cipher.InitKey(key)
 
 		x[0]-- // change at least one bit, which is supposed to cause an avalanche effect
-		cycles := len(x)/2
+		cycles := len(x) / 2
 		cipher.EncryptCascade(x, cycles)
 		cipher.EncryptCascade(y, cycles)
 		cipher.EncryptCascade(z, cycles)
