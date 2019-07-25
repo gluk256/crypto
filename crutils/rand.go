@@ -93,7 +93,7 @@ func AnnihilateData(b []byte) {
 }
 
 // this function should be called once, before the program exits
-func Report() {
+func ProveDataDestruction() {
 	b := make([]byte, 1032)
 	destructionProof.Read(b)
 	fmt.Printf("Proof of destruction: %x\n", b[1000:])

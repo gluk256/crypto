@@ -63,7 +63,7 @@ func main() {
 	}
 
 	deleteAll()
-	crutils.Report()
+	crutils.ProveDataDestruction()
 }
 
 func initialize() {

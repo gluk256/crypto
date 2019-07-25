@@ -84,7 +84,7 @@ func main() {
 		hash := keccak.Digest(src, 32)
 		fmt.Printf("%x\n", hash)
 		crutils.AnnihilateData(hash)
-		crutils.Report()
+		crutils.ProveDataDestruction()
 	} else {
 		hash := crutils.Sha2(src)
 		fmt.Printf("%x\n", hash)

@@ -10,58 +10,79 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
+func checkHelp(flags string) {
+	if strings.Contains(flags, "?") || strings.Contains(flags, "h") {
+		help()
+		os.Exit(0)
+	}
+}
+
 func help() {
 	fmt.Println("xhex encrypts/decrypts the given hex string with a password")
 	fmt.Println("USAGE: xhex [flags] src")
+	fmt.Println("\t e encrypt")
+	fmt.Println("\t d decrypt")
+	fmt.Println("\t w weak encryption, resulting in smaller size and no possible errors")
 	fmt.Println("\t r random password")
 	fmt.Println("\t s secure password input")
+	fmt.Println("\t S secure data input")
+	fmt.Println("\t x data in hex format")
+	fmt.Println("\t g reveal the possible steganographic content")
 	fmt.Println("\t h help")
 }
 
-func main() {
-	var src, flags string
-	var randpass, secure bool
-
+func processParams() (flags string, data []byte) {
+	var err error
 	if len(os.Args) == 1 {
 		help()
-		return
+		os.Exit(0)
 	} else if len(os.Args) == 2 {
-		src = os.Args[1]
-	} else if len(os.Args) == 3 {
-		src = os.Args[2]
 		flags = os.Args[1]
-		randpass = strings.Contains(flags, "r")
-		secure = strings.Contains(flags, "s")
-		if strings.Contains(flags, "?") || strings.Contains(flags, "h") {
-			help()
-			return
-		}
+		checkHelp(flags)
+		data = getData(flags)
+	} else if len(os.Args) == 3 {
+		flags = os.Args[1]
+		checkHelp(flags)
+		data = []byte(os.Args[2])
 	} else {
 		fmt.Printf("Error: wrong number of arguments [%d]\n", len(os.Args))
-		return
+		os.Exit(0)
 	}
 
-	b, err := crutils.HexDecode([]byte(src))
-	if err != nil {
-		fmt.Printf("Error: %s\n", err.Error())
-		return
+	if !strings.Contains(flags, "e") && !strings.Contains(flags, "d") {
+		if strings.Contains(flags, "r") {
+			flags += "e"
+		} else {
+			fmt.Println("Flags are not clear: encryption or decryption?")
+			os.Exit(0)
+		}
 	}
-	pass := getPassword(randpass, secure)
-	encrypt(pass, b)
-	crutils.AnnihilateData(pass)
-	fmt.Printf("%x\n", b)
+
+	if strings.Contains(flags, "x") || strings.Contains(flags, "d") {
+		data, err = crutils.HexDecode(data)
+		if err != nil {
+			fmt.Printf("Error decoding hex data: %s\n", err.Error())
+			os.Exit(0)
+		}
+	}
+	return flags, data
 }
 
-func encrypt(key []byte, data []byte) {
-	dummy := make([]byte, crutils.DefaultRollover)
-	var rc4 rcx.RC4
-	rc4.InitKey(key)
-	rc4.XorInplace(dummy) // roll forward
-	rc4.XorInplace(data)
-	crutils.EncryptInplaceKeccak(key, data)
+func getData(flags string) (res []byte) {
+	secure := strings.Contains(flags, "S")
+	if secure {
+		res = terminal.SecureInput(false)
+	} else {
+		fmt.Print("please enter the data: ")
+		res = terminal.PlainTextInput()
+	}
+	return res
 }
 
-func getPassword(randpass, secure bool) []byte {
+func getPassword(flags string) []byte {
+	randpass := strings.Contains(flags, "r")
+	secure := strings.Contains(flags, "s")
+
 	var res []byte
 	var err error
 	if randpass {
@@ -77,5 +98,56 @@ func getPassword(randpass, secure bool) []byte {
 		fmt.Print("please enter the password: ")
 		res = terminal.PasswordModeInput()
 	}
+
 	return res
+}
+
+func main() {
+	flags, data := processParams()
+	key := getPassword(flags)
+	process(flags, key, data)
+
+	crutils.AnnihilateData(data)
+	crutils.AnnihilateData(key)
+	crutils.ProveDataDestruction()
+}
+
+func process(flags string, key []byte, data []byte) {
+	var err error
+	var res, spacing []byte
+	weak := strings.Contains(flags, "w")
+	encryption := strings.Contains(flags, "e")
+	hexadecimal := strings.Contains(flags, "x")
+	steg := strings.Contains(flags, "g")
+
+	if weak {
+		if encryption {
+			rcx.EncryptInplaceRCX(key, data, 2000)
+			crutils.EncryptInplaceKeccak(key, data)
+		} else {
+			crutils.EncryptInplaceKeccak(key, data)
+			rcx.DecryptInplaceRCX(key, data, 2000)
+		}
+		res = data
+	} else {
+		if encryption {
+			res, err = crutils.Encrypt(key, data)
+		} else {
+			res, spacing, err = crutils.Decrypt(key, data)
+			if err == nil && steg {
+				fmt.Printf("Spacing: %x\n\n", spacing)
+			}
+		}
+	}
+
+	if err != nil {
+		fmt.Printf("Encryption error: %s\n", err.Error())
+	} else if encryption || hexadecimal {
+		fmt.Printf("%x\n", res)
+	} else {
+		fmt.Printf("%s\n", string(res))
+	}
+
+	crutils.AnnihilateData(res)
+	crutils.AnnihilateData(spacing)
 }
