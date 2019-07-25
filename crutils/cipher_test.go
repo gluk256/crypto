@@ -124,9 +124,9 @@ func TestEncryptionMain(t *testing.T) {
 		if !ok {
 			t.Fatal("deep non-equal test failed")
 		}
-		paddedSize := primitives.FindNextPowerOfTwo(sz+4)
-		if len(encyprted) != paddedSize * 2 + SaltSize + AesEncryptedSizeDiff {
-			t.Fatalf("len(encyprted) failed [%d vs. %d]", len(encyprted), sz * 2 + SaltSize + AesEncryptedSizeDiff)
+		paddedSize := primitives.FindNextPowerOfTwo(sz + 4)
+		if len(encyprted) != paddedSize*2+SaltSize+AesEncryptedSizeDiff {
+			t.Fatalf("len(encyprted) failed [%d vs. %d]", len(encyprted), sz*2+SaltSize+AesEncryptedSizeDiff)
 		}
 
 		d2 := make([]byte, len(encyprted))
@@ -175,7 +175,7 @@ func TestEncryptionSteg(t *testing.T) {
 		origEncryptedSteg := make([]byte, len(encyprtedSteg))
 		copy(origEncryptedSteg, encyprtedSteg)
 
-		data := generateRandomBytesMinSize(t, len(encyprtedSteg) * multiplier + 37)
+		data := generateRandomBytesMinSize(t, len(encyprtedSteg)*multiplier+37)
 		origData := make([]byte, len(data))
 		copy(origData, data)
 
@@ -218,7 +218,7 @@ func TestStegSize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EncryptSteg error: %s", err.Error())
 	}
-	const expected = 128 * 2 + EncryptedSizeDiff
+	const expected = 128*2 + EncryptedSizeDiff
 	if len(encryprted) != expected {
 		t.Fatalf("Wrong len(encrypted): %d vs. %d", len(encryprted), expected)
 	}
@@ -244,8 +244,8 @@ func BenchmarkAES(b *testing.B) {
 		if err != nil {
 			b.Fatal(err.Error())
 		}
-		if len(encrypted) - sz != AesEncryptedSizeDiff {
-			b.Fatalf("unexpected size diff: %d", len(encrypted) - sz)
+		if len(encrypted)-sz != AesEncryptedSizeDiff {
+			b.Fatalf("unexpected size diff: %d", len(encrypted)-sz)
 		}
 	}
 }
@@ -260,11 +260,11 @@ func BenchmarkRc4(b *testing.B) {
 }
 
 // 0.5 sec/Mb
-func BenchmarkRCX(b *testing.B) {
+func BenchmarkRcx(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		rcx.EncryptInplaceRCX(key, d, 511)
+		rcx.EncryptInplaceRcx(key, d, 511)
 	}
 }
 
@@ -273,7 +273,7 @@ func BenchmarkRcxQuick(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		rcx.EncryptInplaceRCX(key, d, 37)
+		rcx.EncryptInplaceRcx(key, d, 37)
 	}
 }
 

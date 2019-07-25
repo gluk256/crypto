@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gluk256/crypto/algo/rcx"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
 )
@@ -114,7 +113,7 @@ func main() {
 
 func process(flags string, key []byte, data []byte) {
 	var err error
-	var res, spacing, cleanup []byte
+	var res, spacing []byte
 	weak := strings.Contains(flags, "w")
 	encryption := strings.Contains(flags, "e")
 	hexadecimal := strings.Contains(flags, "x")
@@ -122,11 +121,11 @@ func process(flags string, key []byte, data []byte) {
 
 	if weak {
 		if encryption {
-			cleanup = rcx.EncryptInplaceRCX(key, data, 2001)
+			crutils.EncryptInplaceRCX(key, data)
 			crutils.EncryptInplaceKeccak(key, data)
 		} else {
 			crutils.EncryptInplaceKeccak(key, data)
-			cleanup = rcx.DecryptInplaceRCX(key, data, 2001)
+			crutils.DecryptInplaceRCX(key, data)
 		}
 		res = data
 	} else {
@@ -150,5 +149,4 @@ func process(flags string, key []byte, data []byte) {
 
 	crutils.AnnihilateData(res)
 	crutils.AnnihilateData(spacing)
-	crutils.AnnihilateData(cleanup)
 }

@@ -125,7 +125,7 @@ func TestEncryptionMix(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		DecryptInplaceRCX(key, y, 0)
+		DecryptInplaceRcx(key, y, 0)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -306,7 +306,7 @@ func TestEncryptionRCX(t *testing.T) {
 		y := make([]byte, len(x))
 		copy(y, x)
 
-		EncryptInplaceRCX(key, y, 511)
+		EncryptInplaceRcx(key, y, 511)
 		if bytes.Equal(x, y) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
@@ -315,7 +315,7 @@ func TestEncryptionRCX(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		DecryptInplaceRCX(key, y, 511)
+		DecryptInplaceRcx(key, y, 511)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d\n%x\n%x", i, seed, x, y)
 		}

@@ -35,38 +35,44 @@ const (
 	keyHolderSize = endAesSalt
 )
 
-func calculateIterations(sz int) int {
+func calculateRcxIterations(sz int) int {
 	const Kb = 1024
 	const Mb = Kb * 1024
 	if sz < Kb*32 {
 		return 2047
 	} else if sz < Kb*128 {
 		return 1023
-	} else if sz < Mb*1 {
+	} else if sz < Kb*512 {
 		return 511
-	} else if sz < Mb*2 {
+	} else if sz < Mb*1 {
 		return 255
-	} else if sz < Mb*4 {
+	} else if sz < Mb*2 {
 		return 127
-	} else if sz < Mb*8 {
+	} else if sz < Mb*4 {
 		return 63
-	} else if sz < Mb*16 {
+	} else if sz < Mb*8 {
 		return 31
-	} else if sz < Mb*24 {
-		return 25
-	} else if sz < Mb*35 {
-		return 19
-	} else if sz < Mb*45 {
+	} else if sz < Mb*16 {
 		return 15
-	} else if sz < Mb*60 {
-		return 11
-	} else if sz < Mb*80 {
+	} else if sz < Mb*25 {
+		return 9
+	} else if sz < Mb*30 {
 		return 7
-	} else if sz < Mb*100 {
+	} else if sz < Mb*40 {
 		return 5
 	} else {
 		return 3
 	}
+}
+
+func EncryptInplaceRCX(key []byte, data []byte) {
+	cleanup := rcx.EncryptInplaceRcx(key, data, calculateRcxIterations(len(data)))
+	AnnihilateData(cleanup)
+}
+
+func DecryptInplaceRCX(key []byte, data []byte) {
+	cleanup := rcx.DecryptInplaceRcx(key, data, calculateRcxIterations(len(data)))
+	AnnihilateData(cleanup)
 }
 
 func EncryptInplaceKeccak(key []byte, data []byte) {
@@ -155,7 +161,7 @@ func encryptWithSpacing(key []byte, data []byte, spacing []byte) ([]byte, error)
 	defer AnnihilateData(keyholder)
 
 	EncryptInplaceKeccak(keyholder[begK1:endK1], data)
-	rcx.EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data, calculateIterations(len(data)))
+	EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data)
 	data, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
 	if err != nil {
 		return nil, err
@@ -180,7 +186,7 @@ func Decrypt(key []byte, data []byte) (res []byte, spacing []byte, err error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	rcx.DecryptInplaceRCX(keyholder[begRcxKey:endRcxKey], res, calculateIterations(len(res)))
+	DecryptInplaceRCX(keyholder[begRcxKey:endRcxKey], res)
 	EncryptInplaceKeccak(keyholder[begK1:endK1], res)
 
 	res, spacing = splitSpacing(res)

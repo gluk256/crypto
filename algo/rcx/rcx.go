@@ -73,7 +73,7 @@ func (x *RCX) EncryptCascade(d []byte, iterations int) {
 	}
 }
 
-func EncryptInplaceRCX(key []byte, d []byte, iterations int) []byte {
+func EncryptInplaceRcx(key []byte, d []byte, iterations int) []byte {
 	var x RCX
 	x.InitKey(key)
 	x.rc4.XorInplace(d)
@@ -86,7 +86,7 @@ func EncryptInplaceRCX(key []byte, d []byte, iterations int) []byte {
 	return x.cleanup()
 }
 
-func DecryptInplaceRCX(key []byte, d []byte, iterations int) []byte {
+func DecryptInplaceRcx(key []byte, d []byte, iterations int) []byte {
 	var x RCX
 	x.InitKey(key)
 	sz := len(d)
