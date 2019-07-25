@@ -21,13 +21,13 @@ var (
 
 func help() {
 	fmt.Println("USAGE: xash [flags]")
-	fmt.Println("\t s secure input standard (default)")
-	fmt.Println("\t x secure input extended")
-	fmt.Println("\t t plain text input")
-	fmt.Println("\t p password mode input")
-	fmt.Println("\t f file name as input")
-	fmt.Println("\t k keccak hash")
-	fmt.Println("\t h help")
+	fmt.Println("\t -s secure input standard (default)")
+	fmt.Println("\t -x secure input extended")
+	fmt.Println("\t -t plain text input")
+	fmt.Println("\t -p password mode input")
+	fmt.Println("\t -f file name as input")
+	fmt.Println("\t -k keccak hash")
+	fmt.Println("\t -h help")
 }
 
 func readFile(name string) []byte {

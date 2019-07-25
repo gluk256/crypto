@@ -14,21 +14,21 @@ import (
 func help() {
 	fmt.Println("xfile encrypts/decrypts a file")
 	fmt.Println("USAGE: xfile [flags] [srcFile] [dstFile]")
-	fmt.Println("\t h help")
-	fmt.Println("\t s secure password input")
-	fmt.Println("\t x extra secure password input")
-	fmt.Println("\t f save to file")
+	fmt.Println("\t -h help")
+	fmt.Println("\t -s secure password input")
+	fmt.Println("\t -x extra secure password input")
+	fmt.Println("\t -f save to file")
 
-	fmt.Println("\t e encrypt (default mode)")
-	fmt.Println("\t\t r random password")
+	fmt.Println("\t -e encrypt (default mode)")
+	fmt.Println("\t\t -r random password")
 
-	fmt.Println("\t d decrypt")
-	fmt.Println("\t\t p print decrypted content as text, don't save")
-	fmt.Println("\t\t g interactive grep (print specific text lines only)")
-	fmt.Println("\t\t G interactive grep with secure input")
+	fmt.Println("\t -d decrypt")
+	fmt.Println("\t\t -p print decrypted content as text, don't save")
+	fmt.Println("\t\t -g interactive grep (print specific text lines only)")
+	fmt.Println("\t\t -G interactive grep with secure input")
 
-	fmt.Println("\t l load file")
-	fmt.Println("\t\t i insert file content into another file as steganographic content")
+	fmt.Println("\t -l load file")
+	fmt.Println("\t\t -i insert file content into another file as steganographic content")
 }
 
 func processCommandArgs() (flags string, srcFile string, dstFile string) {

@@ -96,7 +96,7 @@ func AnnihilateData(b []byte) {
 func ProveDataDestruction() {
 	b := make([]byte, 1032)
 	destructionProof.Read(b)
-	fmt.Printf("Proof of destruction: %x\n", b[1000:])
+	fmt.Printf("\nProof of destruction: [%x]\n", b[1000:])
 }
 
 func GenerateRandomPassword(sz int) (res []byte, err error) {

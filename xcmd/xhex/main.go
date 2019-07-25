@@ -20,15 +20,15 @@ func checkHelp(flags string) {
 func help() {
 	fmt.Println("xhex encrypts/decrypts short messages from command line")
 	fmt.Println("USAGE: xhex [flags] src")
-	fmt.Println("\t e encrypt")
-	fmt.Println("\t d decrypt")
-	fmt.Println("\t w weak encryption, resulting in smaller size and no possible errors")
-	fmt.Println("\t r random password")
-	fmt.Println("\t s secure password input")
-	fmt.Println("\t S secure data input")
-	fmt.Println("\t x data in hex format")
-	fmt.Println("\t g reveal the possible steganographic content")
-	fmt.Println("\t h help")
+	fmt.Println("\t -e encrypt")
+	fmt.Println("\t -d decrypt")
+	fmt.Println("\t -w weak encryption, resulting in smaller size and no possible errors")
+	fmt.Println("\t -r random password")
+	fmt.Println("\t -s secure password input")
+	fmt.Println("\t -S secure data input")
+	fmt.Println("\t -x data in hex format")
+	fmt.Println("\t -g reveal the possible steganographic content")
+	fmt.Println("\t -h help")
 }
 
 func processParams() (flags string, data []byte) {
