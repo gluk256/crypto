@@ -18,7 +18,7 @@ func checkHelp(flags string) {
 }
 
 func help() {
-	fmt.Println("xhex encrypts/decrypts the given hex string with a password")
+	fmt.Println("xhex encrypts/decrypts short messages from command line")
 	fmt.Println("USAGE: xhex [flags] src")
 	fmt.Println("\t e encrypt")
 	fmt.Println("\t d decrypt")
