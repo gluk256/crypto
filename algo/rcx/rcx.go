@@ -23,17 +23,17 @@ func Uint2bytes(i uint16) (byte, byte) {
 }
 
 func (x *RCX) InitKey(key []byte) {
-	x.rc4.InitKey(key)
-	x.shuffle()
-}
-
-func (x *RCX) shuffle() {
-	for i := 0; i < 256 * 256; i++ {
+	for i := 0; i < 256*256; i++ {
 		x.f[i] = uint16(i)
 	}
 
+	x.rc4.InitKey(key)
+	x.shuffle(4096)
+}
+
+func (x *RCX) shuffle(rounds int) {
 	var cnt uint16
-	for i := 0; i < 1024 * 8; i++ {
+	for i := 0; i < rounds; i++ {
 		a1 := make([]byte, 256)
 		a2 := make([]byte, 256)
 		x.rc4.XorInplace(a1[:])
@@ -44,6 +44,12 @@ func (x *RCX) shuffle() {
 			cnt++
 		}
 	}
+}
+
+func (x *RCX) cleanup() []byte {
+	x.shuffle(256)
+	x.EncryptCascade(x.rc4.s[:], 777)
+	return x.rc4.s[:]
 }
 
 // this func expects len(data)%4 == 0
@@ -62,12 +68,12 @@ func (x *RCX) encryptSingleRun(d []byte) {
 func (x *RCX) EncryptCascade(d []byte, iterations int) {
 	x.encryptSingleRun(d)
 	for i := 0; i < iterations/2; i++ {
-		x.encryptSingleRun(d[2:len(d)-2])
+		x.encryptSingleRun(d[2 : len(d)-2])
 		x.encryptSingleRun(d)
 	}
 }
 
-func EncryptInplaceRCX(key []byte, d []byte, iterations int) {
+func EncryptInplaceRCX(key []byte, d []byte, iterations int) []byte {
 	var x RCX
 	x.InitKey(key)
 	x.rc4.XorInplace(d)
@@ -76,9 +82,11 @@ func EncryptInplaceRCX(key []byte, d []byte, iterations int) {
 		odd := sz % 4
 		x.EncryptCascade(d[:sz-odd], iterations)
 	}
+
+	return x.cleanup()
 }
 
-func DecryptInplaceRCX(key []byte, d []byte, iterations int) {
+func DecryptInplaceRCX(key []byte, d []byte, iterations int) []byte {
 	var x RCX
 	x.InitKey(key)
 	sz := len(d)
@@ -87,4 +95,6 @@ func DecryptInplaceRCX(key []byte, d []byte, iterations int) {
 		x.EncryptCascade(d[:sz-odd], iterations)
 	}
 	x.rc4.XorInplace(d)
+
+	return x.cleanup()
 }
