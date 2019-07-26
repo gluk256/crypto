@@ -66,6 +66,7 @@ func main() {
 	} else {
 		loadFile(flags, srcFile, dstFile)
 	}
+	crutils.ProveDataDestruction()
 }
 
 func loadFile(flags string, srcFile string, dstFile string) {

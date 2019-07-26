@@ -17,6 +17,7 @@ var (
 	passwordMode bool
 	fileMode     bool
 	keccakHash   bool
+	paranoid     bool
 )
 
 func help() {
@@ -27,6 +28,7 @@ func help() {
 	fmt.Println("\t -p password mode input")
 	fmt.Println("\t -f file name as input")
 	fmt.Println("\t -k keccak hash")
+	fmt.Println("\t -v proove destruction")
 	fmt.Println("\t -h help")
 }
 
@@ -39,35 +41,26 @@ func readFile(name string) []byte {
 	return b
 }
 
-func main() {
-	var src []byte
+func processFlags() {
 	if len(os.Args) > 1 {
 		flags := os.Args[1]
-		if strings.Contains(flags, "h") {
+		if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
 			help()
-			return
+			os.Exit(0)
 		}
-		if strings.Contains(flags, "?") {
-			help()
-			return
-		}
-		if strings.Contains(flags, "x") {
-			extended = true
-		}
-		if strings.Contains(flags, "k") {
-			keccakHash = true
-		}
-		if strings.Contains(flags, "t") {
-			plaintext = true
-		}
-		if strings.Contains(flags, "p") {
-			passwordMode = true
-		}
-		if strings.Contains(flags, "f") {
-			fileMode = true
-		}
+		extended = strings.Contains(flags, "x")
+		keccakHash = strings.Contains(flags, "k")
+		plaintext = strings.Contains(flags, "t")
+		passwordMode = strings.Contains(flags, "p")
+		fileMode = strings.Contains(flags, "f")
+		paranoid = strings.Contains(flags, "v")
 	}
+}
 
+func main() {
+	processFlags()
+
+	var src, hash []byte
 	if passwordMode {
 		src = terminal.PasswordModeInput()
 	} else if plaintext {
@@ -81,12 +74,15 @@ func main() {
 	}
 
 	if keccakHash {
-		hash := keccak.Digest(src, 32)
-		fmt.Printf("%x\n", hash)
-		crutils.AnnihilateData(hash)
-		crutils.ProveDataDestruction()
+		hash = keccak.Digest(src, 32)
 	} else {
-		hash := crutils.Sha2(src)
-		fmt.Printf("%x\n", hash)
+		hash = crutils.Sha2(src)
+	}
+
+	fmt.Printf("%x\n", hash)
+
+	crutils.AnnihilateData(src)
+	if paranoid {
+		crutils.ProveDataDestruction()
 	}
 }
