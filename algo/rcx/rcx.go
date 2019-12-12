@@ -2,7 +2,7 @@ package rcx
 
 // this package must not import any dependencies
 
-// RCX is a block cipher with block_size = 2 * number_of_iterations
+// RCX is a block cipher with block_size = number_of_iterations + 4
 // this cipher is very simple, optimized for readability
 
 type RCX struct {
@@ -33,7 +33,7 @@ func (x *RCX) InitKey(key []byte) {
 
 func (x *RCX) shuffle(rounds int) {
 	var cnt uint16
-	for i := 0; i < rounds; i++ {
+	for r := 0; r < rounds; r++ {
 		a1 := make([]byte, 256)
 		a2 := make([]byte, 256)
 		x.rc4.XorInplace(a1[:])
@@ -47,8 +47,9 @@ func (x *RCX) shuffle(rounds int) {
 }
 
 func (x *RCX) cleanup() []byte {
-	x.shuffle(256)
-	x.EncryptCascade(x.rc4.s[:], 777)
+	const c = 256 * 3
+	x.shuffle(c)
+	x.EncryptCascade(x.rc4.s[:], c)
 	return x.rc4.s[:]
 }
 
@@ -64,11 +65,26 @@ func (x *RCX) encryptSingleRun(d []byte) {
 	}
 }
 
-// this func expects the number of iterations to be odd, len(data)%4 == 0, and len(data) > 4
+// this func expects the number of iterations to be divisible by 4, len(data)%4 == 0, and len(data) > 4
 func (x *RCX) EncryptCascade(d []byte, iterations int) {
-	x.encryptSingleRun(d)
-	for i := 0; i < iterations/2; i++ {
+	for i := 0; i < iterations/4; i++ {
+		x.encryptSingleRun(d)
+		x.encryptSingleRun(d[1 : len(d)-3])
 		x.encryptSingleRun(d[2 : len(d)-2])
+		x.encryptSingleRun(d[3 : len(d)-1])
+	}
+
+	x.encryptSingleRun(d)
+}
+
+// this func expects the number of iterations to be divisible by 4, len(data)%4 == 0, and len(data) > 4
+func (x *RCX) DecryptCascade(d []byte, iterations int) {
+	x.encryptSingleRun(d)
+
+	for i := 0; i < iterations/4; i++ {
+		x.encryptSingleRun(d[3 : len(d)-1])
+		x.encryptSingleRun(d[2 : len(d)-2])
+		x.encryptSingleRun(d[1 : len(d)-3])
 		x.encryptSingleRun(d)
 	}
 }
@@ -92,7 +108,7 @@ func DecryptInplaceRcx(key []byte, d []byte, iterations int) []byte {
 	sz := len(d)
 	if sz > 4 && iterations > 0 {
 		odd := sz % 4
-		x.EncryptCascade(d[:sz-odd], iterations)
+		x.DecryptCascade(d[:sz-odd], iterations)
 	}
 	x.rc4.XorInplace(d)
 

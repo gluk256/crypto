@@ -224,7 +224,7 @@ func TestStegSize(t *testing.T) {
 	}
 }
 
-// 0.017 sec/Mb
+// 0.015 sec/Mb
 func BenchmarkKeccak(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
@@ -250,7 +250,7 @@ func BenchmarkAES(b *testing.B) {
 	}
 }
 
-// 0.01 sec/Mb
+// 0.006 sec/Mb
 func BenchmarkRc4(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
@@ -259,21 +259,21 @@ func BenchmarkRc4(b *testing.B) {
 	}
 }
 
-// 0.5 sec/Mb
+// 0.6 sec/Mb
 func BenchmarkRcx(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		rcx.EncryptInplaceRcx(key, d, 511)
+		rcx.EncryptInplaceRcx(key, d, 512)
 	}
 }
 
-// 0.07 sec/Mb
+// 0.06 sec/Mb
 func BenchmarkRcxQuick(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	for i := 0; i < b.N; i++ {
-		rcx.EncryptInplaceRcx(key, d, 37)
+		rcx.EncryptInplaceRcx(key, d, 32)
 	}
 }
 
@@ -284,29 +284,41 @@ func BenchmarkRcxWithoutKeySchedule(b *testing.B) {
 	var x rcx.RCX
 	x.InitKey(key)
 	for i := 0; i < b.N; i++ {
-		x.EncryptCascade(d, 511)
+		x.EncryptCascade(d, 512)
 	}
 }
 
-// 0.035 sec/Mb
+// 0.03 sec/Mb
 func BenchmarkRcxQuickWithoutKeySchedule(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	var x rcx.RCX
 	x.InitKey(key)
 	for i := 0; i < b.N; i++ {
-		x.EncryptCascade(d, 37)
+		x.EncryptCascade(d, 32)
 	}
 }
 
-// 0.002 sec/Mb
+// 0.005 sec/Mb
 func BenchmarkRcxQuickestWithoutKeySchedule(b *testing.B) {
 	key := []byte("7eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304")
 	d := make([]byte, 1000000)
 	var x rcx.RCX
 	x.InitKey(key)
 	for i := 0; i < b.N; i++ {
-		x.EncryptCascade(d, 3)
+		x.EncryptCascade(d, 4)
+	}
+}
+
+// 0.2 sec
+func BenchmarkSmallSize(b *testing.B) {
+	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
+	data := make([]byte, 128000)
+	for i := 0; i < b.N; i++ {
+		_, err := Encrypt(key, data)
+		if err != nil {
+			b.Fatalf(err.Error())
+		}
 	}
 }
 
@@ -322,7 +334,7 @@ func BenchmarkL1(b *testing.B) {
 	}
 }
 
-// 1.4 sec
+// 2 sec
 func BenchmarkL5(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 5000000)
@@ -334,7 +346,7 @@ func BenchmarkL5(b *testing.B) {
 	}
 }
 
-// 2.7 sec
+// 4 sec
 func BenchmarkL15(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 15000000)
@@ -346,7 +358,7 @@ func BenchmarkL15(b *testing.B) {
 	}
 }
 
-// 4.4 sec
+// 7 sec
 func BenchmarkL20(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 20000000)
@@ -358,7 +370,7 @@ func BenchmarkL20(b *testing.B) {
 	}
 }
 
-// 5 sec
+// 7 sec
 func BenchmarkL32(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 32000000)
@@ -370,7 +382,7 @@ func BenchmarkL32(b *testing.B) {
 	}
 }
 
-// 8 sec
+// 15 sec
 func BenchmarkL40(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 40000000)
@@ -382,7 +394,7 @@ func BenchmarkL40(b *testing.B) {
 	}
 }
 
-// 8 sec
+// 16 sec
 func BenchmarkL50(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 50000000)
@@ -394,7 +406,7 @@ func BenchmarkL50(b *testing.B) {
 	}
 }
 
-// 9 sec
+// 16 sec
 func BenchmarkL64(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 64000000)
@@ -406,7 +418,7 @@ func BenchmarkL64(b *testing.B) {
 	}
 }
 
-// 17 sec
+// 32 sec
 func BenchmarkL90(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 90000000)
@@ -418,7 +430,7 @@ func BenchmarkL90(b *testing.B) {
 	}
 }
 
-// 17 sec
+// 34 sec
 func BenchmarkL128(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 128000000)
@@ -430,31 +442,29 @@ func BenchmarkL128(b *testing.B) {
 	}
 }
 
-// 35 sec
-func BenchmarkL256(b *testing.B) {
-	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
-	data := make([]byte, 256000000)
-	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data)
-		if err != nil {
-			b.Fatalf(err.Error())
-		}
-	}
-}
+// func BenchmarkL256(b *testing.B) {
+// 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
+// 	data := make([]byte, 256000000)
+// 	for i := 0; i < b.N; i++ {
+// 		_, err := Encrypt(key, data)
+// 		if err != nil {
+// 			b.Fatalf(err.Error())
+// 		}
+// 	}
+// }
 
-// 73 sec
-func BenchmarkL512(b *testing.B) {
-	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
-	data := make([]byte, 512000000)
-	for i := 0; i < b.N; i++ {
-		_, err := Encrypt(key, data)
-		if err != nil {
-			b.Fatalf(err.Error())
-		}
-	}
-}
+// func BenchmarkL512(b *testing.B) {
+// 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
+// 	data := make([]byte, 512000000)
+// 	for i := 0; i < b.N; i++ {
+// 		_, err := Encrypt(key, data)
+// 		if err != nil {
+// 			b.Fatalf(err.Error())
+// 		}
+// 	}
+// }
 
-// 0.7 sec
+// 0.5 sec
 func BenchmarkSteg(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 1000000)
@@ -480,7 +490,7 @@ func BenchmarkStegL10(b *testing.B) {
 	}
 }
 
-// 26 sec
+// 32 sec
 func BenchmarkStegL100(b *testing.B) {
 	key := []byte("c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e")
 	data := make([]byte, 100000000)

@@ -17,7 +17,6 @@ const (
 	SaltSize             = 48
 	MinDataSize          = 64
 	EncryptedSizeDiff    = AesEncryptedSizeDiff + SaltSize
-	DefaultRollover      = 1024 * 256
 )
 
 const (
@@ -39,29 +38,29 @@ func calculateRcxIterations(sz int) int {
 	const Kb = 1024
 	const Mb = Kb * 1024
 	if sz < Kb*32 {
-		return 2047
+		return 4096
 	} else if sz < Kb*128 {
-		return 1023
+		return 2048
+	} else if sz < Kb*256 {
+		return 1024
 	} else if sz < Kb*512 {
-		return 511
+		return 512
 	} else if sz < Mb*1 {
-		return 255
+		return 256
 	} else if sz < Mb*2 {
-		return 127
+		return 128
 	} else if sz < Mb*4 {
-		return 63
+		return 64
 	} else if sz < Mb*8 {
-		return 31
+		return 32
 	} else if sz < Mb*16 {
-		return 15
+		return 16
 	} else if sz < Mb*25 {
-		return 9
-	} else if sz < Mb*30 {
-		return 7
-	} else if sz < Mb*40 {
-		return 5
+		return 12
+	} else if sz < Mb*32 {
+		return 8
 	} else {
-		return 3
+		return 4
 	}
 }
 
@@ -99,10 +98,7 @@ func EncryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	encrypted := aesgcm.Seal(nil, salt, data, nil)
-	if len(data) < 1024*1024 {
-		AnnihilateData(data)
-	}
+	encrypted := aesgcm.Seal(data[:0], salt, data, nil)
 	return encrypted, err
 }
 
@@ -140,7 +136,7 @@ func EncryptSteg(key []byte, data []byte, steg []byte) (res []byte, err error) {
 	if len(data) < len(steg)+4 { // four bytes for padding size
 		return nil, fmt.Errorf("data size is less than necessary [%d vs. %d]", len(data), len(steg)+4)
 	}
-	steg, err = addPadding(steg, len(data), false) // no mark: steg content must be indistinguishable from random gamma
+	steg, err = addPadding(steg, len(data), false) // mark = false: steg content must be indistinguishable from random gamma
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +152,7 @@ func encryptWithSpacing(key []byte, data []byte, spacing []byte) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	data = addSpacing(data, spacing)
+	data = addSpacing(data, spacing) // now data will have additional capacity (enough for the salt)
 	keyholder := generateKeys(key, salt)
 	defer AnnihilateData(keyholder)
 

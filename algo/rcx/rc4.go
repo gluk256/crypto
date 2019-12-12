@@ -27,21 +27,6 @@ func (c *RC4) XorInplace(data []byte) {
 	}
 }
 
-/*
-func (c *RC4) calculateRollover(key []byte) int {
-	var sum byte
-	for n := 0; n < len(key); n++ {
-		sum += key[n]
-	}
-	a := c.s[c.j] + sum
-	b := c.j + c.s[sum]
-	res := int(1024*64)
-	res += int(c.s[a])*256
-	res += int(c.s[c.s[c.s[c.s[b]]]])
-	return res
-}
-*/
-
 func EncryptInplaceRC4(key []byte, data []byte) {
 	var x RC4
 	x.InitKey(key)

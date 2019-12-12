@@ -64,7 +64,7 @@ func HexDecode(src []byte) ([]byte, error) {
 }
 
 func addSpacing(data []byte, spacing []byte) []byte {
-	b := make([]byte, 0, len(data)*2)
+	b := make([]byte, 0, len(data)*2 + 256)
 	for i := 0; i < len(data); i++ {
 		b = append(b, data[i])
 		b = append(b, spacing[i])

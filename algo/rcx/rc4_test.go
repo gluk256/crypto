@@ -231,7 +231,7 @@ func TestCascade(t *testing.T) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		c.EncryptCascade(y, 511)
+		c.DecryptCascade(y, 511)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
@@ -254,7 +254,7 @@ func TestAvalancheRcx(t *testing.T) {
 		cipher.InitKey(key)
 
 		x[0]-- // change at least one bit, which is supposed to cause an avalanche effect
-		cycles := len(x) / 2
+		cycles := len(x)
 		cipher.EncryptCascade(x, cycles)
 		cipher.EncryptCascade(y, cycles)
 		cipher.EncryptCascade(z, cycles)
