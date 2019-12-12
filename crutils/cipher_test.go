@@ -56,6 +56,13 @@ func TestAes(t *testing.T) {
 			t.Fatalf("encryption failed: %s", err)
 		}
 
+		encrypted2 := make([]byte, len(encrypted))
+		encrypted3 := make([]byte, len(encrypted))
+		encrypted4 := make([]byte, len(encrypted))
+		copy(encrypted2, encrypted)
+		copy(encrypted3, encrypted)
+		copy(encrypted4, encrypted)
+
 		diff := len(encrypted) - len(expected)
 		if diff != AesEncryptedSizeDiff {
 			t.Fatalf("weird diff: %d", diff)
@@ -79,7 +86,7 @@ func TestAes(t *testing.T) {
 			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
 		}
 
-		decrypted2, err := DecryptAES(key, salt, encrypted)
+		decrypted2, err := DecryptAES(key, salt, encrypted2)
 		if err != nil {
 			t.Fatalf("decryption failed: %s", err)
 		}
@@ -88,15 +95,14 @@ func TestAes(t *testing.T) {
 			t.Fatalf("decrypted != expected, round %d with seed %d", i, seed)
 		}
 
-		encrypted[sz/2]++ // change at least one bit
-		_, err = DecryptAES(key, salt, encrypted)
+		encrypted3[sz/2]++ // change at least one bit
+		_, err = DecryptAES(key, salt, encrypted3)
 		if err == nil {
 			t.Fatalf("decryption false positive, despite changing byte %d", sz/2)
 		}
 
-		encrypted[sz/2]--
-		encrypted[sz-1]++
-		_, err = DecryptAES(key, salt, encrypted)
+		encrypted4[sz-1]++
+		_, err = DecryptAES(key, salt, encrypted4)
 		if err == nil {
 			t.Fatal("decryption false positive, despite changing the MAC")
 		}

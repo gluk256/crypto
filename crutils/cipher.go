@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/algo/rcx"
@@ -115,10 +116,7 @@ func DecryptAES(key []byte, salt []byte, data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	decrypted, err := aesgcm.Open(nil, salt, data, nil)
-	if err != nil && len(data) < 1024*1024 {
-		AnnihilateData(data)
-	}
+	decrypted, err := aesgcm.Open(data[:0], salt, data, nil)
 	return decrypted, err
 }
 
@@ -158,13 +156,22 @@ func encryptWithSpacing(key []byte, data []byte, spacing []byte) ([]byte, error)
 
 	EncryptInplaceKeccak(keyholder[begK1:endK1], data)
 	EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data)
-	data, err = EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
+	tmp, err := EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
 	if err != nil {
 		return nil, err
 	}
+	reallocated := reflect.ValueOf(tmp).Pointer() != reflect.ValueOf(data).Pointer()
+	if reallocated {
+		fmt.Println("WARNING: data reallocated during AES encryption and not annihilated!")
+	}
+	data = tmp
 	EncryptInplaceKeccak(keyholder[begK2:endK2], data)
-	data = append(data, salt...)
-	return data, nil
+	res := append(data, salt...)
+	reallocated = reflect.ValueOf(res).Pointer() != reflect.ValueOf(data).Pointer()
+	if reallocated {
+		fmt.Println("WARNING: data reallocated because of append, and not annihilated!")
+	}
+	return res, nil
 }
 
 // don't forget to annihilate the key!
