@@ -3,7 +3,7 @@ package rcx
 // this package must not import any dependencies
 
 type RC4 struct {
-	s [256]byte
+	s    [256]byte
 	i, j byte
 }
 
@@ -12,7 +12,7 @@ func (c *RC4) InitKey(key []byte) {
 		c.s[i] = byte(i)
 	}
 	for i := 0; i < 256; i++ {
-		c.j += c.s[i] + key[i % len(key)]
+		c.j += c.s[i] + key[i%len(key)]
 		c.s[i], c.s[c.j] = c.s[c.j], c.s[i]
 	}
 }
@@ -27,6 +27,7 @@ func (c *RC4) XorInplace(data []byte) {
 	}
 }
 
+/*
 func (c *RC4) calculateRollover(key []byte) int {
 	var sum byte
 	for n := 0; n < len(key); n++ {
@@ -39,11 +40,12 @@ func (c *RC4) calculateRollover(key []byte) int {
 	res += int(c.s[c.s[c.s[c.s[b]]]])
 	return res
 }
+*/
 
 func EncryptInplaceRC4(key []byte, data []byte) {
 	var x RC4
 	x.InitKey(key)
-	rollover := x.calculateRollover(key)
+	rollover := int(x.s[x.i]+x.j) + int(x.s[x.j])*256 + 256*256
 	dummy := make([]byte, rollover)
 	x.XorInplace(dummy) // roll forward
 	x.XorInplace(data)
