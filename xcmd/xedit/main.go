@@ -34,12 +34,18 @@ var (
 	//steg    int
 )
 
+func help() {
+	fmt.Printf("xedit version 1.%d \n", crutils.Version)
+	fmt.Println("encrypt/decrypt a file")
+	fmt.Println("USAGE: xfile [flags] [srcFile] [dstFile]")
+}
+
 func main() {
 	initialize()
 
 	if len(os.Args) == 2 {
-		fmt.Println("Not enough args. Usage:")
-		fmt.Println("xcrypt [flags src_file_name]")
+		fmt.Println("ERROR: not enough args")
+		help()
 		return
 	} else if len(os.Args) > 2 {
 		if FileLoad(os.Args[1:], false) {

@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	Version              = 2
 	AesKeySize           = 32
 	AesSaltSize          = 12
 	AesEncryptedSizeDiff = 16

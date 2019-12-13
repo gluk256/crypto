@@ -30,7 +30,7 @@ func (c *RC4) XorInplace(data []byte) {
 func EncryptInplaceRC4(key []byte, data []byte) {
 	var x RC4
 	x.InitKey(key)
-	rollover := int(x.s[x.i]+x.j) + int(x.s[x.j])*256 + 256*256
+	rollover := int(x.s[255]) + int(x.s[x.j])*256 + 256*256
 	dummy := make([]byte, rollover)
 	x.XorInplace(dummy) // roll forward
 	x.XorInplace(data)

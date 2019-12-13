@@ -12,7 +12,8 @@ import (
 )
 
 func help() {
-	fmt.Println("xfile encrypts/decrypts a file")
+	fmt.Printf("xfile version 1.%d \n", crutils.Version)
+	fmt.Println("encrypt/decrypt a file")
 	fmt.Println("USAGE: xfile [flags] [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
 	fmt.Println("\t -s secure password input")
