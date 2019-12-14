@@ -23,17 +23,17 @@ const (
 
 const (
 	offset        = 256
-	begK1         = offset
-	endK1         = begK1 + offset
-	begK2         = endK1 + offset
-	endK2         = begK2 + offset
-	begRcxKey     = endK2 + offset
-	endRcxKey     = begRcxKey + offset
-	begAesKey     = endRcxKey + offset
-	endAesKey     = begAesKey + AesKeySize
-	begAesSalt    = endAesKey + offset
-	endAesSalt    = begAesSalt + AesSaltSize
-	keyHolderSize = endAesSalt
+	BegK1         = offset
+	EndK1         = BegK1 + offset
+	BegK2         = EndK1 + offset
+	EndK2         = BegK2 + offset
+	BegRcxKey     = EndK2 + offset
+	EndRcxKey     = BegRcxKey + offset
+	BegAesKey     = EndRcxKey + offset
+	EndAesKey     = BegAesKey + AesKeySize
+	BegAesSalt    = EndAesKey + offset
+	EndAesSalt    = BegAesSalt + AesSaltSize
+	KeyHolderSize = EndAesSalt
 )
 
 func calculateRcxIterations(sz int) int {
@@ -147,17 +147,17 @@ func EncryptSteg(key []byte, data []byte, steg []byte) (res []byte, err error) {
 // data must be already padded.
 // don't forget to annihilate the key!
 func encryptWithSpacing(key []byte, data []byte, spacing []byte) ([]byte, error) {
-	salt, err := generateSalt()
+	salt, err := GenerateSalt()
 	if err != nil {
 		return nil, err
 	}
 	data = addSpacing(data, spacing) // now data will have additional capacity (enough for the salt)
-	keyholder := generateKeys(key, salt)
+	keyholder := GenerateKeys(key, salt)
 	defer AnnihilateData(keyholder)
 
-	EncryptInplaceKeccak(keyholder[begK1:endK1], data)
-	EncryptInplaceRCX(keyholder[begRcxKey:endRcxKey], data)
-	tmp, err := EncryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], data)
+	EncryptInplaceKeccak(keyholder[BegK1:EndK1], data)
+	EncryptInplaceRCX(keyholder[BegRcxKey:EndRcxKey], data)
+	tmp, err := EncryptAES(keyholder[BegAesKey:EndAesKey], keyholder[BegAesSalt:EndAesSalt], data)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func encryptWithSpacing(key []byte, data []byte, spacing []byte) ([]byte, error)
 		fmt.Println("WARNING: data reallocated during AES encryption and not annihilated!")
 	}
 	data = tmp
-	EncryptInplaceKeccak(keyholder[begK2:endK2], data)
+	EncryptInplaceKeccak(keyholder[BegK2:EndK2], data)
 	res := append(data, salt...)
 	reallocated = reflect.ValueOf(res).Pointer() != reflect.ValueOf(data).Pointer()
 	if reallocated {
@@ -182,16 +182,16 @@ func Decrypt(key []byte, data []byte) (res []byte, spacing []byte, err error) {
 	}
 	res = data[:len(data)-SaltSize]
 	salt := data[len(data)-SaltSize:]
-	keyholder := generateKeys(key, salt)
+	keyholder := GenerateKeys(key, salt)
 	defer AnnihilateData(keyholder)
 
-	EncryptInplaceKeccak(keyholder[begK2:endK2], res)
-	res, err = DecryptAES(keyholder[begAesKey:endAesKey], keyholder[begAesSalt:endAesSalt], res)
+	EncryptInplaceKeccak(keyholder[BegK2:EndK2], res)
+	res, err = DecryptAES(keyholder[BegAesKey:EndAesKey], keyholder[BegAesSalt:EndAesSalt], res)
 	if err != nil {
 		return nil, nil, err
 	}
-	DecryptInplaceRCX(keyholder[begRcxKey:endRcxKey], res)
-	EncryptInplaceKeccak(keyholder[begK1:endK1], res)
+	DecryptInplaceRCX(keyholder[BegRcxKey:EndRcxKey], res)
+	EncryptInplaceKeccak(keyholder[BegK1:EndK1], res)
 
 	res, spacing = splitSpacing(res)
 	res, err = removePadding(res)

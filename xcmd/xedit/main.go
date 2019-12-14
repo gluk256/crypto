@@ -37,7 +37,7 @@ var (
 func help() {
 	fmt.Printf("xedit v.1.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt and edit a file")
-	fmt.Println("USAGE: xfile [flags] [srcFile] [dstFile]")
+	fmt.Println("USAGE: xedit [flags] [srcFile] [dstFile]")
 }
 
 func main() {

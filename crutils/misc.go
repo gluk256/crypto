@@ -27,25 +27,25 @@ func Char2int(b byte) int {
 		return int(b - 48)
 	}
 	if b >= 65 && b <= 70 {
-		return int(b - 65) + 10
+		return int(b-65) + 10
 	}
 	if b >= 97 && b <= 102 {
-		return int(b - 97) + 10
+		return int(b-97) + 10
 	}
 	return -1
 }
 
 func HexDecode(src []byte) ([]byte, error) {
-	for i := len(src) - 1; i >=0; i-- {
+	for i := len(src) - 1; i >= 0; i-- {
 		if src[i] > 32 && src[i] < 128 {
 			break
 		} else {
-			src = src[:len(src) - 1]
+			src = src[:len(src)-1]
 		}
 	}
 
 	sz := len(src)
-	if sz % 2 == 1 {
+	if sz%2 == 1 {
 		s := fmt.Sprintf("Error decoding: odd src size %d", sz)
 		return nil, errors.New(s)
 	}
@@ -64,7 +64,7 @@ func HexDecode(src []byte) ([]byte, error) {
 }
 
 func addSpacing(data []byte, spacing []byte) []byte {
-	b := make([]byte, 0, len(data)*2 + 256)
+	b := make([]byte, 0, len(data)*2+256)
 	for i := 0; i < len(data); i++ {
 		b = append(b, data[i])
 		b = append(b, spacing[i])
@@ -95,7 +95,7 @@ func addPadding(data []byte, newSize int, mark bool) ([]byte, error) {
 		if newSize < MinDataSize {
 			newSize = MinDataSize
 		}
-	} else if newSize < sz + 4 {
+	} else if newSize < sz+4 {
 		return data, errors.New("padding failed: new size is too small")
 	}
 	rnd := make([]byte, newSize)
@@ -119,14 +119,14 @@ func removePadding(data []byte) ([]byte, error) {
 	}
 	b := rcx.Bytes2uint(data[sz-2], data[sz-1])
 	a := rcx.Bytes2uint(data[sz-4], data[sz-3])
-	newSize := int(a) + int(b) << 16
+	newSize := int(a) + int(b)<<16
 	if newSize > sz {
 		return data, errors.New(fmt.Sprintf("error removing padding: wrong sizes [%d vs. %d]", newSize, sz))
 	}
 	return data[:newSize], nil
 }
 
-func generateSalt() ([]byte, error) {
+func GenerateSalt() ([]byte, error) {
 	salt := make([]byte, SaltSize)
 	err := StochasticRand(salt)
 	if err != nil {
@@ -135,11 +135,11 @@ func generateSalt() ([]byte, error) {
 	return salt, err
 }
 
-func generateKeys(key []byte, salt []byte) []byte {
-	fullkey := make([]byte, 0, len(key) + len(salt))
+func GenerateKeys(key []byte, salt []byte) []byte {
+	fullkey := make([]byte, 0, len(key)+len(salt))
 	fullkey = append(fullkey, key...)
 	fullkey = append(fullkey, salt...)
-	keyholder := keccak.Digest(fullkey, keyHolderSize)
+	keyholder := keccak.Digest(fullkey, KeyHolderSize)
 	AnnihilateData(fullkey)
 	return keyholder
 }

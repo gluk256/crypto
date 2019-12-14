@@ -85,8 +85,33 @@ func loadFile(flags string, srcFile string, dstFile string) {
 	}
 }
 
+func loadDataFromFile(filename string, minSize int) []byte {
+	for i := 0; i < 64; i++ {
+		if len(filename) == 0 || i > 0 {
+			filename = getFileName() // may call os.Exit
+		}
+		data, err := ioutil.ReadFile(filename)
+		if err != nil {
+			fmt.Printf("Failed to load data: %s\n", err.Error())
+			fmt.Println("Please try again.")
+			continue
+		}
+		expanded := primitives.FindNextPowerOfTwo(len(data))
+		if expanded < minSize {
+			fmt.Printf("The data size %d (padded: %d) is less than required size %d\n", len(data), expanded, minSize)
+			fmt.Println("Please try again.")
+			continue
+		}
+		return data
+	}
+
+	fmt.Println("The number of iterations exceeded allowed maximum. Exit.")
+	os.Exit(0)
+	return nil
+}
+
 func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, steg []byte, err error) {
-	for {
+	for i := 0; i < 4096; i++ {
 		key := getPassword(flags) // may call os.Exit
 		if unknownSize {
 			decrypted, steg, err = crutils.DecryptStegContentOfUnknownSize(key, data)
@@ -148,6 +173,9 @@ func processEncryption(flags string, srcFile string, dstFile string, steg []byte
 	key := getPassword(flags)                    // may call os.Exit
 	encrypted, err := encrypt(key, data, steg)
 	crutils.AnnihilateData(key)
+	crutils.AnnihilateData(data)
+	crutils.AnnihilateData(steg)
+
 	if err != nil {
 		fmt.Printf("Failed to encrypt data: %s\nFATAL ERROR. Exit.\n", err.Error())
 		os.Exit(0)
@@ -163,34 +191,6 @@ func processEncryption(flags string, srcFile string, dstFile string, steg []byte
 	} else {
 		processEncryption(flags, "", dstFile, encrypted) // recursively encrypt steg content
 	}
-
-	crutils.AnnihilateData(data)
-	crutils.AnnihilateData(steg)
-}
-
-func loadDataFromFile(filename string, minSize int) []byte {
-	for i := 0; i < 64; i++ {
-		if len(filename) == 0 || i > 0 {
-			filename = getFileName() // may call os.Exit
-		}
-		data, err := ioutil.ReadFile(filename)
-		if err != nil {
-			fmt.Printf("Failed to load data: %s\n", err.Error())
-			fmt.Println("Please try again.")
-			continue
-		}
-		expanded := primitives.FindNextPowerOfTwo(len(data))
-		if expanded < minSize {
-			fmt.Printf("The data size %d (padded: %d) is less than required size %d\n", len(data), expanded, minSize)
-			fmt.Println("Please try again.")
-			continue
-		}
-		return data
-	}
-
-	fmt.Println("The number of iterations exceeded allowed maximum. Exit.")
-	os.Exit(0)
-	return nil
 }
 
 func getFileName() string {
@@ -205,7 +205,7 @@ func getFileName() string {
 			return string(f)
 		}
 	}
-	fmt.Println("Error: filename input failed. Eixt.")
+	fmt.Println("Error: filename input failed. Exit.")
 	os.Exit(0)
 	return ""
 }
@@ -216,7 +216,7 @@ func saveData(filename string, data []byte) {
 		return
 	}
 
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 16; i++ {
 		if len(filename) == 0 || i > 0 {
 			filename = getFileName()
 		}
