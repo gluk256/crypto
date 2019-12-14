@@ -61,14 +61,6 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 	return flags, srcFile, dstFile
 }
 
-func deletethis1() { // todo
-	fmt.Println("deferrred func 1 exe")
-}
-
-func deletethis2() { // todo
-	fmt.Println("deferrred func 2 exe")
-}
-
 func main() {
 	var err error
 	flags, srcFile, dstFile := processCommandArgs()
@@ -77,8 +69,6 @@ func main() {
 
 	defer crutils.ProveDataDestruction()
 	defer crutils.AnnihilateData(key)
-	defer deletethis1()
-	defer deletethis2()
 
 	if strings.Contains(flags, "e") {
 		data, err = encrypt(key, data)
@@ -178,7 +168,9 @@ func encrypt(key []byte, data []byte) ([]byte, error) {
 
 	rcx.EncryptInplaceRC4(keyholder[crutils.BegRcxKey:crutils.EndRcxKey], data)
 	crutils.EncryptInplaceKeccak(keyholder[crutils.BegK1:crutils.EndK1], data)
-	data, err = crutils.EncryptAES(keyholder[crutils.BegAesKey:crutils.EndAesKey], salt, data)
+
+	aesNonce := keyholder[crutils.BegAesSalt:crutils.EndAesSalt]
+	data, err = crutils.EncryptAES(keyholder[crutils.BegAesKey:crutils.EndAesKey], aesNonce, data)
 	if err == nil {
 		data = append(data, salt...)
 	}
@@ -187,12 +179,15 @@ func encrypt(key []byte, data []byte) ([]byte, error) {
 
 func decrypt(key []byte, data []byte) ([]byte, error) {
 	var err error
-	salt := data[len(data)-crutils.SaltSize:]
+	split := len(data) - crutils.SaltSize
+	salt := data[split:]
+	data = data[:split]
 	keyholder := crutils.GenerateKeys(key, salt)
 	defer crutils.AnnihilateData(keyholder)
 
-	data, err = crutils.DecryptAES(keyholder[crutils.BegAesKey:crutils.EndAesKey], salt, data)
-	if err == nil {
+	aesNonce := keyholder[crutils.BegAesSalt:crutils.EndAesSalt]
+	data, err = crutils.DecryptAES(keyholder[crutils.BegAesKey:crutils.EndAesKey], aesNonce, data)
+	if err != nil {
 		return data, err
 	}
 
