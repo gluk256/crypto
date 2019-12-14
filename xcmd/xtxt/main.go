@@ -17,7 +17,7 @@ func checkHelp(flags string) {
 }
 
 func help() {
-	fmt.Printf("xhex v.2.%d \n", crutils.Version)
+	fmt.Printf("xhex v.2.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt short messages in console")
 	fmt.Println("USAGE: xhex [flags] src")
 	fmt.Println("\t -e encrypt")
