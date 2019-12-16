@@ -86,15 +86,21 @@ func AnnihilateData(b []byte) {
 			// small data are likely to contain very sensitive info (e.g. RCX cryptographic setup),
 			// and therefore it is important to prevent the compiler optimization.
 			primitives.ReverseBytes(b)
-			destructionProof.ReadXor(b)
+			RandXor(b)
 			destructionProof.Write(b)
 		}
 	}
 }
 
-// this function should be called once, before the program exits
+func RecordDestruction(i uint64) {
+	destructionProof.AddEntropy(i)
+}
+
+// this function should be called once, before the program exit
 func ProveDataDestruction() {
 	b := make([]byte, 1032)
+	entropy.Read(b)
+	destructionProof.Write(b)
 	destructionProof.Read(b)
 	fmt.Printf("\nProof of destruction: [%x]\n", b[1000:])
 }
