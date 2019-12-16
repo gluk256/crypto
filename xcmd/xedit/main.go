@@ -42,6 +42,7 @@ func help() {
 
 func main() {
 	initialize()
+	defer crutils.ProveDataDestruction()
 
 	if len(os.Args) == 2 {
 		fmt.Println("ERROR: not enough args")
@@ -69,7 +70,6 @@ func main() {
 	}
 
 	deleteAll()
-	crutils.ProveDataDestruction()
 }
 
 func initialize() {

@@ -62,12 +62,15 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 }
 
 func main() {
+	defer crutils.ProveDataDestruction()
+	run()
+}
+
+func run() {
 	var err error
 	flags, srcFile, dstFile := processCommandArgs()
 	data := loadDataFromFile(flags, srcFile)
 	key := getPassword(flags)
-
-	defer crutils.ProveDataDestruction()
 	defer crutils.AnnihilateData(key)
 
 	if strings.Contains(flags, "e") {

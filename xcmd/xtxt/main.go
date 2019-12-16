@@ -126,16 +126,22 @@ func getPassword(flags string) []byte {
 }
 
 func main() {
-	flags, data := processParams()
-	key := getPassword(flags)
-	res, spacing, err := process(flags, key, data)
-	outputResult(flags, err, res, spacing)
+	defer crutils.ProveDataDestruction()
+	run()
+}
 
-	crutils.AnnihilateData(res)
-	crutils.AnnihilateData(spacing)
-	crutils.AnnihilateData(data)
-	crutils.AnnihilateData(key)
-	crutils.ProveDataDestruction()
+func run() {
+	flags, data := processParams()
+	defer crutils.AnnihilateData(data)
+
+	key := getPassword(flags)
+	defer crutils.AnnihilateData(key)
+
+	res, spacing, err := process(flags, key, data)
+	defer crutils.AnnihilateData(spacing)
+	defer crutils.AnnihilateData(res)
+
+	outputResult(flags, err, res, spacing)
 }
 
 func process(flags string, key []byte, data []byte) (res []byte, spacing []byte, err error) {

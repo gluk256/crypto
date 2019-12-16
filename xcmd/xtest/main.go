@@ -10,7 +10,7 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
-// do not delete this function
+// do not delete this function, it might be useful for testing purposes
 func crypticExe() {
 	x := terminal.SecureInput(false)
 	s := strings.Split(string(x), " ")

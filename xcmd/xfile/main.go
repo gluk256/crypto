@@ -58,6 +58,7 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 }
 
 func main() {
+	defer crutils.ProveDataDestruction()
 	flags, srcFile, dstFile := processCommandArgs()
 	if strings.Contains(flags, "d") {
 		data := loadDataFromFile(srcFile, crutils.MinDataSize+crutils.EncryptedSizeDiff)
@@ -67,7 +68,6 @@ func main() {
 	} else {
 		loadFile(flags, srcFile, dstFile)
 	}
-	crutils.ProveDataDestruction()
 }
 
 func loadFile(flags string, srcFile string, dstFile string) {
@@ -134,6 +134,9 @@ func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, ste
 
 func processDecryption(flags string, data []byte, dstFile string, unknownSize bool) {
 	decrypted, steg, err := decrypt(flags, data, unknownSize)
+	defer crutils.AnnihilateData(decrypted)
+	defer crutils.AnnihilateData(steg)
+
 	if err != nil {
 		return
 	}
@@ -155,9 +158,6 @@ func processDecryption(flags string, data []byte, dstFile string, unknownSize bo
 	} else {
 		processDecryption(flags, steg, dstFile, true) // recursively decrypt steg content
 	}
-
-	crutils.AnnihilateData(decrypted)
-	crutils.AnnihilateData(steg)
 }
 
 func encrypt(key []byte, data []byte, steg []byte) ([]byte, error) {
@@ -171,10 +171,11 @@ func encrypt(key []byte, data []byte, steg []byte) ([]byte, error) {
 func processEncryption(flags string, srcFile string, dstFile string, steg []byte) {
 	data := loadDataFromFile(srcFile, len(steg)) // may call os.Exit
 	key := getPassword(flags)                    // may call os.Exit
+	defer crutils.AnnihilateData(key)
+	defer crutils.AnnihilateData(data)
+	defer crutils.AnnihilateData(steg)
+
 	encrypted, err := encrypt(key, data, steg)
-	crutils.AnnihilateData(key)
-	crutils.AnnihilateData(data)
-	crutils.AnnihilateData(steg)
 
 	if err != nil {
 		fmt.Printf("Failed to encrypt data: %s\nFATAL ERROR. Exit.\n", err.Error())
