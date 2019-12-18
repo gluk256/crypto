@@ -11,8 +11,9 @@ import (
 )
 
 // do not delete this function, it might be useful for testing purposes
-func crypticExe() {
-	x := terminal.SecureInput(false)
+func crypticExe(secure bool) {
+	x := terminal.SecureInput(secure)
+	fmt.Println()
 	s := strings.Split(string(x), " ")
 	cmd := exec.Command(s[0], s[1:]...)
 	cmd.Stdin = os.Stdin
@@ -23,7 +24,7 @@ func crypticExe() {
 
 func main() {
 	if len(os.Args) < 2 {
-		crypticExe()
+		crypticExe(false)
 		return
 	}
 
@@ -37,7 +38,9 @@ func main() {
 	case 't':
 		tst()
 	case 'x':
-		crypticExe()
+		crypticExe(false)
+	case 'X':
+		crypticExe(true)
 	default:
 		if strings.Contains(os.Args[1], "-") {
 			fmt.Println("Error: dash is not a valid flag")
