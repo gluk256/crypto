@@ -68,12 +68,12 @@ func calculateRcxIterations(sz int) int {
 
 func EncryptInplaceRCX(key []byte, data []byte) {
 	cleanup := rcx.EncryptInplaceRcx(key, data, calculateRcxIterations(len(data)))
-	destructionProof.Write(cleanup)
+	AnnihilateData(cleanup)
 }
 
 func DecryptInplaceRCX(key []byte, data []byte) {
 	cleanup := rcx.DecryptInplaceRcx(key, data, calculateRcxIterations(len(data)))
-	destructionProof.Write(cleanup)
+	AnnihilateData(cleanup)
 }
 
 func EncryptInplaceKeccak(key []byte, data []byte) {
@@ -82,9 +82,9 @@ func EncryptInplaceKeccak(key []byte, data []byte) {
 	d.ReadXor(data)
 
 	// cleanup
-	b := make([]byte, keccak.Rate*16)
+	b := make([]byte, keccak.Rate*8)
 	d.Read(b)
-	destructionProof.Write(b)
+	AnnihilateData(b)
 }
 
 // key is expected to be 32 bytes, salt 12 bytes
