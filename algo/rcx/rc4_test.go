@@ -107,26 +107,32 @@ func TestEncryptionMix(t *testing.T) {
 
 	for i := 0; i < 8; i++ {
 		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, false)
-		y := make([]byte, len(x))
-		copy(y, x)
+		orig := generateRandomBytes(t, false)
+		buf := make([]byte, len(orig))
+		encrypted := make([]byte, len(orig))
+		copy(buf, orig)
 
 		var re RC4
 		re.InitKey(key)
 		dummy := make([]byte, 16*256*256)
 		re.XorInplace(dummy) // roll forward
 
-		re.XorInplace(y)
-		if bytes.Equal(x, y) {
+		re.XorInplace(buf)
+		copy(encrypted, buf)
+		if bytes.Equal(orig, buf) {
 			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
 		}
-		ok := primitives.IsDeepNotEqual(x, y, len(x))
-		if !ok {
+		if !primitives.IsDeepNotEqual(orig, buf, len(orig)) {
 			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
 		}
 
-		DecryptInplaceRcx(key, y, 0)
-		if !bytes.Equal(x, y) {
+		DecryptInplaceRcx(key, buf, 0)
+		if !bytes.Equal(orig, buf) {
+			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
+		}
+
+		EncryptInplaceRcx(key, buf, 0)
+		if !bytes.Equal(encrypted, buf) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
 	}
