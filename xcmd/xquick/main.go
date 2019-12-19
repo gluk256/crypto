@@ -13,7 +13,7 @@ import (
 
 func help() {
 	fmt.Printf("xquick v.0.%d \n", crutils.CipherVersion)
-	fmt.Println("encrypt/decrypt a file with quick cipher (RC4 + AES)")
+	fmt.Println("encrypt/decrypt a [big] file with stream cipher")
 	fmt.Println("USAGE: xquick flags srcFile dstFile")
 	fmt.Println("\t -e encrypt (default mode)")
 	fmt.Println("\t -d decrypt")

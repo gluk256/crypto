@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/algo/rcx"
 )
@@ -123,5 +124,24 @@ func TestEncryptSimplest(t *testing.T) {
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
 		}
+	}
+}
+
+func TestAnnihilateData(t *testing.T) {
+	seed := time.Now().Unix()
+	var hash keccak.Keccak512
+	hash.AddEntropy(uint64(seed))
+	sz := 3 * 1024 * 1024
+
+	for i := 0; i < 9; i++ {
+		x := make([]byte, sz)
+		y := make([]byte, sz)
+		hash.Read(x)
+		copy(y, x)
+		AnnihilateData(x)
+		if !primitives.IsDeepNotEqual(x, y, sz) {
+			t.Fatalf("AnnihilateData failed, round %d with seed %d", i, seed)
+		}
+		sz /= 4
 	}
 }

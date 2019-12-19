@@ -24,7 +24,7 @@ func crypticExe(secure bool) {
 
 func main() {
 	if len(os.Args) < 2 {
-		crypticExe(false)
+		crypticExe(true)
 		return
 	}
 
@@ -61,5 +61,5 @@ func createFile() {
 }
 
 func tst() {
-
+	fmt.Println("test success")
 }

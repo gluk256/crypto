@@ -113,7 +113,7 @@ func TestEncryptionMix(t *testing.T) {
 
 		var re RC4
 		re.InitKey(key)
-		dummy := make([]byte, 4096*512)
+		dummy := make([]byte, 16*256*256)
 		re.XorInplace(dummy) // roll forward
 
 		re.XorInplace(y)
@@ -348,6 +348,23 @@ func TestConsistencyRC4(t *testing.T) {
 		r2.XorInplace(y)
 		if !bytes.Equal(x, y) {
 			t.Fatalf("failed to generate consistent gamma, round %d with seed %d", i, seed)
+		}
+	}
+}
+
+func TestCleanupRcx(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 8; i++ {
+		key := generateRandomBytes(t, false)
+		var x RCX
+		x.InitKey(key)
+		prev := make([]byte, 256)
+		copy(prev, x.rc4.s[:])
+		x.cleanup()
+		if !primitives.IsDeepNotEqual(prev, x.rc4.s[:], 256) {
+			t.Fatalf("cleanup failed, round %d with seed %d", i, seed)
 		}
 	}
 }

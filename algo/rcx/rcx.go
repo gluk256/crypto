@@ -48,11 +48,11 @@ func (x *RCX) shuffle(fullCycles int) {
 
 func (x *RCX) cleanup() []byte {
 	x.shuffle(2)
-	x.EncryptCascade(x.rc4.s[:], 64)
+	x.EncryptCascade(x.rc4.s[:], 128)
 	x.rc4.i = 0
 	x.rc4.j = 0
 	x.shuffle(1)
-	x.EncryptCascade(x.rc4.s[:], 64)
+	x.EncryptCascade(x.rc4.s[:], 128)
 	return x.rc4.s[:]
 }
 
