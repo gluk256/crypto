@@ -78,6 +78,15 @@ func isHexData(data []byte) bool {
 	return true
 }
 
+func isAscii(data []byte) bool {
+	for _, c := range data {
+		if c > 126 || c < 32 {
+			return false
+		}
+	}
+	return true
+}
+
 func isWeakerAlgo(flags string, data []byte) bool {
 	if strings.Contains(flags, "w") {
 		return true
@@ -158,9 +167,9 @@ func outputResult(flags string, err error, res []byte, spacing []byte) {
 		fmt.Printf("Spacing in hex format: %x\n\n", spacing)
 	}
 
-	if isHexData(res) {
-		fmt.Printf("Decrypted data in hex format:\n%x\n", res)
-	} else {
+	if isAscii(res) {
 		fmt.Printf("%s\n", string(res))
+	} else {
+		fmt.Printf("Decrypted data in hex format:\n%x\n", res)
 	}
 }

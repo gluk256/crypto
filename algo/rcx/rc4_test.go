@@ -105,7 +105,7 @@ func TestEncryptionMix(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 4; i++ {
 		key := generateRandomBytes(t, false)
 		orig := generateRandomBytes(t, false)
 		buf := make([]byte, len(orig))
@@ -163,7 +163,7 @@ func TestSingleRunRCX(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 5; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -194,7 +194,7 @@ func TestSingleRunRcxZero(t *testing.T) {
 	mrand.Seed(seed)
 	const sz = 1024 * 64
 
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 4; i++ {
 		key := generateRandomBytes(t, false)
 		x := make([]byte, sz)
 		zero := make([]byte, sz)
@@ -219,7 +219,7 @@ func TestCascade(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 5; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -248,7 +248,7 @@ func TestAvalancheRcx(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 5; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -306,7 +306,7 @@ func TestEncryptionRCX(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 5; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, false)
 		y := make([]byte, len(x))
@@ -362,7 +362,7 @@ func TestCleanupRcx(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 5; i++ {
 		key := generateRandomBytes(t, false)
 		var x RCX
 		x.InitKey(key)

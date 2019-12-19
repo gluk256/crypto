@@ -16,7 +16,7 @@ func TestPadding(t *testing.T) {
 
 	var b, s, r, zero []byte
 	zero = make([]byte, 1024*8)
-	b = generateRandomBytes(t)
+	b = generateRandomBytes(t, false)
 	r = make([]byte, len(b))
 	Randomize(r)
 	b = addSpacing(b, r)
@@ -42,11 +42,11 @@ func TestAes(t *testing.T) {
 	mrand.Seed(seed)
 
 	for i := 0; i < 64; i++ {
-		key := generateRandomBytes(t)
+		key := generateRandomBytes(t, false)
 		key = key[:AesKeySize]
-		salt := generateRandomBytes(t)
+		salt := generateRandomBytes(t, false)
 		salt = salt[:AesSaltSize]
-		data := generateRandomBytes(t)
+		data := generateRandomBytes(t, true)
 		sz := len(data)
 		expected := make([]byte, sz)
 		copy(expected, data)
@@ -109,15 +109,46 @@ func TestAes(t *testing.T) {
 	}
 }
 
-func TestEncryptionMain(t *testing.T) {
+func TestEncryptionQuick(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
 	for i := 0; i < 16; i++ {
 		keysz := (mrand.Int() % 64) + 7
-		key := generateRandomBytes(t)
+		key := generateRandomBytes(t, false)
 		key = key[:keysz]
-		data := generateRandomBytes(t)
+		data := generateRandomBytes(t, true)
+		sz := len(data)
+		orig := make([]byte, sz)
+		copy(orig, data)
+
+		encyprted, err := EncryptQuick(key, data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !primitives.IsDeepNotEqual(orig, encyprted, len(data)) {
+			t.Fatal("deep non-equal test failed")
+		}
+
+		decrypted, err := DecryptQuick(key, encyprted)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(decrypted, orig) {
+			t.Fatalf("decrypted != expected, [%d %d] round %d with seed %d", len(orig), len(decrypted), i, seed)
+		}
+	}
+}
+
+func TestEncryptionMain(t *testing.T) {
+	seed := time.Now().Unix()
+	mrand.Seed(seed)
+
+	for i := 0; i < 3; i++ {
+		keysz := (mrand.Int() % 64) + 7
+		key := generateRandomBytes(t, false)
+		key = key[:keysz]
+		data := generateRandomBytes(t, true)
 		sz := len(data)
 		orig := make([]byte, sz)
 		copy(orig, data)
@@ -163,14 +194,14 @@ func TestEncryptionSteg(t *testing.T) {
 	mrand.Seed(seed)
 
 	multiplier := 1
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 2; i++ {
 		keysz := (mrand.Int() % 64) + 13
-		key := generateRandomBytes(t)
+		key := generateRandomBytes(t, false)
 		key = key[:keysz]
-		keySteg := generateRandomBytes(t)
+		keySteg := generateRandomBytes(t, false)
 		keySteg = keySteg[:keysz]
 
-		steg := generateRandomBytes(t)
+		steg := generateRandomBytes(t, true)
 		origSteg := make([]byte, len(steg))
 		copy(origSteg, steg)
 

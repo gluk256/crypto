@@ -126,7 +126,8 @@ func Encrypt(key []byte, data []byte) ([]byte, error) {
 	data, _ = addPadding(data, 0, true)
 	spacing := make([]byte, len(data))
 	Randomize(spacing)
-	return encryptWithSpacing(key, data, spacing)
+	data = addSpacing(data, spacing) // now data will have additional capacity (enough for the salt)
+	return encrypt(key, data)
 }
 
 // encrypt with steganographic content as spacing
@@ -135,23 +136,22 @@ func EncryptSteg(key []byte, data []byte, steg []byte) (res []byte, err error) {
 	if len(data) < len(steg)+4 { // four bytes for padding size
 		return nil, fmt.Errorf("data size is less than necessary [%d vs. %d]", len(data), len(steg)+4)
 	}
-	steg, err = addPadding(steg, len(data), false) // mark = false: steg content must be indistinguishable from random gamma
+	steg, err = addPadding(steg, len(data), false) // mark = false (steg content must be indistinguishable from random gamma)
 	if err != nil {
 		return nil, err
 	}
-
-	res, err = encryptWithSpacing(key, data, steg)
-	return res, err
+	data = addSpacing(data, steg) // now data will have additional capacity (enough for the salt)
+	return encrypt(key, data)
 }
 
 // data must be already padded.
 // don't forget to annihilate the key!
-func encryptWithSpacing(key []byte, data []byte, spacing []byte) ([]byte, error) {
+func encrypt(key []byte, data []byte) ([]byte, error) {
 	salt, err := GenerateSalt()
 	if err != nil {
 		return nil, err
 	}
-	data = addSpacing(data, spacing) // now data will have additional capacity (enough for the salt)
+
 	keyholder := GenerateKeys(key, salt)
 	defer AnnihilateData(keyholder)
 
@@ -212,4 +212,41 @@ func DecryptStegContentOfUnknownSize(key []byte, steg []byte) ([]byte, []byte, e
 		}
 	}
 	return nil, nil, errors.New("failed to decrypt steganographic content")
+}
+
+// XOR-only encryption, without the slow block cipher
+func EncryptQuick(key []byte, data []byte) ([]byte, error) {
+	salt, err := GenerateSalt()
+	if err != nil {
+		return nil, err
+	}
+	keyholder := GenerateKeys(key, salt)
+	defer AnnihilateData(keyholder)
+
+	rcx.EncryptInplaceRC4(keyholder[BegRcxKey:EndRcxKey], data)
+	EncryptInplaceKeccak(keyholder[BegK1:EndK1], data)
+
+	data, err = EncryptAES(keyholder[BegAesKey:EndAesKey], keyholder[BegAesSalt:EndAesSalt], data)
+	if err == nil {
+		data = append(data, salt...)
+	}
+	return data, err
+}
+
+func DecryptQuick(key []byte, data []byte) ([]byte, error) {
+	var err error
+	split := len(data) - SaltSize
+	salt := data[split:]
+	data = data[:split]
+	keyholder := GenerateKeys(key, salt)
+	defer AnnihilateData(keyholder)
+
+	data, err = DecryptAES(keyholder[BegAesKey:EndAesKey], keyholder[BegAesSalt:EndAesSalt], data)
+	if err != nil {
+		return data, err
+	}
+
+	EncryptInplaceKeccak(keyholder[BegK1:EndK1], data)
+	rcx.EncryptInplaceRC4(keyholder[BegRcxKey:EndRcxKey], data)
+	return data, nil
 }

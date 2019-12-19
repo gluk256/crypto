@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gluk256/crypto/algo/rcx"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
 )
@@ -74,9 +73,9 @@ func run() {
 	defer crutils.AnnihilateData(key)
 
 	if strings.Contains(flags, "e") {
-		data, err = encrypt(key, data)
+		data, err = crutils.EncryptQuick(key, data)
 	} else {
-		data, err = decrypt(key, data)
+		data, err = crutils.DecryptQuick(key, data)
 	}
 
 	if err == nil {
@@ -135,42 +134,4 @@ func getFileName() string {
 	fmt.Println("Error: filename input failed. Exit.")
 	os.Exit(0)
 	return ""
-}
-
-func encrypt(key []byte, data []byte) ([]byte, error) {
-	salt, err := crutils.GenerateSalt()
-	if err != nil {
-		return nil, err
-	}
-	keyholder := crutils.GenerateKeys(key, salt)
-	defer crutils.AnnihilateData(keyholder)
-
-	rcx.EncryptInplaceRC4(keyholder[crutils.BegRcxKey:crutils.EndRcxKey], data)
-	crutils.EncryptInplaceKeccak(keyholder[crutils.BegK1:crutils.EndK1], data)
-
-	aesNonce := keyholder[crutils.BegAesSalt:crutils.EndAesSalt]
-	data, err = crutils.EncryptAES(keyholder[crutils.BegAesKey:crutils.EndAesKey], aesNonce, data)
-	if err == nil {
-		data = append(data, salt...)
-	}
-	return data, err
-}
-
-func decrypt(key []byte, data []byte) ([]byte, error) {
-	var err error
-	split := len(data) - crutils.SaltSize
-	salt := data[split:]
-	data = data[:split]
-	keyholder := crutils.GenerateKeys(key, salt)
-	defer crutils.AnnihilateData(keyholder)
-
-	aesNonce := keyholder[crutils.BegAesSalt:crutils.EndAesSalt]
-	data, err = crutils.DecryptAES(keyholder[crutils.BegAesKey:crutils.EndAesKey], aesNonce, data)
-	if err != nil {
-		return data, err
-	}
-
-	crutils.EncryptInplaceKeccak(keyholder[crutils.BegK1:crutils.EndK1], data)
-	rcx.EncryptInplaceRC4(keyholder[crutils.BegRcxKey:crutils.EndRcxKey], data)
-	return data, nil
 }

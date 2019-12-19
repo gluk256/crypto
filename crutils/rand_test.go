@@ -53,8 +53,11 @@ func TestRand(t *testing.T) {
 	}
 }
 
-func generateRandomBytes(t *testing.T) []byte {
+func generateRandomBytes(t *testing.T, big bool) []byte {
 	sz := mrand.Intn(256) + 256
+	if big {
+		sz += mrand.Intn(1024 * 32)
+	}
 	b := make([]byte, sz)
 	_, err := mrand.Read(b)
 	if err != nil {
@@ -78,8 +81,8 @@ func TestEncryptKeccak(t *testing.T) {
 	mrand.Seed(seed)
 
 	for i := 0; i < 64; i++ {
-		key := generateRandomBytes(t)
-		x := generateRandomBytes(t)
+		key := generateRandomBytes(t, false)
+		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
 		copy(y, x)
 
@@ -104,8 +107,8 @@ func TestEncryptSimplest(t *testing.T) {
 	mrand.Seed(seed)
 
 	for i := 0; i < 64; i++ {
-		key := generateRandomBytes(t)
-		x := generateRandomBytes(t)
+		key := generateRandomBytes(t, false)
+		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
 		copy(y, x)
 
