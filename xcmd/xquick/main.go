@@ -70,7 +70,7 @@ func run() {
 	var err error
 	flags, srcFile, dstFile := processCommandArgs()
 	data := loadDataFromFile(flags, srcFile)
-	key := getPassword(flags)
+	key := terminal.GetPassword(flags)
 	defer crutils.AnnihilateData(key)
 
 	if strings.Contains(flags, "e") {
@@ -135,30 +135,6 @@ func getFileName() string {
 	fmt.Println("Error: filename input failed. Exit.")
 	os.Exit(0)
 	return ""
-}
-
-func getPassword(flags string) []byte {
-	var res []byte
-	var err error
-	if strings.Contains(flags, "r") {
-		res, err = crutils.GenerateRandomPassword(20)
-		if err != nil {
-			fmt.Printf("Critical error: %s\n", err)
-			fmt.Println("Execution aborted")
-			os.Exit(0)
-		}
-		fmt.Println(string(res))
-	} else if strings.Contains(flags, "x") {
-		res = terminal.SecureInput(true)
-	} else if strings.Contains(flags, "s") {
-		res = terminal.SecureInput(false)
-	} else {
-		for len(res) == 0 {
-			fmt.Print("please enter the password: ")
-			res = terminal.PasswordModeInput()
-		}
-	}
-	return res
 }
 
 func encrypt(key []byte, data []byte) ([]byte, error) {

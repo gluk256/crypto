@@ -361,7 +361,7 @@ func getPassword(cryptic bool, checkExisting bool) []byte {
 
 	var res []byte
 	//if randpass {
-	//	res = crutils.RandPass(16)
+	//	res = crutils.RandPass(20)
 	//	fmt.Println(string(res))
 	//} else
 	if cryptic {

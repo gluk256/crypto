@@ -21,6 +21,7 @@ var (
 )
 
 func help() {
+	fmt.Println("xash v.1.0")
 	fmt.Println("USAGE: xash [flags]")
 	fmt.Println("\t -s secure input standard (default)")
 	fmt.Println("\t -x secure input extended")
@@ -28,7 +29,7 @@ func help() {
 	fmt.Println("\t -p password mode input")
 	fmt.Println("\t -f file name as input")
 	fmt.Println("\t -k keccak hash")
-	fmt.Println("\t -v proove destruction")
+	fmt.Println("\t -v prove destruction")
 	fmt.Println("\t -h help")
 }
 

@@ -102,29 +102,6 @@ func getData(flags string) (res []byte) {
 	return res
 }
 
-func getPassword(flags string) []byte {
-	randpass := strings.Contains(flags, "r")
-	secure := strings.Contains(flags, "s")
-
-	var res []byte
-	var err error
-	if randpass {
-		res, err = crutils.GenerateRandomPassword(16)
-		fmt.Println(string(res))
-		if err != nil {
-			fmt.Printf("ERROR: %s\n", err)
-			fmt.Println("ATTENTION!!! The data is not entirely random. Not safe to use!")
-		}
-	} else if secure {
-		res = terminal.SecureInput(false)
-	} else {
-		fmt.Print("please enter the password: ")
-		res = terminal.PasswordModeInput()
-	}
-
-	return res
-}
-
 func main() {
 	defer crutils.ProveDataDestruction()
 	run()
@@ -134,7 +111,7 @@ func run() {
 	flags, data := processParams()
 	defer crutils.AnnihilateData(data)
 
-	key := getPassword(flags)
+	key := terminal.GetPassword(flags)
 	defer crutils.AnnihilateData(key)
 
 	res, spacing, err := process(flags, key, data)
