@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -26,7 +27,6 @@ func help() {
 
 func processParams() (flags string, data []byte) {
 	var zero string
-	var err error
 	if len(os.Args) == 2 {
 		flags = os.Args[1]
 	} else if len(os.Args) == 3 {
@@ -57,10 +57,13 @@ func processParams() (flags string, data []byte) {
 	}
 
 	if strings.Contains(flags, "d") || common.IsHexData(data) {
-		data, err = common.HexDecode(data)
+		h := make([]byte, len(data)/2)
+		_, err := hex.Decode(h, data)
 		if err != nil {
 			fmt.Printf("Error decoding hex data: %s\n", err.Error())
 			return zero, nil
+		} else {
+			data = h
 		}
 	}
 	return flags, data

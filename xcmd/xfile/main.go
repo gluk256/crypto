@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -76,12 +77,13 @@ func enterText(flags string) (res []byte) {
 	}
 
 	if strings.Contains(flags, "r") && common.IsHexData(res) {
-		hex, err := common.HexDecode(res)
+		h := make([]byte, len(res)/2)
+		_, err := hex.Decode(h, res)
 		if err != nil {
 			fmt.Printf("Error decoding hex data: %s\n", err.Error())
 			return nil
 		} else {
-			res = hex
+			res = h
 		}
 	}
 	return res
