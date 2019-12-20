@@ -7,6 +7,7 @@ import (
 
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
+	"github.com/gluk256/crypto/xcmd/common"
 )
 
 func help() {
@@ -55,32 +56,14 @@ func processParams() (flags string, data []byte) {
 		data = getData(flags)
 	}
 
-	if strings.Contains(flags, "d") || isHexData(data) {
-		data, err = crutils.HexDecode(data)
+	if strings.Contains(flags, "d") || common.IsHexData(data) {
+		data, err = common.HexDecode(data)
 		if err != nil {
 			fmt.Printf("Error decoding hex data: %s\n", err.Error())
 			return zero, nil
 		}
 	}
 	return flags, data
-}
-
-func isHexData(data []byte) bool {
-	for _, c := range data {
-		if !strings.ContainsRune(string("0123456789abcdef"), rune(c)) {
-			return false
-		}
-	}
-	return true
-}
-
-func isAscii(data []byte) bool {
-	for _, c := range data {
-		if c < 32 { // ignore c > 127 (could be some other alphabet encoding)
-			return false
-		}
-	}
-	return true
 }
 
 func isWeakerAlgo(flags string, data []byte) bool {
@@ -123,7 +106,7 @@ func run(flags string, data []byte) {
 	defer crutils.AnnihilateData(key)
 	defer crutils.AnnihilateData(spacing)
 
-	key = terminal.GetPassword(flags)
+	key = common.GetPassword(flags)
 	res, spacing, err = process(flags, key, data)
 	outputResult(flags, err, res, spacing)
 }
@@ -166,7 +149,7 @@ func outputResult(flags string, err error, res []byte, spacing []byte) {
 		fmt.Printf("%x\n\n", spacing)
 	}
 
-	if isAscii(res) {
+	if common.IsAscii(res) {
 		fmt.Printf("%s\n", string(res))
 	} else {
 		fmt.Printf("Decrypted data in hex format:\n%x\n", res)

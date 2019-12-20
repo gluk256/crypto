@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
+	"github.com/gluk256/crypto/xcmd/common"
 )
 
 func help() {
@@ -24,12 +24,16 @@ func help() {
 	fmt.Println("\t\t -r random password")
 
 	fmt.Println("\t -d decrypt")
-	fmt.Println("\t\t -p print decrypted content as text, don't save")
+	fmt.Println("\t\t -o output decrypted content as text, don't save")
 	fmt.Println("\t\t -g interactive grep (print specific text lines only)")
 	fmt.Println("\t\t -G interactive grep with secure input")
 
 	fmt.Println("\t -l load file")
 	fmt.Println("\t\t -i insert file content into another file as steganographic content")
+
+	fmt.Println("\t -t enter text")
+	fmt.Println("\t\t -p password mode")
+	fmt.Println("\t\t -T plain text mode")
 }
 
 func processCommandArgs() (flags string, srcFile string, dstFile string) {
@@ -45,50 +49,63 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 
 	if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
 		help()
-		os.Exit(0)
+		return "", srcFile, dstFile
 	}
 
 	if strings.Contains(flags, "d") && strings.Contains(flags, "r") {
 		fmt.Println("Random password ('r') is incompatible with decryption ('d').")
-		fmt.Println("FATAL ERROR: wrong flags. Exit.")
-		os.Exit(0)
+		fmt.Println("ERROR: wrong flags.")
+		return "", srcFile, dstFile
 	}
 
 	return flags, srcFile, dstFile
 }
 
-func main() {
-	defer crutils.ProveDataDestruction()
-	flags, srcFile, dstFile := processCommandArgs()
-	if strings.Contains(flags, "d") {
-		data := loadDataFromFile(srcFile, crutils.MinDataSize+crutils.EncryptedSizeDiff)
-		processDecryption(flags, data, dstFile, false)
-	} else if strings.Contains(flags, "e") {
-		processEncryption(flags, srcFile, dstFile, nil)
+func enterText(flags string) (res []byte) {
+	if strings.Contains(flags, "p") {
+		res = terminal.PasswordModeInput()
+	} else if strings.Contains(flags, "s") {
+		res = terminal.SecureInput(false)
+	} else if strings.Contains(flags, "x") {
+		res = terminal.SecureInput(true)
+	} else if strings.Contains(flags, "T") {
+		res = terminal.PlainTextInput()
 	} else {
-		loadFile(flags, srcFile, dstFile)
+		fmt.Println("Insufficiant flags.")
+		return nil
 	}
+
+	if strings.Contains(flags, "r") && common.IsHexData(res) {
+		hex, err := common.HexDecode(res)
+		if err != nil {
+			fmt.Printf("Error decoding hex data: %s\n", err.Error())
+			return nil
+		} else {
+			res = hex
+		}
+	}
+	return res
 }
 
-func loadFile(flags string, srcFile string, dstFile string) {
-	data := loadDataFromFile(srcFile, 0) // may call os.Exit
-	fmt.Print("What do you want to do with loaded content? Please enter the command [ied]: ")
-	cmd := string(terminal.PlainTextInput())
-	if strings.Contains(cmd, "d") {
-		processDecryption(flags, data, dstFile, false)
-	} else if strings.Contains(cmd, "e") {
-		processEncryption(flags, srcFile, dstFile, nil)
-	} else if strings.Contains(cmd, "i") {
-		processEncryption(flags, "", dstFile, data)
+func getData(flags string, srcFile string) (data []byte) {
+	if strings.Contains(flags, "t") {
+		data = enterText(flags)
 	} else {
-		fmt.Println("Wrong command. Exit.")
+		data = loadDataFromFile(srcFile)
 	}
+	if len(data) == 0 {
+		fmt.Println("Error: empty data")
+	}
+	return data
 }
 
-func loadDataFromFile(filename string, minSize int) []byte {
-	for i := 0; i < 64; i++ {
+func loadDataFromFile(filename string) []byte {
+	for i := 0; i < 8; i++ {
 		if len(filename) == 0 || i > 0 {
-			filename = getFileName() // may call os.Exit
+			filename = common.GetFileName()
+			if len(filename) == 0 {
+				return nil
+			}
 		}
 		data, err := ioutil.ReadFile(filename)
 		if err != nil {
@@ -96,26 +113,39 @@ func loadDataFromFile(filename string, minSize int) []byte {
 			fmt.Println("Please try again.")
 			continue
 		}
-		expanded := primitives.FindNextPowerOfTwo(len(data))
-		if expanded < minSize {
-			fmt.Printf("The data size %d (padded: %d) is less than required size %d\n", len(data), expanded, minSize)
-			fmt.Println("Please try again.")
-			continue
-		}
 		return data
 	}
 
 	fmt.Println("The number of iterations exceeded allowed maximum. Exit.")
-	os.Exit(0)
 	return nil
+}
+
+func main() {
+	defer crutils.ProveDataDestruction()
+	flags, srcFile, dstFile := processCommandArgs()
+	if len(flags) == 0 {
+		return
+	}
+	data := getData(flags, srcFile)
+	if len(data) == 0 {
+		return
+	}
+
+	if strings.Contains(flags, "d") {
+		processDecryption(flags, dstFile, data, false)
+	} else {
+		processEncryption(flags, dstFile, data, nil)
+	}
+
+	crutils.AnnihilateData(data)
 }
 
 func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, steg []byte, err error) {
 	var key []byte
-	defer crutils.AnnihilateData(key) // just in case of unexpected crash
+	defer crutils.AnnihilateData(key) // defer just in case of unexpected crash
 
-	for i := 0; i < 4096; i++ {
-		key = terminal.GetPassword(flags)
+	for i := 0; i < 1024; i++ {
+		key = common.GetPassword(flags)
 		if unknownSize {
 			decrypted, steg, err = crutils.DecryptStegContentOfUnknownSize(key, data)
 		} else {
@@ -135,31 +165,37 @@ func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, ste
 	return decrypted, steg, err
 }
 
-func processDecryption(flags string, data []byte, dstFile string, unknownSize bool) {
+func processDecryption(flags string, dstFile string, data []byte, unknownSize bool) {
+	if len(data) == 0 {
+		fmt.Println("Error: empty data")
+		return
+	}
+
 	decrypted, steg, err := decrypt(flags, data, unknownSize)
 	defer crutils.AnnihilateData(decrypted)
 	defer crutils.AnnihilateData(steg)
-
 	if err != nil {
 		return
 	}
 
 	if !strings.Contains(flags, "f") {
-		fmt.Print("What do you want to do with decrypted content? Please enter the command [Ggpsxfd]: ")
+		fmt.Println("What do you want to do with decrypted content?")
+		fmt.Println("options [Ggpdsxfq]: grep, print, decrypt, secure_pass, extra_secure, save_file")
+		fmt.Print("Please enter the command: ")
 		flags = string(terminal.PlainTextInput())
 	}
 
 	if strings.Contains(flags, "f") {
-		saveData(dstFile, decrypted)
+		common.SaveData(dstFile, decrypted)
 	} else if strings.Contains(flags, "G") {
 		runGrep(flags, decrypted)
 	} else if strings.Contains(flags, "g") {
 		runGrep(flags, decrypted)
-	} else if strings.Contains(flags, "p") {
+	} else if strings.Contains(flags, "o") {
 		fmt.Print(string(decrypted))
 		fmt.Println()
 	} else {
-		processDecryption(flags, steg, dstFile, true) // recursively decrypt steg content
+		processDecryption(flags, dstFile, steg, true) // recursively decrypt steg content
 	}
 }
 
@@ -171,69 +207,34 @@ func encrypt(key []byte, data []byte, steg []byte) ([]byte, error) {
 	}
 }
 
-func processEncryption(flags string, srcFile string, dstFile string, steg []byte) {
-	data := loadDataFromFile(srcFile, len(steg)) // may call os.Exit
-	key := terminal.GetPassword(flags)
+func processEncryption(flags string, dstFile string, data []byte, steg []byte) {
+	key := common.GetPassword(flags)
 	defer crutils.AnnihilateData(key)
-	defer crutils.AnnihilateData(data)
 
 	encrypted, err := encrypt(key, data, steg)
 	defer crutils.AnnihilateData(encrypted)
 	if err != nil {
-		fmt.Printf("Failed to encrypt data: %s\nFATAL ERROR. Exit.\n", err.Error())
-		os.Exit(0)
+		fmt.Printf("Failed to encrypt data: %s\nFATAL ERROR\n", err.Error())
+		return
 	}
 
 	if !strings.Contains(flags, "f") {
-		fmt.Print("What do you want to do with encrypted content? Please enter the command [rsxfe]: ")
+		fmt.Println("What do you want to do with encrypted content?")
+		fmt.Println("options [ersxfq]: encrypt, rand_pass, secure_pass, extra_secure, save_file")
+		fmt.Print("Please enter the command: ")
 		flags = string(terminal.PlainTextInput())
 	}
 
 	if strings.Contains(flags, "f") {
-		saveData(dstFile, encrypted)
-	} else {
-		processEncryption(flags, "", dstFile, encrypted) // recursively encrypt steg content
-	}
-}
-
-func getFileName() string {
-	for i := 0; i < 64; i++ {
-		fmt.Println("Please enter file name: ")
-		f := terminal.PlainTextInput()
-		if len(f) == 0 {
-			fmt.Println("Error: empty filename, please try again")
-		} else if len(f) > 160 {
-			fmt.Println("Error: filename too long, please try again")
-		} else {
-			return string(f)
-		}
-	}
-	fmt.Println("Error: filename input failed. Exit.")
-	os.Exit(0)
-	return ""
-}
-
-func saveData(filename string, data []byte) {
-	if len(data) == 0 {
-		fmt.Println("Error: content is absent, file is not saved.")
+		err = common.SaveData(dstFile, encrypted)
+	} else if strings.Contains(flags, "q") {
 		return
-	}
-
-	for i := 0; i < 16; i++ {
-		if len(filename) == 0 || i > 0 {
-			filename = getFileName()
-		}
-
-		err := ioutil.WriteFile(filename, data, 0666)
-		if err == nil {
-			return
-		} else {
-			fmt.Printf("Failed to save file: %s \n", err)
+	} else {
+		buf := loadDataFromFile("")
+		if len(buf) != 0 {
+			processEncryption(flags, dstFile, buf, encrypted) // recursively encrypt steg content
 		}
 	}
-
-	fmt.Println("Failed to save file after max tries. Exit.")
-	os.Exit(0)
 }
 
 func runGrep(flags string, content []byte) {

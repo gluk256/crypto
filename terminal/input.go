@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"syscall"
 
 	shell "golang.org/x/crypto/ssh/terminal"
@@ -183,39 +182,4 @@ func SecureInput(ext bool) []byte {
 	} else {
 		return PasswordModeInput()
 	}
-}
-
-// this is a helper function for cmd tools
-func GetPassword(flags string) (res []byte) {
-	if strings.Contains(flags, "r") {
-		var err error
-		res, err = crutils.GenerateRandomPassword(20)
-		fmt.Println(string(res))
-		if err != nil {
-			fmt.Println("ATTENTION!!! The data is not entirely random. Not safe to use!")
-			fmt.Printf("Error: %s\n", err.Error())
-			return res
-		}
-	} else if strings.Contains(flags, "x") {
-		res = SecureInput(true)
-	} else if strings.Contains(flags, "s") {
-		res = SecureInput(false)
-	} else {
-		for len(res) == 0 {
-			fmt.Print("please enter the password: ")
-			res = PasswordModeInput()
-		}
-	}
-	res = expand(res)
-	return res
-}
-
-// password for xcmd apps should always be 256 bytes
-func expand(prev []byte) []byte {
-	res := make([]byte, 256)
-	for i := 0; i < 256; i++ {
-		res[i] = prev[i%len(prev)]
-	}
-	crutils.AnnihilateData(prev)
-	return res
 }

@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/gluk256/crypto/crutils"
-	"github.com/gluk256/crypto/terminal"
+	"github.com/gluk256/crypto/xcmd/common"
 )
 
 func help() {
 	fmt.Printf("xquick v.0.%d \n", crutils.CipherVersion)
-	fmt.Println("encrypt/decrypt a [big] file with stream cipher")
+	fmt.Println("encrypt/decrypt a [big] file with stream cipher (xor only)")
 	fmt.Println("USAGE: xquick flags srcFile dstFile")
 	fmt.Println("\t -e encrypt (default mode)")
 	fmt.Println("\t -d decrypt")
@@ -71,7 +71,7 @@ func run(flags string, srcFile string, dstFile string) {
 		return
 	}
 
-	key := terminal.GetPassword(flags)
+	key := common.GetPassword(flags)
 	defer crutils.AnnihilateData(key)
 
 	if strings.Contains(flags, "e") {
@@ -81,7 +81,7 @@ func run(flags string, srcFile string, dstFile string) {
 	}
 
 	if err == nil {
-		saveData(dstFile, data)
+		common.SaveData(dstFile, data)
 	} else {
 		fmt.Printf("ERROR: %s\n", err.Error())
 	}
@@ -100,42 +100,4 @@ func loadDataFromFile(flags string, filename string) []byte {
 	}
 
 	return data
-}
-
-func saveData(filename string, data []byte) {
-	if len(data) == 0 {
-		fmt.Println("Error: content is absent, file is not saved.")
-		return
-	}
-
-	for i := 0; i < 16; i++ {
-		err := ioutil.WriteFile(filename, data, 0666)
-		if err == nil {
-			return
-		}
-
-		fmt.Printf("Failed to save file: %s \n", err)
-		filename = getFileName()
-		if len(filename) == 0 {
-			break
-		}
-	}
-
-	fmt.Println("Failed to save file after max tries. Exit.")
-}
-
-func getFileName() string {
-	for i := 0; i < 3; i++ {
-		fmt.Println("Please enter file name: ")
-		f := terminal.PlainTextInput()
-		if len(f) == 0 {
-			fmt.Println("Error: empty filename, please try again")
-		} else if len(f) > 256 {
-			fmt.Println("Error: filename too long, please try again")
-		} else {
-			return string(f)
-		}
-	}
-	fmt.Println("Error: filename input failed.")
-	return ""
 }
