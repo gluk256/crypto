@@ -23,30 +23,26 @@ func help() {
 }
 
 func processCommandArgs() (flags string, srcFile string, dstFile string) {
-	if len(os.Args) < 2 {
+	var zero string
+	if len(os.Args) != 4 {
 		fmt.Println("ERROR: wrong number of parameters.")
-		os.Exit(0)
+		return zero, zero, zero
 	}
 
 	flags = os.Args[1]
-	if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
-		help()
-		os.Exit(0)
-	}
-
-	if len(os.Args) != 4 {
-		fmt.Println("ERROR: wrong number of parameters.")
-		os.Exit(0)
-	}
-
 	srcFile = os.Args[2]
 	dstFile = os.Args[3]
+
+	if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
+		help()
+		return zero, zero, zero
+	}
 
 	if strings.Contains(flags, "r") {
 		if strings.Contains(flags, "d") {
 			fmt.Println("Random password ('r') is incompatible with decryption ('d').")
 			fmt.Println("ERROR: wrong flags.")
-			os.Exit(0)
+			return zero, zero, zero
 		} else if !strings.Contains(flags, "e") {
 			flags += "e"
 		}
@@ -54,7 +50,7 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 
 	if !strings.Contains(flags, "e") && !strings.Contains(flags, "d") {
 		fmt.Println("ERROR: neither encryption nor decryption specified.")
-		os.Exit(0)
+		return zero, zero, zero
 	}
 
 	return flags, srcFile, dstFile
@@ -62,13 +58,19 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 
 func main() {
 	defer crutils.ProveDataDestruction()
-	run()
+	flags, srcFile, dstFile := processCommandArgs()
+	if len(flags) > 0 {
+		run(flags, srcFile, dstFile)
+	}
 }
 
-func run() {
+func run(flags string, srcFile string, dstFile string) {
 	var err error
-	flags, srcFile, dstFile := processCommandArgs()
 	data := loadDataFromFile(flags, srcFile)
+	if len(data) == 0 {
+		return
+	}
+
 	key := terminal.GetPassword(flags)
 	defer crutils.AnnihilateData(key)
 
@@ -89,12 +91,12 @@ func loadDataFromFile(flags string, filename string) []byte {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Printf("Failed to load data: %s\n", err.Error())
-		os.Exit(0)
+		return nil
 	}
 
 	if strings.Contains(flags, "d") && len(data) <= crutils.EncryptedSizeDiff {
 		fmt.Printf("The data is too small for decryption [%d bytes]: %s\n", len(data), err.Error())
-		os.Exit(0)
+		return nil
 	}
 
 	return data
@@ -114,24 +116,26 @@ func saveData(filename string, data []byte) {
 
 		fmt.Printf("Failed to save file: %s \n", err)
 		filename = getFileName()
+		if len(filename) == 0 {
+			break
+		}
 	}
 
 	fmt.Println("Failed to save file after max tries. Exit.")
 }
 
 func getFileName() string {
-	for i := 0; i < 64; i++ {
+	for i := 0; i < 3; i++ {
 		fmt.Println("Please enter file name: ")
 		f := terminal.PlainTextInput()
 		if len(f) == 0 {
 			fmt.Println("Error: empty filename, please try again")
-		} else if len(f) > 160 {
+		} else if len(f) > 256 {
 			fmt.Println("Error: filename too long, please try again")
 		} else {
 			return string(f)
 		}
 	}
-	fmt.Println("Error: filename input failed. Exit.")
-	os.Exit(0)
+	fmt.Println("Error: filename input failed.")
 	return ""
 }

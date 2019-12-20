@@ -17,7 +17,6 @@ var (
 	passwordMode bool
 	fileMode     bool
 	keccakHash   bool
-	paranoid     bool
 )
 
 func help() {
@@ -29,7 +28,6 @@ func help() {
 	fmt.Println("\t -p password mode input")
 	fmt.Println("\t -f file name as input")
 	fmt.Println("\t -k keccak hash")
-	fmt.Println("\t -v prove destruction")
 	fmt.Println("\t -h help")
 }
 
@@ -54,14 +52,14 @@ func processFlags() {
 		plaintext = strings.Contains(flags, "t")
 		passwordMode = strings.Contains(flags, "p")
 		fileMode = strings.Contains(flags, "f")
-		paranoid = strings.Contains(flags, "v")
 	}
 }
 
 func main() {
+	var src, hash []byte
+	defer crutils.AnnihilateData(src)
 	processFlags()
 
-	var src, hash []byte
 	if passwordMode {
 		src = terminal.PasswordModeInput()
 	} else if plaintext {
@@ -81,9 +79,5 @@ func main() {
 	}
 
 	fmt.Printf("%x\n", hash)
-
-	crutils.AnnihilateData(src)
-	if paranoid {
-		crutils.ProveDataDestruction()
-	}
+	crutils.ProveDataDestruction()
 }

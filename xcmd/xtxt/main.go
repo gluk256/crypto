@@ -9,13 +9,6 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
-func checkHelp(flags string) {
-	if strings.Contains(flags, "?") || strings.Contains(flags, "h") {
-		help()
-		os.Exit(0)
-	}
-}
-
 func help() {
 	fmt.Printf("xtxt v.2.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt short messages in console")
@@ -23,7 +16,7 @@ func help() {
 	fmt.Println("\t -e encrypt")
 	fmt.Println("\t -d decrypt")
 	fmt.Println("\t -a reveal all decrypted data, including spacing")
-	fmt.Println("\t -w use weaker encryption (without AES, MAC and salt)")
+	fmt.Println("\t -w use weaker encryption (without AES, MAC, salt and spacing)")
 	fmt.Println("\t -r random password")
 	fmt.Println("\t -s secure password input")
 	fmt.Println("\t -S secure data input")
@@ -31,21 +24,20 @@ func help() {
 }
 
 func processParams() (flags string, data []byte) {
+	var zero string
 	var err error
-	if len(os.Args) == 1 {
-		help()
-		os.Exit(0)
-	} else if len(os.Args) == 2 {
+	if len(os.Args) == 2 {
 		flags = os.Args[1]
-		checkHelp(flags)
-		data = getData(flags)
 	} else if len(os.Args) == 3 {
 		flags = os.Args[1]
-		checkHelp(flags)
 		data = []byte(os.Args[2])
 	} else {
-		fmt.Printf("Error: wrong number of arguments [%d]\n", len(os.Args))
-		os.Exit(0)
+		flags = "h"
+	}
+
+	if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
+		help()
+		return zero, nil
 	}
 
 	if !strings.Contains(flags, "e") && !strings.Contains(flags, "d") {
@@ -55,15 +47,19 @@ func processParams() (flags string, data []byte) {
 			flags += "d"
 		} else {
 			fmt.Println("Flags are not clear: encryption or decryption?")
-			os.Exit(0)
+			return zero, nil
 		}
+	}
+
+	if data == nil {
+		data = getData(flags)
 	}
 
 	if strings.Contains(flags, "d") || isHexData(data) {
 		data, err = crutils.HexDecode(data)
 		if err != nil {
 			fmt.Printf("Error decoding hex data: %s\n", err.Error())
-			os.Exit(0)
+			return zero, nil
 		}
 	}
 	return flags, data
@@ -80,7 +76,7 @@ func isHexData(data []byte) bool {
 
 func isAscii(data []byte) bool {
 	for _, c := range data {
-		if c > 126 || c < 32 {
+		if c < 32 { // ignore c > 127 (could be some other alphabet encoding)
 			return false
 		}
 	}
@@ -113,20 +109,22 @@ func getData(flags string) (res []byte) {
 
 func main() {
 	defer crutils.ProveDataDestruction()
-	run()
+	flags, data := processParams()
+	if len(flags) > 0 {
+		run(flags, data)
+	}
 }
 
-func run() {
-	flags, data := processParams()
+func run(flags string, data []byte) {
+	var err error
+	var res, key, spacing []byte
 	defer crutils.AnnihilateData(data)
-
-	key := terminal.GetPassword(flags)
-	defer crutils.AnnihilateData(key)
-
-	res, spacing, err := process(flags, key, data)
-	defer crutils.AnnihilateData(spacing)
 	defer crutils.AnnihilateData(res)
+	defer crutils.AnnihilateData(key)
+	defer crutils.AnnihilateData(spacing)
 
+	key = terminal.GetPassword(flags)
+	res, spacing, err = process(flags, key, data)
 	outputResult(flags, err, res, spacing)
 }
 
@@ -164,7 +162,8 @@ func outputResult(flags string, err error, res []byte, spacing []byte) {
 	}
 
 	if strings.Contains(flags, "a") && spacing != nil {
-		fmt.Printf("Spacing in hex format: %x\n\n", spacing)
+		fmt.Println("Spacing in hex format:")
+		fmt.Printf("%x\n\n", spacing)
 	}
 
 	if isAscii(res) {

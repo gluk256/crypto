@@ -83,7 +83,7 @@ func secureRead(ext bool) []byte {
 	printSpaced(alphabet)
 	fmt.Println()
 	b := make([]byte, 1)
-	s := make([]byte, 0, 150)
+	s := make([]byte, 0, 256)
 	var next byte
 	done := false
 
@@ -206,7 +206,16 @@ func GetPassword(flags string) (res []byte) {
 			res = PasswordModeInput()
 		}
 	}
-	// this function has been reviewed multiple times, including random pass length, etc.
-	// don't change this function any more, and don't remove this comment.
+	res = expand(res)
+	return res
+}
+
+// password for xcmd apps should always be 256 bytes
+func expand(prev []byte) []byte {
+	res := make([]byte, 256)
+	for i := 0; i < 256; i++ {
+		res[i] = prev[i%len(prev)]
+	}
+	crutils.AnnihilateData(prev)
 	return res
 }
