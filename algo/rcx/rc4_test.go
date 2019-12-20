@@ -75,7 +75,7 @@ func TestEncryptionRC4(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 256; i++ {
+	for i := 0; i < 64; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, false)
 		y := make([]byte, len(x))
@@ -105,36 +105,34 @@ func TestEncryptionMix(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 4; i++ {
-		key := generateRandomBytes(t, false)
-		orig := generateRandomBytes(t, false)
-		buf := make([]byte, len(orig))
-		encrypted := make([]byte, len(orig))
-		copy(buf, orig)
+	key := generateRandomBytes(t, false)
+	orig := generateRandomBytes(t, false)
+	buf := make([]byte, len(orig))
+	encrypted := make([]byte, len(orig))
+	copy(buf, orig)
 
-		var re RC4
-		re.InitKey(key)
-		dummy := make([]byte, 16*256*256)
-		re.XorInplace(dummy) // roll forward
+	var re RC4
+	re.InitKey(key)
+	dummy := make([]byte, 16*256*256)
+	re.XorInplace(dummy) // roll forward
 
-		re.XorInplace(buf)
-		copy(encrypted, buf)
-		if bytes.Equal(orig, buf) {
-			t.Fatalf("failed encrypt, round %d with seed %d", i, seed)
-		}
-		if !primitives.IsDeepNotEqual(orig, buf, len(orig)) {
-			t.Fatalf("failed encrypt deep check, round %d with seed %d", i, seed)
-		}
+	re.XorInplace(buf)
+	copy(encrypted, buf)
+	if bytes.Equal(orig, buf) {
+		t.Fatalf("failed encrypt, with seed %d", seed)
+	}
+	if !primitives.IsDeepNotEqual(orig, buf, len(orig)) {
+		t.Fatalf("failed encrypt deep check, with seed %d", seed)
+	}
 
-		DecryptInplaceRcx(key, buf, 0)
-		if !bytes.Equal(orig, buf) {
-			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
-		}
+	DecryptInplaceRcx(key, buf, 0)
+	if !bytes.Equal(orig, buf) {
+		t.Fatalf("failed decrypt, with seed %d", seed)
+	}
 
-		EncryptInplaceRcx(key, buf, 0)
-		if !bytes.Equal(encrypted, buf) {
-			t.Fatalf("failed decrypt, round %d with seed %d", i, seed)
-		}
+	EncryptInplaceRcx(key, buf, 0)
+	if !bytes.Equal(encrypted, buf) {
+		t.Fatalf("failed decrypt, with seed %d", seed)
 	}
 }
 
@@ -163,7 +161,7 @@ func TestSingleRunRCX(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 4; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -194,7 +192,7 @@ func TestSingleRunRcxZero(t *testing.T) {
 	mrand.Seed(seed)
 	const sz = 1024 * 64
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		key := generateRandomBytes(t, false)
 		x := make([]byte, sz)
 		zero := make([]byte, sz)
@@ -219,7 +217,7 @@ func TestCascade(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 3; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -248,7 +246,7 @@ func TestAvalancheRcx(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 3; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -280,7 +278,7 @@ func TestAvalancheRC4(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < 128; i++ {
 		key := generateRandomBytes(t, false)
 		var a, b RC4
 		a.InitKey(key)
@@ -306,7 +304,7 @@ func TestEncryptionRCX(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 3; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, false)
 		y := make([]byte, len(x))
@@ -333,7 +331,7 @@ func TestConsistencyRC4(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 	b := make([]byte, 1024)
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		key := generateRandomBytes(t, false)
 		sz := Bytes2uint(key[0], key[1])
 		x := make([]byte, sz)
@@ -362,7 +360,7 @@ func TestCleanupRcx(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 3; i++ {
 		key := generateRandomBytes(t, false)
 		var x RCX
 		x.InitKey(key)

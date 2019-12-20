@@ -80,7 +80,7 @@ func TestEncryptKeccak(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 64; i++ {
+	for i := 0; i < 16; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -106,7 +106,7 @@ func TestEncryptSimplest(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 64; i++ {
+	for i := 0; i < 3; i++ {
 		key := generateRandomBytes(t, false)
 		x := generateRandomBytes(t, true)
 		y := make([]byte, len(x))
@@ -135,16 +135,13 @@ func TestAnnihilateData(t *testing.T) {
 	var hash keccak.Keccak512
 	hash.AddEntropy(uint64(seed))
 	sz := 3 * 1024 * 1024
-
-	for i := 0; i < 9; i++ {
-		x := make([]byte, sz)
-		y := make([]byte, sz)
-		hash.Read(x)
-		copy(y, x)
-		AnnihilateData(x)
-		if !primitives.IsDeepNotEqual(x, y, sz) {
-			t.Fatalf("AnnihilateData failed, round %d with seed %d", i, seed)
-		}
-		sz /= 4
+	x := make([]byte, sz)
+	y := make([]byte, sz)
+	hash.Read(x)
+	copy(y, x)
+	AnnihilateData(x)
+	if !primitives.IsDeepNotEqual(x, y, sz) {
+		t.Fatalf("AnnihilateData failed, with seed %d", seed)
 	}
+	sz /= 4
 }

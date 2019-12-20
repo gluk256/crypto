@@ -111,7 +111,7 @@ func TestReadXor(t *testing.T) {
 	mrand.Seed(seed)
 	var zeroCnt int
 
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < 64; i++ {
 		key := generateRandomBytes(t)
 		x := generateRandomBytes(t)
 		sz := len(x)
@@ -192,7 +192,7 @@ func TestReadSequence(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)
 
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 16; i++ {
 		key := generateRandomBytes(t)
 		sz := mrand.Intn(200)
 		sz += 16

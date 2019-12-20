@@ -18,9 +18,9 @@ func isEqual(a, b []int) bool {
 }
 
 func TestReverse(t *testing.T) {
-	s := []int{1,2,3,4,5,6,7}
-	r := []int{7,6,5,4,3,2,1}
-	w := []int{1,2,3,4,5,6,7}
+	s := []int{1, 2, 3, 4, 5, 6, 7}
+	r := []int{7, 6, 5, 4, 3, 2, 1}
+	w := []int{1, 2, 3, 4, 5, 6, 7}
 
 	ReverseInt(s)
 	if !isEqual(s, r) {
@@ -127,21 +127,21 @@ func TestPowerOfTwo(t *testing.T) {
 	if !IsPowerOfTwo(a) {
 		t.Fatal("false negative")
 	}
-	if !IsPowerOfTwo(a/2) {
+	if !IsPowerOfTwo(a / 2) {
 		t.Fatal("false negative")
 	}
-	if IsPowerOfTwo(a+1) {
+	if IsPowerOfTwo(a + 1) {
 		t.Fatal("false positive")
 	}
-	if IsPowerOfTwo(a-1) {
+	if IsPowerOfTwo(a - 1) {
 		t.Fatal("false positive")
 	}
-	if IsPowerOfTwo(a+1024) {
+	if IsPowerOfTwo(a + 1024) {
 		t.Fatal("false positive")
 	}
 
-	if FindNextPowerOfTwo(1048576 + 1024) != 1048576 * 2 {
-		t.Fatalf("FindNextPowerOfTwo failed: %d vs. %d", FindNextPowerOfTwo(int(a)), 1048576 * 2)
+	if FindNextPowerOfTwo(1048576+1024) != 1048576*2 {
+		t.Fatalf("FindNextPowerOfTwo failed: %d vs. %d", FindNextPowerOfTwo(int(a)), 1048576*2)
 	}
 	if FindNextPowerOfTwo(999999) != 1048576 {
 		t.Fatal("FindNextPowerOfTwo failed")
