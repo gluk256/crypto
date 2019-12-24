@@ -12,7 +12,7 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtxt v.2.%d \n", crutils.CipherVersion)
+	fmt.Printf("xtxt v.2.1.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt short messages in console")
 	fmt.Println("USAGE: xtxt flags [src]")
 	fmt.Println("\t -e encrypt")
@@ -52,20 +52,6 @@ func processParams() (flags string, data []byte) {
 		}
 	}
 
-	if data == nil {
-		data = getData(flags)
-	}
-
-	if strings.Contains(flags, "d") || common.IsHexData(data) {
-		h := make([]byte, len(data)/2)
-		_, err := hex.Decode(h, data)
-		if err != nil {
-			fmt.Printf("Error decoding hex data: %s\n", err.Error())
-			return zero, nil
-		} else {
-			data = h
-		}
-	}
 	return flags, data
 }
 
@@ -74,28 +60,46 @@ func isWeakerAlgo(flags string, data []byte) bool {
 		return true
 	}
 
-	threshold := crutils.MinDataSize*2 + crutils.EncryptedSizeDiff
-	if strings.Contains(flags, "d") && len(data) < threshold {
-		return true
+	if strings.Contains(flags, "d") {
+		threshold := crutils.MinDataSize*2 + crutils.EncryptedSizeDiff
+		if len(data) < threshold {
+			return true
+		}
 	}
 
 	return false
 }
 
-func getData(flags string) (res []byte) {
+func getData(flags string) (data []byte, err error) {
 	secure := strings.Contains(flags, "S")
 	if secure {
-		res = terminal.SecureInput(false)
+		data = terminal.SecureInput(false)
 	} else {
 		fmt.Print("please enter the data: ")
-		res = terminal.PlainTextInput()
+		data = terminal.PlainTextInput()
 	}
-	return res
+	data, err = convertData(flags, data)
+	return data, err
+}
+
+func convertData(flags string, data []byte) (res []byte, err error) {
+	if strings.Contains(flags, "d") || common.IsHexData(data) {
+		h := make([]byte, len(data)/2)
+		_, err = hex.Decode(h, data)
+		if err != nil {
+			fmt.Printf("Error decoding hex data: %s\n", err.Error())
+		} else {
+			res = h
+		}
+	} else {
+		res = data
+	}
+	return res, nil
 }
 
 func main() {
-	defer crutils.ProveDataDestruction()
 	flags, data := processParams()
+	defer crutils.ProveDataDestruction()
 	if len(flags) > 0 {
 		run(flags, data)
 	}
@@ -104,14 +108,24 @@ func main() {
 func run(flags string, data []byte) {
 	var err error
 	var res, key, spacing []byte
+	if data == nil {
+		data, err = getData(flags)
+		if err != nil {
+			return
+		}
+	}
+
 	defer crutils.AnnihilateData(data)
 	defer crutils.AnnihilateData(res)
 	defer crutils.AnnihilateData(key)
 	defer crutils.AnnihilateData(spacing)
 
-	key = common.GetPassword(flags)
-	res, spacing, err = process(flags, key, data)
-	outputResult(flags, err, res, spacing)
+	data, err = convertData(flags, data)
+	if err == nil {
+		key = common.GetPassword(flags)
+		res, spacing, err = process(flags, key, data)
+		outputResult(flags, err, res, spacing)
+	}
 }
 
 func process(flags string, key []byte, data []byte) (res []byte, spacing []byte, err error) {
@@ -120,6 +134,7 @@ func process(flags string, key []byte, data []byte) (res []byte, spacing []byte,
 		if encryption {
 			crutils.EncryptInplaceRCX(key, data)
 			crutils.EncryptInplaceKeccak(key, data)
+			fmt.Println("Warning: weak encryption used")
 		} else {
 			crutils.EncryptInplaceKeccak(key, data)
 			crutils.DecryptInplaceRCX(key, data)
@@ -153,7 +168,7 @@ func outputResult(flags string, err error, res []byte, spacing []byte) {
 	}
 
 	if common.IsAscii(res) {
-		fmt.Printf("%s\n", string(res))
+		fmt.Printf("Decrypted:\n[%s]\n", string(res))
 	} else {
 		fmt.Printf("Decrypted data in hex format:\n%x\n", res)
 	}

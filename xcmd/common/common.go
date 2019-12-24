@@ -64,7 +64,7 @@ func expand(prev []byte) []byte {
 
 func GetFileName() string {
 	for i := 0; i < 3; i++ {
-		fmt.Println("Please enter file name: ")
+		fmt.Print("Please enter file name: ")
 		f := terminal.PlainTextInput()
 		if len(f) == 0 {
 			fmt.Println("Error: empty filename, please try again")
@@ -87,7 +87,7 @@ func SaveData(filename string, data []byte) error {
 	for i := 0; i < 16; i++ {
 		if len(filename) == 0 || i > 0 {
 			filename = GetFileName()
-			if len(filename) == 0 {
+			if len(filename) == 0 || filename == string("q") {
 				break
 			}
 		}

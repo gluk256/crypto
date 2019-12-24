@@ -24,17 +24,16 @@ func help() {
 
 func processCommandArgs() (flags string, srcFile string, dstFile string) {
 	var zero string
-	if len(os.Args) != 4 {
-		fmt.Println("ERROR: wrong number of parameters.")
-		return zero, zero, zero
+	if len(os.Args) > 1 {
+		flags = os.Args[1]
+		if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
+			help()
+			return zero, zero, zero
+		}
 	}
 
-	flags = os.Args[1]
-	srcFile = os.Args[2]
-	dstFile = os.Args[3]
-
-	if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
-		help()
+	if len(os.Args) != 4 {
+		fmt.Println("ERROR: wrong number of parameters.")
 		return zero, zero, zero
 	}
 
@@ -53,12 +52,13 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 		return zero, zero, zero
 	}
 
-	return flags, srcFile, dstFile
+	return flags, os.Args[2], os.Args[3]
 }
 
 func main() {
-	defer crutils.ProveDataDestruction()
 	flags, srcFile, dstFile := processCommandArgs()
+	defer crutils.ProveDataDestruction()
+
 	if len(flags) > 0 {
 		run(flags, srcFile, dstFile)
 	}

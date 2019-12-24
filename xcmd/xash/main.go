@@ -40,12 +40,12 @@ func readFile(name string) []byte {
 	return b
 }
 
-func processFlags() {
+func processFlags() bool {
 	if len(os.Args) > 1 {
 		flags := os.Args[1]
 		if strings.Contains(flags, "h") || strings.Contains(flags, "?") {
 			help()
-			os.Exit(0)
+			return false
 		}
 		extended = strings.Contains(flags, "x")
 		keccakHash = strings.Contains(flags, "k")
@@ -53,13 +53,15 @@ func processFlags() {
 		passwordMode = strings.Contains(flags, "p")
 		fileMode = strings.Contains(flags, "f")
 	}
+	return true
 }
 
 func main() {
-	var src, hash []byte
-	defer crutils.AnnihilateData(src)
-	processFlags()
+	if !processFlags() {
+		return
+	}
 
+	var src, hash []byte
 	if passwordMode {
 		src = terminal.PasswordModeInput()
 	} else if plaintext {
@@ -79,5 +81,6 @@ func main() {
 	}
 
 	fmt.Printf("%x\n", hash)
+	crutils.AnnihilateData(src)
 	crutils.ProveDataDestruction()
 }

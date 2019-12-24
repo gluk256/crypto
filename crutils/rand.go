@@ -102,7 +102,7 @@ func ProveDataDestruction() {
 	entropy.Read(b)
 	destructionProof.Write(b)
 	destructionProof.Read(b)
-	fmt.Printf("\nProof of destruction: [%x]\n", b[1000:])
+	fmt.Printf("\nProof of destruction: %x\n", b[1000:])
 }
 
 func GenerateRandomPassword(sz int) (res []byte, err error) {

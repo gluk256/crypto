@@ -13,31 +13,33 @@ import (
 )
 
 func help() {
-	fmt.Printf("xfile v.1.%d \n", crutils.CipherVersion)
+	fmt.Printf("xfile v.1.2.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
-	fmt.Println("USAGE: xfile [flags] [srcFile] [dstFile]")
+	fmt.Println("USAGE: xfile flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
-	fmt.Println("\t -s secure password input")
-	fmt.Println("\t -x extra secure password input")
+	fmt.Println("\t -s secure password/text input")
+	fmt.Println("\t -x extra secure password/text input")
 	fmt.Println("\t -f save to file")
 
 	fmt.Println("\t -e encrypt (default mode)")
 	fmt.Println("\t\t -r random password")
 
 	fmt.Println("\t -d decrypt")
-	fmt.Println("\t\t -o output decrypted content as text, don't save")
+	fmt.Println("\t\t -p output decrypted content as text, don't save")
 	fmt.Println("\t\t -g interactive grep (print specific text lines only)")
 	fmt.Println("\t\t -G interactive grep with secure input")
 
 	fmt.Println("\t -l load file")
 	fmt.Println("\t\t -i insert file content into another file as steganographic content")
 
-	fmt.Println("\t -t enter text")
-	fmt.Println("\t\t -p password mode")
-	fmt.Println("\t\t -T plain text mode")
+	fmt.Println("\t -t enter text (password mode)")
+	fmt.Println("\t -T enter text (plain text mode)")
 }
 
 func processCommandArgs() (flags string, srcFile string, dstFile string) {
+	if len(os.Args) == 1 {
+		flags = "h"
+	}
 	if len(os.Args) > 1 {
 		flags = os.Args[1]
 	}
@@ -59,24 +61,29 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 		return "", srcFile, dstFile
 	}
 
+	if strings.Contains(flags, "t") || strings.Contains(flags, "T") {
+		if len(os.Args) > 2 {
+			fmt.Println("ERROR: flag -t is incompatible with param srcFile")
+			return "", srcFile, dstFile
+		}
+	}
+
 	return flags, srcFile, dstFile
 }
 
 func enterText(flags string) (res []byte) {
-	if strings.Contains(flags, "p") {
-		res = terminal.PasswordModeInput()
-	} else if strings.Contains(flags, "s") {
+	fmt.Println("Please enter your text:")
+	if strings.Contains(flags, "s") {
 		res = terminal.SecureInput(false)
 	} else if strings.Contains(flags, "x") {
 		res = terminal.SecureInput(true)
 	} else if strings.Contains(flags, "T") {
 		res = terminal.PlainTextInput()
 	} else {
-		fmt.Println("Insufficiant flags.")
-		return nil
+		res = terminal.PasswordModeInput()
 	}
 
-	if strings.Contains(flags, "r") && common.IsHexData(res) {
+	if strings.Contains(flags, "d") && common.IsHexData(res) {
 		h := make([]byte, len(res)/2)
 		_, err := hex.Decode(h, res)
 		if err != nil {
@@ -84,13 +91,14 @@ func enterText(flags string) (res []byte) {
 			return nil
 		} else {
 			res = h
+			fmt.Println("Loaded data in hex format")
 		}
 	}
 	return res
 }
 
 func getData(flags string, srcFile string) (data []byte) {
-	if strings.Contains(flags, "t") {
+	if strings.Contains(flags, "t") || strings.Contains(flags, "T") {
 		data = enterText(flags)
 	} else {
 		data = loadDataFromFile(srcFile)
@@ -105,7 +113,7 @@ func loadDataFromFile(filename string) []byte {
 	for i := 0; i < 8; i++ {
 		if len(filename) == 0 || i > 0 {
 			filename = common.GetFileName()
-			if len(filename) == 0 {
+			if len(filename) == 0 || filename == string("q") {
 				return nil
 			}
 		}
@@ -123,11 +131,12 @@ func loadDataFromFile(filename string) []byte {
 }
 
 func main() {
-	defer crutils.ProveDataDestruction()
 	flags, srcFile, dstFile := processCommandArgs()
 	if len(flags) == 0 {
 		return
 	}
+
+	defer crutils.ProveDataDestruction()
 	data := getData(flags, srcFile)
 	if len(data) == 0 {
 		return
@@ -181,10 +190,19 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 	}
 
 	if !strings.Contains(flags, "f") {
-		fmt.Println("What do you want to do with decrypted content?")
-		fmt.Println("options [Ggpdsxfq]: grep, print, decrypt, secure_pass, extra_secure, save_file")
-		fmt.Print("Please enter the command: ")
-		flags = string(terminal.PlainTextInput())
+		for {
+			fmt.Println("What do you want to do with decrypted content?")
+			fmt.Println("options: save_File, Grep, Print, Decrypt, Secure_pass, eXtra_secure, Quit")
+			fmt.Print("Please enter the command: ")
+			flags = string(terminal.PlainTextInput())
+			if strings.Contains(flags, "p") {
+				fmt.Printf("Decrypted:\n[%s]\n", string(decrypted))
+			} else if strings.Contains(flags, "p") {
+				return
+			} else {
+				break
+			}
+		}
 	}
 
 	if strings.Contains(flags, "f") {
@@ -193,20 +211,18 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 		runGrep(flags, decrypted)
 	} else if strings.Contains(flags, "g") {
 		runGrep(flags, decrypted)
-	} else if strings.Contains(flags, "o") {
-		fmt.Print(string(decrypted))
-		fmt.Println()
 	} else {
 		processDecryption(flags, dstFile, steg, true) // recursively decrypt steg content
 	}
 }
 
-func encrypt(key []byte, data []byte, steg []byte) ([]byte, error) {
+func encrypt(key []byte, data []byte, steg []byte) (res []byte, err error) {
 	if steg == nil {
-		return crutils.Encrypt(key, data)
+		res, err = crutils.Encrypt(key, data)
 	} else {
-		return crutils.EncryptSteg(key, data, steg)
+		res, err = crutils.EncryptSteg(key, data, steg)
 	}
+	return res, err
 }
 
 func processEncryption(flags string, dstFile string, data []byte, steg []byte) {
@@ -222,7 +238,7 @@ func processEncryption(flags string, dstFile string, data []byte, steg []byte) {
 
 	if !strings.Contains(flags, "f") {
 		fmt.Println("What do you want to do with encrypted content?")
-		fmt.Println("options [ersxfq]: encrypt, rand_pass, secure_pass, extra_secure, save_file")
+		fmt.Println("options: save_File, Encrypt, Rand_pass, Secure_pass, eXtra_secure, Quit")
 		fmt.Print("Please enter the command: ")
 		flags = string(terminal.PlainTextInput())
 	}
@@ -232,9 +248,16 @@ func processEncryption(flags string, dstFile string, data []byte, steg []byte) {
 	} else if strings.Contains(flags, "q") {
 		return
 	} else {
-		buf := loadDataFromFile("")
-		if len(buf) != 0 {
-			processEncryption(flags, dstFile, buf, encrypted) // recursively encrypt steg content
+		for i := 0; i < 3; i++ {
+			buf := getData(flags, "")
+			if len(buf) == 0 {
+				fmt.Println("no data, please try again")
+			} else if len(buf) < len(encrypted)+4 {
+				fmt.Printf("File size in insufficiant for steg encryption [%d vs. %d]. Please try again.\n", len(buf), len(encrypted)+4)
+			} else {
+				processEncryption(flags, dstFile, buf, encrypted) // recursively encrypt steg content
+				break
+			}
 		}
 	}
 }
