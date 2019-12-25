@@ -95,7 +95,7 @@ func loadDataFromFile(flags string, filename string) []byte {
 	}
 
 	if strings.Contains(flags, "d") && len(data) <= crutils.EncryptedSizeDiff {
-		fmt.Printf("The data is too small for decryption [%d bytes]: %s\n", len(data), err.Error())
+		fmt.Printf("The data is too small for decryption [%d bytes]\n", len(data))
 		return nil
 	}
 

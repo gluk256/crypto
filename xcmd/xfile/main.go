@@ -197,7 +197,7 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 			flags = string(terminal.PlainTextInput())
 			if strings.Contains(flags, "p") {
 				fmt.Printf("Decrypted:\n[%s]\n", string(decrypted))
-			} else if strings.Contains(flags, "p") {
+			} else if strings.Contains(flags, "q") {
 				return
 			} else {
 				break

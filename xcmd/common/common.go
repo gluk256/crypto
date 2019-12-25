@@ -10,22 +10,14 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
-func IsAscii(data []byte) bool {
-	for _, c := range data {
-		if c < 32 { // ignore c > 127 (could be some other alphabet encoding)
-			return false
-		}
+// password for xcmd apps should always be 256 bytes
+func expand(prev []byte) []byte {
+	res := make([]byte, 256)
+	for i := 0; i < 256; i++ {
+		res[i] = prev[i%len(prev)]
 	}
-	return true
-}
-
-func IsHexData(data []byte) bool {
-	for _, c := range data {
-		if !strings.ContainsRune(string("0123456789abcdef"), rune(c)) {
-			return false
-		}
-	}
-	return true
+	crutils.AnnihilateData(prev)
+	return res
 }
 
 func GetPassword(flags string) (res []byte) {
@@ -52,14 +44,22 @@ func GetPassword(flags string) (res []byte) {
 	return res
 }
 
-// password for xcmd apps should always be 256 bytes
-func expand(prev []byte) []byte {
-	res := make([]byte, 256)
-	for i := 0; i < 256; i++ {
-		res[i] = prev[i%len(prev)]
+func IsAscii(data []byte) bool {
+	for _, c := range data {
+		if c < 32 { // ignore c > 127 (could be some other alphabet encoding)
+			return false
+		}
 	}
-	crutils.AnnihilateData(prev)
-	return res
+	return true
+}
+
+func IsHexData(data []byte) bool {
+	for _, c := range data {
+		if !strings.ContainsRune(string("0123456789abcdef"), rune(c)) {
+			return false
+		}
+	}
+	return true
 }
 
 func GetFileName() string {
