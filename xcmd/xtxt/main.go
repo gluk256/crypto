@@ -117,13 +117,14 @@ func run(flags string, data []byte) {
 
 	defer crutils.AnnihilateData(data)
 	defer crutils.AnnihilateData(res)
-	defer crutils.AnnihilateData(key)
 	defer crutils.AnnihilateData(spacing)
+	defer crutils.AnnihilateData(key) // in case of panic
 
 	data, err = convertData(flags, data)
 	if err == nil {
 		key = common.GetPassword(flags)
 		res, spacing, err = process(flags, key, data)
+		crutils.AnnihilateData(key)
 		outputResult(flags, err, res, spacing)
 	}
 }

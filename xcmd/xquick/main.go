@@ -72,13 +72,14 @@ func run(flags string, srcFile string, dstFile string) {
 	}
 
 	key := common.GetPassword(flags)
-	defer crutils.AnnihilateData(key)
+	defer crutils.AnnihilateData(key) // in case of panic
 
 	if strings.Contains(flags, "e") {
 		data, err = crutils.EncryptQuick(key, data)
 	} else {
 		data, err = crutils.DecryptQuick(key, data)
 	}
+	crutils.AnnihilateData(key)
 
 	if err == nil {
 		common.SaveData(dstFile, data)

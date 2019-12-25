@@ -153,7 +153,7 @@ func main() {
 
 func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, steg []byte, err error) {
 	var key []byte
-	defer crutils.AnnihilateData(key) // defer just in case of unexpected crash
+	defer crutils.AnnihilateData(key) // in case of panic
 
 	for i := 0; i < 1024; i++ {
 		key = common.GetPassword(flags)
@@ -162,10 +162,10 @@ func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, ste
 		} else {
 			decrypted, steg, err = crutils.Decrypt(key, data)
 		}
-		crutils.AnnihilateData(key)
 		if err == nil {
 			return decrypted, steg, err
 		}
+		crutils.AnnihilateData(key)
 		fmt.Printf("Failed to decrypt data: %s\n", err.Error())
 		fmt.Print("Do you want to retry? [y/n]: ")
 		res := terminal.PlainTextInput()
@@ -227,7 +227,7 @@ func encrypt(key []byte, data []byte, steg []byte) (res []byte, err error) {
 
 func processEncryption(flags string, dstFile string, data []byte, steg []byte) {
 	key := common.GetPassword(flags)
-	defer crutils.AnnihilateData(key)
+	defer crutils.AnnihilateData(key) // in case of panic
 
 	encrypted, err := encrypt(key, data, steg)
 	defer crutils.AnnihilateData(encrypted)
@@ -235,6 +235,7 @@ func processEncryption(flags string, dstFile string, data []byte, steg []byte) {
 		fmt.Printf("Failed to encrypt data: %s\nFATAL ERROR\n", err.Error())
 		return
 	}
+	crutils.AnnihilateData(key)
 
 	if !strings.Contains(flags, "f") {
 		fmt.Println("What do you want to do with encrypted content?")
