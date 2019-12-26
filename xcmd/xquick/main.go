@@ -57,9 +57,8 @@ func processCommandArgs() (flags string, srcFile string, dstFile string) {
 
 func main() {
 	flags, srcFile, dstFile := processCommandArgs()
-	defer crutils.ProveDataDestruction()
-
-	if len(flags) > 0 {
+	if len(flags) != 0 {
+		defer crutils.ProveDataDestruction()
 		run(flags, srcFile, dstFile)
 	}
 }

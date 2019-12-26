@@ -18,7 +18,7 @@ func help() {
 	fmt.Println("\t -e encrypt")
 	fmt.Println("\t -d decrypt")
 	fmt.Println("\t -a reveal all decrypted data, including spacing")
-	fmt.Println("\t -w use weaker encryption (without AES, MAC, salt and spacing)")
+	fmt.Println("\t -w use weaker encryption (block cipher without AES, MAC, salt and spacing)")
 	fmt.Println("\t -r random password")
 	fmt.Println("\t -s secure password input")
 	fmt.Println("\t -S secure data input")
@@ -99,8 +99,8 @@ func convertData(flags string, data []byte) (res []byte, err error) {
 
 func main() {
 	flags, data := processParams()
-	defer crutils.ProveDataDestruction()
-	if len(flags) > 0 {
+	if len(flags) != 0 {
+		defer crutils.ProveDataDestruction()
 		run(flags, data)
 	}
 }
