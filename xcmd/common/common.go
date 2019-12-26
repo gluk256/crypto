@@ -40,6 +40,9 @@ func GetPassword(flags string) (res []byte) {
 			res = terminal.PasswordModeInput()
 		}
 	}
+	if len(res) == 0 {
+		panic("empty password")
+	}
 	res = expand(res)
 	return res
 }
