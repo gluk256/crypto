@@ -49,14 +49,20 @@ func splitSpacing(data []byte) ([]byte, []byte) {
 // the size of content before encryption must be power of two
 func addPadding(data []byte, newSize int, mark bool) ([]byte, error) {
 	sz := len(data)
+	requiredSize := sz
+	if mark {
+		requiredSize += 4
+	}
+
 	if newSize <= 0 {
-		newSize = primitives.FindNextPowerOfTwo(sz + 4)
+		newSize = primitives.FindNextPowerOfTwo(requiredSize)
 		if newSize < MinDataSize {
 			newSize = MinDataSize
 		}
-	} else if newSize < sz+4 {
+	} else if newSize < requiredSize {
 		return data, errors.New("padding failed: new size is too small")
 	}
+
 	rnd := make([]byte, newSize)
 	Randomize(rnd)
 	copy(rnd, data)

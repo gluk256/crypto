@@ -133,7 +133,7 @@ func Encrypt(key []byte, data []byte) ([]byte, error) {
 // encrypt with steganographic content as spacing
 func EncryptSteg(key []byte, data []byte, steg []byte) (res []byte, err error) {
 	data, _ = addPadding(data, 0, true)
-	if len(data) < len(steg)+4 { // four bytes for padding size
+	if len(data) < len(steg) { // four bytes for padding size
 		return nil, fmt.Errorf("data size is less than necessary [%d vs. %d]", len(data), len(steg)+4)
 	}
 	steg, err = addPadding(steg, len(data), false) // mark = false (steg content must be indistinguishable from random gamma)

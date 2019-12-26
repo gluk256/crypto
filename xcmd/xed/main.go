@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
 	"github.com/gluk256/crypto/xcmd/common"
@@ -134,7 +135,7 @@ func content2raw(index int, capacity int) []byte {
 	}
 
 	if total > capacity {
-		capacity = total
+		capacity = total * 2
 	}
 
 	i := 0
@@ -275,36 +276,28 @@ func FileSaveSteg(arg []string) {
 		return
 	}
 
-	const requiredDiff = crutils.AesEncryptedSizeDiff + crutils.SaltSize
 	plainContent := content2raw(face, 0)
-	stegContent := content2raw(steg, len(plainContent))
+	stegContent := content2raw(steg, len(plainContent)*4)
 	defer crutils.AnnihilateData(plainContent)
 	defer crutils.AnnihilateData(stegContent)
-
-	diff := len(plainContent) - len(stegContent)
-	if diff < requiredDiff {
+	secure := (len(arg) < 2) || !strings.Contains(arg[1], "i")
+	encrypedStegSize := len(stegContent) + crutils.EncryptedSizeDiff
+	allowedStegSize := primitives.FindNextPowerOfTwo(len(stegContent))
+	if encrypedStegSize > allowedStegSize {
 		fmt.Printf(">>> Error: plain text is too small in comparison with steganographic content ")
 		fmt.Printf("[%d vs. %d] \n", len(plainContent), len(stegContent))
 		return
-	} else if diff > requiredDiff {
-		padSize := diff - requiredDiff
-		pad := make([]byte, padSize)
-		stegContent = append(stegContent, pad...)
 	}
 
-	var insecure bool
-	if len(arg) > 1 {
-		insecure = strings.Contains(arg[1], "i")
-	}
 	fmt.Println("password for steganographic content encryption")
-	keySteg := getKey(!insecure, true)
+	keySteg := getKey(secure, true)
 	if len(keySteg) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return
 	}
 
 	fmt.Println("password for plain text encryption")
-	keyPlain := getKey(!insecure, true)
+	keyPlain := getKey(secure, true)
 	if len(keyPlain) == 0 {
 		crutils.AnnihilateData(keySteg)
 		fmt.Println(">>> Error: wrong key")
@@ -316,6 +309,7 @@ func FileSaveSteg(arg []string) {
 		fmt.Printf(">>> Error encrypting steg: %s\n", err)
 		return
 	}
+
 	res, err := crutils.EncryptSteg(keyPlain, plainContent, encryptedSteg)
 	if err != nil {
 		fmt.Printf(">>> Error encrypting cur: %s\n", err)

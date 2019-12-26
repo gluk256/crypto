@@ -41,7 +41,7 @@ func GetPassword(flags string) (res []byte) {
 		}
 	}
 	if len(res) == 0 {
-		panic("empty password")
+		panic("empty password") // todo: return nil
 	}
 	res = expand(res)
 	return res
