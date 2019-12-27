@@ -127,6 +127,21 @@ func getKey(cryptic bool, checkExisting bool) (res []byte) {
 	return res
 }
 
+func getFileName(arg []string) (res string) {
+	if len(arg) >= 2 {
+		res = arg[1]
+	} else {
+		fmt.Println("Enter file name: ")
+		f := terminal.PlainTextInput()
+		if f == nil {
+			return ""
+		} else {
+			res = string(f)
+		}
+	}
+	return res
+}
+
 func content2raw(index int, capacity int) []byte {
 	total := getConsoleSizeInBytes(index)
 	if total < 2 {
@@ -193,7 +208,8 @@ func run() {
 func FileLoad(arg []string, show bool) bool {
 	deleteContent(cur)
 
-	if len(arg) < 2 {
+	filename := getFileName(arg)
+	if len(filename) == 0 {
 		fmt.Println(">>> Error: filename is missing")
 		return false
 	}
@@ -208,6 +224,7 @@ func FileLoad(arg []string, show bool) bool {
 	items[cur].console = list.New()
 	items[cur].prepared = false
 	items[cur].changed = false
+
 	if show {
 		cat()
 	}
@@ -235,15 +252,15 @@ func saveData(arg []string, data []byte) {
 	}
 }
 
-func FileSavePlainText(arg []string) {
-	if confirm("Do you really want to save plain text?") {
-		b := content2raw(cur, 0)
-		if b != nil {
-			saveData(arg, b)
-			crutils.AnnihilateData(b)
-		}
-	}
-}
+// func FileSavePlainText(arg []string) {
+// 	if confirm("Do you really want to save plain text?") {
+// 		b := content2raw(cur, 0)
+// 		if b != nil {
+// 			saveData(arg, b)
+// 			crutils.AnnihilateData(b)
+// 		}
+// 	}
+// }
 
 func FileSave(arg []string) {
 	b := content2raw(cur, 0)
@@ -253,21 +270,6 @@ func FileSave(arg []string) {
 		crutils.AnnihilateData(x)
 		crutils.AnnihilateData(b)
 	}
-}
-
-func getFileName(arg []string) (res string) {
-	if len(arg) >= 2 {
-		res = arg[1]
-	} else {
-		fmt.Println("Enter file name: ")
-		f := terminal.PlainTextInput()
-		if f == nil {
-			return ""
-		} else {
-			res = string(f)
-		}
-	}
-	return res
 }
 
 func FileSaveSteg(arg []string) {
@@ -341,10 +343,10 @@ func encryptData(args []string, d []byte) []byte {
 }
 
 func contentDecrypt(arg []string) bool {
-	var secure, hide bool
+	var secure, mute bool
 	if len(arg) > 1 {
 		secure = strings.Contains(arg[1], "s")
-		hide = strings.Contains(arg[1], "h")
+		mute = strings.Contains(arg[1], "m")
 	}
 
 	content := make([]byte, len(items[cur].src))
@@ -364,23 +366,23 @@ func contentDecrypt(arg []string) bool {
 
 	items[cur].src = b
 	items[cur].pad = s
-	if !hide {
+	if !mute {
 		cat()
 	}
 	return true
 }
 
 func stegDecrypt(arg []string) bool {
-	var insecure, hide bool
+	var secure, mute bool
 	if len(arg) > 1 {
-		insecure = strings.Contains(arg[1], "i")
-		hide = strings.Contains(arg[1], "h")
+		secure = !strings.Contains(arg[1], "p")
+		mute = strings.Contains(arg[1], "m")
 	}
 
 	stegContent := make([]byte, len(items[cur].pad))
 	copy(stegContent, items[cur].pad)
 
-	key := getKey(!insecure, false)
+	key := getKey(secure, false)
 	if len(key) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return false
@@ -394,8 +396,8 @@ func stegDecrypt(arg []string) bool {
 
 	items[steg].src = b
 	items[steg].key = key
-	if !hide {
-		cur = (cur + 1) % 2
+	cur = (cur + 1) % 2
+	if !mute {
 		cat()
 	}
 	return true

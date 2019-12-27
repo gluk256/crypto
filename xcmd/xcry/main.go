@@ -13,7 +13,7 @@ import (
 )
 
 func help() {
-	fmt.Printf("xfile v.1.2.%d \n", crutils.CipherVersion)
+	fmt.Printf("xfile v.1.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
 	fmt.Println("USAGE: xfile flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")

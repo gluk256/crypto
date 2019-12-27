@@ -12,7 +12,7 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtxt v.2.1.%d \n", crutils.CipherVersion)
+	fmt.Printf("xtxt v.2.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt short messages in console")
 	fmt.Println("USAGE: xtxt flags [src]")
 	fmt.Println("\t -e encrypt")

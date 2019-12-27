@@ -26,7 +26,7 @@ func GetPassword(flags string) (res []byte) {
 		res, err = crutils.GenerateRandomPassword(20)
 		fmt.Println(string(res))
 		if err != nil {
-			fmt.Println("ATTENTION!!! The data is not entirely random. Not safe to use!")
+			fmt.Println("======================> WARNING: the data is not entirely random, not safe to use!")
 			fmt.Printf("Error: %s\n", err.Error())
 			return res
 		}
@@ -40,9 +40,13 @@ func GetPassword(flags string) (res []byte) {
 			res = terminal.PasswordModeInput()
 		}
 	}
+
 	if len(res) == 0 {
-		panic("empty password") // todo: return nil
+		panic("empty password")
+	} else if len(res) < 8 {
+		//fmt.Println("======================> WARNING: the password is too short, not safe to use!") // todo: uncomment!
 	}
+
 	res = expand(res)
 	return res
 }

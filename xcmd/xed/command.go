@@ -45,15 +45,13 @@ func processCommand(cmd string) {
 	case "ls":
 		ls()
 	////////////////////////////////////////////
-	case "cat": // content display current
+	case "cat":
 		cat()
-	case "cc": // content display current
+	case "cc":
 		cat()
-	case "cds": // content decrypt steg
+	case "dx":
 		stegDecrypt(arg)
-	case "cdd": // content decrypt steg
-		stegDecrypt(arg)
-	case "cd": // content decrypt
+	case "dc":
 		contentDecrypt(arg)
 	////////////////////////////////////////////
 	case "fd": // file decrypt
@@ -66,10 +64,8 @@ func processCommand(cmd string) {
 		FileLoad(arg, true)
 	case "fs": // file save (encrypted)
 		FileSave(arg)
-	case "fss": // file save steg
+	case "fsx": // file save steg
 		FileSaveSteg(arg)
-	case "fsplain": // file save plain text
-		FileSavePlainText(arg)
 	////////////////////////////////////////////
 	case "grep":
 		grep(arg, false, false)
@@ -117,14 +113,13 @@ func helpInternal() {
 	fmt.Println("sw:\t switch content")
 	fmt.Println("ls:\t list current directory contents")
 	fmt.Println("cat:\t print content")
-	fmt.Println("cd:\t content decrypt")
-	fmt.Println("cds:\t content decrypt steg")
-	fmt.Println("fd:\t file load and decrypt")
-	fmt.Println("fl:\t file load")
-	fmt.Println("fo:\t file open and print content without decrypting")
-	fmt.Println("fs:\t file save")
-	fmt.Println("fss:\t file save steg")
-	fmt.Println("fplain:\t file save as plain text")
+	fmt.Println("dc:\t decrypt loaded content (options: [sm])")
+	fmt.Println("dx:\t decrypt steg content (options: [pm])")
+	fmt.Println("fl:\t file load (param filename required)")
+	fmt.Println("fo:\t file load and print content without decrypting (param filename required)")
+	fmt.Println("fd:\t file load and decrypt (param filename required)")
+	fmt.Println("fs:\t file save (param filename required)")
+	fmt.Println("fsx:\t file save steg (param filename required)")
 	fmt.Println("grep:\t normal grep")
 	fmt.Println("g:\t grep in password mode")
 	fmt.Println("G:\t grep in secure mode")
