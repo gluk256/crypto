@@ -81,12 +81,14 @@ func PseudorandomUint64() uint64 {
 func AnnihilateData(b []byte) {
 	if len(b) > 0 {
 		RandXor(b)
+		destructionProof.AddEntropy(PseudorandomUint64()) // reshuffle entropy and destructionProof
 		destructionProof.Write(b)
 		if len(b) < 1024*1024 {
 			// small data are likely to contain very sensitive info (e.g. RCX cryptographic setup),
 			// and therefore it is important to prevent the compiler optimization.
 			primitives.ReverseBytes(b)
 			RandXor(b)
+			destructionProof.AddEntropy(PseudorandomUint64())
 			destructionProof.Write(b)
 		}
 	}
