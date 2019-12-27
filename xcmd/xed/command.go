@@ -138,9 +138,9 @@ func helpInternal() {
 }
 
 func help() {
-	fmt.Printf("xedit v.2.%d \n", crutils.CipherVersion)
+	fmt.Printf("xed v.2.%d \n", crutils.CipherVersion)
 	fmt.Println("editor for encrypted files and/or steganographic content")
-	fmt.Println("USAGE: xedit [flags] [srcFile] [dstFile]")
+	fmt.Println("USAGE: xed [flags] [srcFile] [dstFile]")
 }
 
 func info() {

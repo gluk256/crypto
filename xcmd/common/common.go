@@ -44,7 +44,7 @@ func GetPassword(flags string) (res []byte) {
 	if len(res) == 0 {
 		panic("empty password")
 	} else if len(res) < 8 {
-		//fmt.Println("======================> WARNING: the password is too short, not safe to use!") // todo: uncomment!
+		fmt.Println("======================> WARNING: the password is too short, not safe to use!") // todo: uncomment this line
 	}
 
 	res = expand(res)

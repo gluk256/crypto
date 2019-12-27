@@ -13,9 +13,9 @@ import (
 )
 
 func help() {
-	fmt.Printf("xfile v.1.%d \n", crutils.CipherVersion)
+	fmt.Printf("xcry v.1.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
-	fmt.Println("USAGE: xfile flags [srcFile] [dstFile]")
+	fmt.Println("USAGE: xcry flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
 	fmt.Println("\t -s secure password/text input")
 	fmt.Println("\t -x extra secure password/text input")
