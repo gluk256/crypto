@@ -78,7 +78,6 @@ func getData(flags string) (data []byte, err error) {
 		fmt.Print("please enter the data: ")
 		data = terminal.PlainTextInput()
 	}
-	data, err = convertData(flags, data)
 	return data, err
 }
 
