@@ -9,9 +9,9 @@ func processCommand(cmd string) {
 	case "h":
 		helpInternal()
 	case "e":
-		processEncryptionCmd()
+		processEncryption(cmd)
 	case "d":
-		processDecryptionCmd()
+		processDecryption()
 	case "f":
 		load2FA()
 	case "i":

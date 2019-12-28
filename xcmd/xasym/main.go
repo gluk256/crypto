@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -48,36 +49,69 @@ func printMyKey() {
 }
 
 func generateRandomKey() {
-	var err error
-	if myKey != nil {
-		asym.AnnihilatePrivateKey(myKey)
-	}
-	myKey, err = asym.GenerateKey()
+	k, err := asym.GenerateKey()
 	if err != nil {
 		fmt.Printf("Failed to generate private key: %s\n", err.Error())
 	} else {
+		setMyKey(k)
 		printMyKey()
 	}
 }
 
+func setMyKey(key *ecdsa.PrivateKey) {
+	if myKey != nil {
+		asym.AnnihilatePrivateKey(myKey)
+	}
+	myKey = key
+}
+
+func getHexData(name string) (res []byte) {
+	fmt.Printf("please enter %s: ", name)
+	raw := terminal.PlainTextInput()
+	res = make([]byte, len(raw)/2)
+	_, err := hex.Decode(res, raw)
+	crutils.AnnihilateData(raw)
+	if err != nil {
+		fmt.Printf("Error decoding hex data: %s\n", err.Error())
+		return nil
+	}
+	return res
+}
+
 func importPubKey() {
-	// todo
+	x := getHexData("public key")
+	if x != nil {
+		key, err := asym.ImportPubKey(x)
+		if err != nil {
+			fmt.Printf("Error importing public key: %s\n", err.Error())
+		} else {
+			remotePeer = key
+		}
+	}
+	crutils.AnnihilateData(x)
 }
 
 func importPrivateKey(cmd string) {
+	if strings.Contains(cmd, "r") {
+		fmt.Println("Wrong flag 'r': random password is not allowed for import")
+		return
+	}
 	if strings.Contains(cmd, "f") {
 		load2FA()
 	}
-	// todo:
-	// getPass, apply 2FA, set key
-}
-
-func processEncryptionCmd() {
-	// todo
-}
-
-func processDecryptionCmd() {
-	// todo
+	pass := common.GetPassword(cmd)
+	for i := 0; i < len(pass) && i < len(hash2fa); i++ {
+		pass[i] ^= hash2fa[i]
+	}
+	raw := keccak.Digest(pass, 32)
+	key, err := asym.ImportPrivateKey(raw)
+	if err != nil {
+		fmt.Printf("Failed to import private key: %s\n", err.Error())
+	} else {
+		setMyKey(key)
+	}
+	crutils.AnnihilateData(pass)
+	crutils.AnnihilateData(raw)
 }
 
 func run() {
@@ -119,4 +153,48 @@ func main() {
 	}
 
 	run()
+}
+
+func processDecryption() {
+	data := getHexData("data for decryption")
+	if data == nil {
+		return
+	}
+
+	res, err := asym.Decrypt(myKey, data)
+	if err != nil {
+		fmt.Printf("Decryption failed: %s\n", err.Error())
+		return
+	}
+
+	if common.IsAscii(res) {
+		fmt.Printf("Decrypted text: [%s]\n", string(res))
+	} else {
+		fmt.Printf("Decrypted binary data: [%x]\n", res)
+	}
+
+	crutils.AnnihilateData(res)
+}
+
+func processEncryption(cmd string) {
+	var text []byte
+	if strings.Contains(cmd, "s") {
+		text = terminal.SecureInput(false)
+	} else {
+		fmt.Print("please enter your text: ")
+		if strings.Contains(cmd, "p") {
+			text = terminal.PasswordModeInput()
+		} else {
+			text = terminal.PlainTextInput()
+		}
+	}
+
+	res, err := asym.Encrypt(remotePeer, text)
+	if err != nil {
+		fmt.Printf("Encryption failed: %s\n", err.Error())
+	} else {
+		fmt.Printf("%x\n", res)
+	}
+
+	crutils.AnnihilateData(text)
 }

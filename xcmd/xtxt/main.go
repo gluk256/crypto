@@ -52,9 +52,15 @@ func processParams() (flags string, data []byte) {
 		}
 	}
 
-	if strings.Contains(flags, "d") && strings.Contains(flags, "r") {
-		fmt.Println("Wrong flag 'r': you can not decrypt with random password")
-		return zero, nil
+	if strings.Contains(flags, "d") {
+		if strings.Contains(flags, "r") {
+			fmt.Println("Wrong flag 'r': you can not decrypt with random password")
+			return zero, nil
+		}
+		if strings.Contains(flags, "e") {
+			fmt.Println("Flags 'e' and 'd' are incompatible: encryption or decryption?")
+			return zero, nil
+		}
 	}
 
 	return flags, data
@@ -91,7 +97,8 @@ func convertData(flags string, data []byte) (res []byte, err error) {
 		h := make([]byte, len(data)/2)
 		_, err = hex.Decode(h, data)
 		if err != nil {
-			fmt.Printf("Error decoding hex data: %s\n", err.Error())
+			fmt.Printf("Error decoding hex data [%d characters]: %s\n", len(data), err.Error())
+			return nil, err
 		} else {
 			res = h
 		}
