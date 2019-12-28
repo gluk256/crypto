@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	offset               = 256
 	CipherVersion        = 2
 	AesKeySize           = 32
 	AesSaltSize          = 12
@@ -22,19 +23,48 @@ const (
 )
 
 const (
-	offset        = 256
-	BegK1         = offset
-	EndK1         = BegK1 + offset
-	BegK2         = EndK1 + offset
-	EndK2         = BegK2 + offset
-	BegRcxKey     = EndK2 + offset
-	EndRcxKey     = BegRcxKey + offset
-	BegAesKey     = EndRcxKey + offset
-	EndAesKey     = BegAesKey + AesKeySize
-	BegAesSalt    = EndAesKey + offset
-	EndAesSalt    = BegAesSalt + AesSaltSize
-	KeyHolderSize = EndAesSalt
+	index0 = iota
+	indexKey1
+	indexKey2
+	indexRcxKey
+	indexAesKey
+	indexAesSalt
+	indexKeyHolderSize
 )
+
+func getKeyHolderSize() int {
+	return indexKeyHolderSize * offset
+}
+
+func getKey1(raw []byte) []byte {
+	beg := indexKey1 * offset
+	end := beg + offset
+	return raw[beg:end]
+}
+
+func getKey2(raw []byte) []byte {
+	beg := indexKey2 * offset
+	end := beg + offset
+	return raw[beg:end]
+}
+
+func getRcxKey(raw []byte) []byte {
+	beg := indexRcxKey * offset
+	end := beg + offset
+	return raw[beg:end]
+}
+
+func getAesKey(raw []byte) []byte {
+	beg := indexAesKey * offset
+	end := beg + AesKeySize
+	return raw[beg:end]
+}
+
+func getAesSalt(raw []byte) []byte {
+	beg := indexAesSalt * offset
+	end := beg + AesSaltSize
+	return raw[beg:end]
+}
 
 func calculateRcxIterations(sz int) int {
 	const Kb = 1024
@@ -155,9 +185,9 @@ func encrypt(key []byte, data []byte) ([]byte, error) {
 	keyholder := GenerateKeys(key, salt)
 	defer AnnihilateData(keyholder)
 
-	EncryptInplaceKeccak(keyholder[BegK1:EndK1], data)
-	EncryptInplaceRCX(keyholder[BegRcxKey:EndRcxKey], data)
-	tmp, err := EncryptAES(keyholder[BegAesKey:EndAesKey], keyholder[BegAesSalt:EndAesSalt], data)
+	EncryptInplaceKeccak(getKey1(keyholder), data)
+	EncryptInplaceRCX(getRcxKey(keyholder), data)
+	tmp, err := EncryptAES(getAesKey(keyholder), getAesSalt(keyholder), data)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +196,7 @@ func encrypt(key []byte, data []byte) ([]byte, error) {
 		fmt.Println("WARNING: data reallocated during AES encryption and not annihilated!")
 	}
 	data = tmp
-	EncryptInplaceKeccak(keyholder[BegK2:EndK2], data)
+	EncryptInplaceKeccak(getKey2(keyholder), data)
 	res := append(data, salt...)
 	reallocated = reflect.ValueOf(res).Pointer() != reflect.ValueOf(data).Pointer()
 	if reallocated {
@@ -185,13 +215,13 @@ func Decrypt(key []byte, data []byte) (res []byte, spacing []byte, err error) {
 	keyholder := GenerateKeys(key, salt)
 	defer AnnihilateData(keyholder)
 
-	EncryptInplaceKeccak(keyholder[BegK2:EndK2], res)
-	res, err = DecryptAES(keyholder[BegAesKey:EndAesKey], keyholder[BegAesSalt:EndAesSalt], res)
+	EncryptInplaceKeccak(getKey2(keyholder), res)
+	res, err = DecryptAES(getAesKey(keyholder), getAesSalt(keyholder), res)
 	if err != nil {
 		return nil, nil, err
 	}
-	DecryptInplaceRCX(keyholder[BegRcxKey:EndRcxKey], res)
-	EncryptInplaceKeccak(keyholder[BegK1:EndK1], res)
+	DecryptInplaceRCX(getRcxKey(keyholder), res)
+	EncryptInplaceKeccak(getKey1(keyholder), res)
 
 	res, spacing = splitSpacing(res)
 	res, err = removePadding(res)
@@ -223,10 +253,10 @@ func EncryptQuick(key []byte, data []byte) ([]byte, error) {
 	keyholder := GenerateKeys(key, salt)
 	defer AnnihilateData(keyholder)
 
-	rcx.EncryptInplaceRC4(keyholder[BegRcxKey:EndRcxKey], data)
-	EncryptInplaceKeccak(keyholder[BegK1:EndK1], data)
+	rcx.EncryptInplaceRC4(getRcxKey(keyholder), data)
+	EncryptInplaceKeccak(getKey1(keyholder), data)
 
-	data, err = EncryptAES(keyholder[BegAesKey:EndAesKey], keyholder[BegAesSalt:EndAesSalt], data)
+	data, err = EncryptAES(getAesKey(keyholder), getAesSalt(keyholder), data)
 	if err == nil {
 		data = append(data, salt...)
 	}
@@ -241,12 +271,12 @@ func DecryptQuick(key []byte, data []byte) ([]byte, error) {
 	keyholder := GenerateKeys(key, salt)
 	defer AnnihilateData(keyholder)
 
-	data, err = DecryptAES(keyholder[BegAesKey:EndAesKey], keyholder[BegAesSalt:EndAesSalt], data)
+	data, err = DecryptAES(getAesKey(keyholder), getAesSalt(keyholder), data)
 	if err != nil {
 		return data, err
 	}
 
-	EncryptInplaceKeccak(keyholder[BegK1:EndK1], data)
-	rcx.EncryptInplaceRC4(keyholder[BegRcxKey:EndRcxKey], data)
+	EncryptInplaceKeccak(getKey1(keyholder), data)
+	rcx.EncryptInplaceRC4(getRcxKey(keyholder), data)
 	return data, nil
 }

@@ -10,6 +10,41 @@ import (
 	"github.com/gluk256/crypto/algo/rcx"
 )
 
+func TestKeyholder(t *testing.T) {
+	const expected = 1536
+	sz := getKeyHolderSize()
+	key := make([]byte, expected)
+	if sz != expected {
+		t.Fatalf("wrong size [%d vs. %d]", sz, expected)
+	}
+
+	k1 := getKey1(key)
+	k2 := getKey2(key)
+	r := getRcxKey(key)
+	a := getAesKey(key)
+	s := getAesSalt(key)
+
+	if &k1[0] != &key[256] {
+		t.Fatal("key generation failed")
+	}
+
+	if &k2[0] != &key[512] {
+		t.Fatal("key generation failed")
+	}
+
+	if &r[0] != &key[768] {
+		t.Fatal("key generation failed")
+	}
+
+	if &a[0] != &key[1024] {
+		t.Fatal("key generation failed")
+	}
+
+	if &s[0] != &key[1280] {
+		t.Fatal("key generation failed")
+	}
+}
+
 func TestPadding(t *testing.T) {
 	seed := time.Now().Unix()
 	mrand.Seed(seed)

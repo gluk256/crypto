@@ -104,7 +104,7 @@ func GenerateKeys(key []byte, salt []byte) []byte {
 	fullkey := make([]byte, 0, len(key)+len(salt))
 	fullkey = append(fullkey, key...)
 	fullkey = append(fullkey, salt...)
-	keyholder := keccak.Digest(fullkey, KeyHolderSize)
+	keyholder := keccak.Digest(fullkey, getKeyHolderSize())
 	AnnihilateData(fullkey)
 	return keyholder
 }

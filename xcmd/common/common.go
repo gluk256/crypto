@@ -15,6 +15,7 @@ func expand(prev []byte) []byte {
 	res := make([]byte, 256)
 	for i := 0; i < 256; i++ {
 		res[i] = prev[i%len(prev)]
+		res[i] += byte(i)
 	}
 	crutils.AnnihilateData(prev)
 	return res
