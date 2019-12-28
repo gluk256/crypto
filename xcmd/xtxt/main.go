@@ -52,6 +52,11 @@ func processParams() (flags string, data []byte) {
 		}
 	}
 
+	if strings.Contains(flags, "d") && strings.Contains(flags, "r") {
+		fmt.Println("Wrong flag 'r': you can not decrypt with random password")
+		return zero, nil
+	}
+
 	return flags, data
 }
 

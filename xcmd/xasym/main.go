@@ -64,8 +64,12 @@ func importPubKey() {
 	// todo
 }
 
-func importPrivateKey() {
-	// todo
+func importPrivateKey(cmd string) {
+	if strings.Contains(cmd, "f") {
+		load2FA()
+	}
+	// todo:
+	// getPass, apply 2FA, set key
 }
 
 func processEncryptionCmd() {

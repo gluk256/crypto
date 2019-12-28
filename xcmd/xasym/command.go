@@ -17,7 +17,7 @@ func processCommand(cmd string) {
 	case "i":
 		importPubKey()
 	case "I":
-		importPrivateKey()
+		importPrivateKey(cmd)
 	case "r":
 		generateRandomKey()
 	case "m":
