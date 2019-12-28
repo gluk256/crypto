@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/ecies"
 	"github.com/gluk256/crypto/algo/keccak"
+	"github.com/gluk256/crypto/crutils"
 )
 
 // I am unable to implement elliptic curve cryptography, and have to rely on external libraries.
@@ -61,4 +63,33 @@ func Encrypt(key *ecdsa.PublicKey, data []byte) (res []byte, err error) {
 
 func Decrypt(key *ecdsa.PrivateKey, data []byte) (res []byte, err error) {
 	return ecies.ImportECDSA(key).Decrypt(data, nil, nil)
+}
+
+func AnnihilateBigInt(i *big.Int) {
+	arr := i.Bits()
+	sz := len(arr)
+	for i := sz - 1; i >= 0; i-- {
+		u, _ := crutils.StochasticUint64() // ignore the errors, because the pseudorandom entropy is good enough
+		arr[i] ^= big.Word(u)
+	}
+	for i := 0; i < sz; i++ {
+		crutils.RecordDestruction(uint64(arr[i]))
+	}
+	for i := 0; i < sz; i++ {
+		crutils.RecordDestruction(uint64(arr[i]))
+	}
+}
+
+func AnnihilatePubKey(k *ecdsa.PublicKey) {
+	if k != nil {
+		AnnihilateBigInt(k.X)
+		AnnihilateBigInt(k.Y)
+	}
+}
+
+func AnnihilatePrivateKey(k *ecdsa.PrivateKey) {
+	if k != nil {
+		AnnihilateBigInt(k.D)
+		AnnihilatePubKey(&k.PublicKey)
+	}
 }
