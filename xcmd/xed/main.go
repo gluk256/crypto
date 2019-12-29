@@ -36,6 +36,7 @@ var (
 func initialize() {
 	for i := 0; i < NumItems; i++ {
 		items[i].console = list.New()
+		items[i].prepared = true
 	}
 }
 
@@ -73,7 +74,7 @@ func deleteContent(i int) {
 
 func checkQuit() bool {
 	if items[cur].changed {
-		return confirm("The file is not saved. Do you really want to quit and lose the changes?")
+		//return confirm("The file is not saved. Do you really want to quit and lose the changes?") // todo: uncomment
 	}
 	return true
 }
@@ -87,7 +88,7 @@ func reset(all bool) {
 }
 
 func confirm(question string) bool {
-	fmt.Printf("%s ", question)
+	fmt.Printf("%s [y/n] ", question)
 	s := terminal.PlainTextInput()
 	if s == nil {
 		return false
@@ -214,7 +215,7 @@ func FileLoad(arg []string, show bool) bool {
 		return false
 	}
 
-	b, err := ioutil.ReadFile(arg[1])
+	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Printf(">>> Error: %s \n", err)
 		return false
@@ -284,7 +285,7 @@ func FileSaveSteg(arg []string) {
 	defer crutils.AnnihilateData(stegContent)
 	secure := (len(arg) < 2) || !strings.Contains(arg[1], "i")
 	encrypedStegSize := len(stegContent) + crutils.EncryptedSizeDiff
-	allowedStegSize := primitives.FindNextPowerOfTwo(len(stegContent))
+	allowedStegSize := primitives.FindNextPowerOfTwo(len(plainContent))
 	if encrypedStegSize > allowedStegSize {
 		fmt.Printf(">>> Error: plain text is too small in comparison with steganographic content ")
 		fmt.Printf("[%d vs. %d] \n", len(plainContent), len(stegContent))

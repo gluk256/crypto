@@ -25,10 +25,6 @@ func cleanup() {
 	crutils.AnnihilateData(hash2fa)
 }
 
-func initialize() {
-	generateRandomKey()
-}
-
 func load2FA() {
 	filename := common.GetFileName()
 	data, err := ioutil.ReadFile(filename)
@@ -159,7 +155,7 @@ func main() {
 		}
 	}
 
-	initialize() // todo: maybe refactor this func away (delete)
+	generateRandomKey()
 	defer cleanup()
 
 	if len(flags) > 0 {

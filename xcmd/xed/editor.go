@@ -7,15 +7,16 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
-	"github.com/gluk256/crypto/algo/primitives"
 )
 
-var BarCol  = "   │——————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
+var BarCol = "   │——————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————+—————————"
 var BarNorm = "   │————————————————————————————————————————————————————————————————————————————————————————————————————"
 var Bar = BarNorm
 var defaultPrompt = "Enter text: "
+
 const newline = byte('\n')
 
 func ChangeFrameStyle() {
@@ -95,7 +96,7 @@ func grep(arg []string, cryptic bool, scramble bool) {
 			if cryptic {
 				beg := j + len(pattern)
 				fmt.Printf("%03d│ %s\n", i, s[beg:])
-			} else  {
+			} else {
 				fmt.Printf("%03d│ %s\n", i, s)
 			}
 		}
@@ -122,6 +123,8 @@ func LineAppend(cryptic bool) {
 		items[cur].console.PushBack(s)
 		items[cur].changed = true
 		cat()
+	} else {
+		fmt.Println(">>>>>>>>>>>>>> impossible error occured, please check src <<<<<<<<<<<<<<")
 	}
 }
 
@@ -258,7 +261,7 @@ func mergeLines(ln int) bool {
 
 			s1, _ := x.Value.([]byte)
 			s2, _ := y.Value.([]byte)
-			res := make([]byte, len(s1) + len(s2))
+			res := make([]byte, len(s1)+len(s2))
 			copy(res, s1)
 			copy(res[len(s1):], s2)
 			items[cur].console.InsertBefore(res, x)
@@ -280,7 +283,7 @@ func LinesMerge(arg []string) {
 		return
 	}
 
-	i, ok := a2i(arg[1], 0, items[cur].console.Len() - 1)
+	i, ok := a2i(arg[1], 0, items[cur].console.Len()-1)
 	if ok {
 		if mergeLines(i) {
 			cat()
@@ -398,7 +401,7 @@ func extendLine(ln int, ext []byte) bool {
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
 			prev, _ := x.Value.([]byte)
-			n := make([]byte, len(prev) + len(ext))
+			n := make([]byte, len(prev)+len(ext))
 			copy(n, prev)
 			copy(n[len(prev):], ext)
 			items[cur].console.InsertAfter(n, x)
