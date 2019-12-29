@@ -22,6 +22,14 @@ func processCommand(cmd string) {
 		generateRandomKey()
 	case "m":
 		printMyKey()
+	case "t":
+		sign(cmd, false)
+	case "b":
+		sign(cmd, true)
+	case "v":
+		verify(false)
+	case "w":
+		verify(true)
 	default:
 		fmt.Printf(">>> Wrong command: %s \n", cmd)
 	}
@@ -37,13 +45,17 @@ func help() {
 func helpInternal() {
 	fmt.Println("\t -e encrypt")
 	fmt.Println("\t -d decrypt")
-	fmt.Println("\t -f use a file as two-factor-authentification")
 	fmt.Println("\t -i import public key for encryption")
 	fmt.Println("\t -I import private key for decryption (from password)")
-	fmt.Println("\t -r generate random private key")
-	fmt.Println("\t -m print my public key")
 	fmt.Println("\t\t -s secure input (only used together with another command)")
 	fmt.Println("\t\t -p password mode input (only used together with another command)")
+	fmt.Println("\t -f use a file as two-factor-authentification")
+	fmt.Println("\t -r generate random private key")
+	fmt.Println("\t -m print my public key")
+	fmt.Println("\t -t sign text")
+	fmt.Println("\t -b sign binary data in hexadecimal representation")
+	fmt.Println("\t -v verify signature")
+	fmt.Println("\t -w verify signature of binary data in hexadecimal representation")
 	fmt.Println("\t -h help")
 	fmt.Println("\t -q quit")
 }

@@ -65,8 +65,22 @@ func setMyKey(key *ecdsa.PrivateKey) {
 	myKey = key
 }
 
-func getHexData(name string) (res []byte) {
-	fmt.Printf("please enter %s: ", name)
+func getText(cmd string, legend string) (text []byte) {
+	if strings.Contains(cmd, "s") {
+		text = terminal.SecureInput(false)
+	} else {
+		fmt.Printf("please enter %s: ", legend)
+		if strings.Contains(cmd, "p") {
+			text = terminal.PasswordModeInput()
+		} else {
+			text = terminal.PlainTextInput()
+		}
+	}
+	return text
+}
+
+func getHexData(legend string) (res []byte) {
+	fmt.Printf("please enter %s: ", legend)
 	raw := terminal.PlainTextInput()
 	res = make([]byte, len(raw)/2)
 	_, err := hex.Decode(res, raw)
@@ -163,7 +177,7 @@ func processDecryption() {
 
 	res, err := asym.Decrypt(myKey, data)
 	if err != nil {
-		fmt.Printf("Decryption failed: %s\n", err.Error())
+		fmt.Printf("Error: decryption failed: %s\n", err.Error())
 		return
 	}
 
@@ -177,24 +191,58 @@ func processDecryption() {
 }
 
 func processEncryption(cmd string) {
-	var text []byte
-	if strings.Contains(cmd, "s") {
-		text = terminal.SecureInput(false)
-	} else {
-		fmt.Print("please enter your text: ")
-		if strings.Contains(cmd, "p") {
-			text = terminal.PasswordModeInput()
-		} else {
-			text = terminal.PlainTextInput()
-		}
-	}
-
+	text := getText(cmd, "your text")
 	res, err := asym.Encrypt(remotePeer, text)
 	if err != nil {
-		fmt.Printf("Encryption failed: %s\n", err.Error())
+		fmt.Printf("Error: encryption failed: %s\n", err.Error())
 	} else {
 		fmt.Printf("%x\n", res)
 	}
 
 	crutils.AnnihilateData(text)
+}
+
+func sign(cmd string, hexadecimal bool) {
+	var data []byte
+	if hexadecimal {
+		data = getHexData("data for signing")
+	} else {
+		data = getText(cmd, "data for signing")
+	}
+	if data == nil {
+		return
+	}
+
+	sig, err := asym.Sign(myKey, data)
+	if err != nil {
+		fmt.Printf("Error: signing failed: %s\n", err.Error())
+	} else {
+		fmt.Printf("signature: %x\n", sig)
+	}
+
+	crutils.AnnihilateData(data)
+}
+
+func verify(hexadecimal bool) {
+	var data, sig []byte
+	if hexadecimal {
+		data = getHexData("data")
+	} else {
+		data = getText("", "data")
+	}
+	if data == nil {
+		return
+	}
+	sig = getHexData("signature")
+	if sig == nil {
+		return
+	}
+	pub, err := asym.SigToPub(data, sig)
+	if err != nil {
+		fmt.Printf("Failed to retrieve the signature: %s\n", err.Error())
+	} else {
+		fmt.Printf("public key: %x\n", pub)
+	}
+
+	crutils.AnnihilateData(data)
 }
