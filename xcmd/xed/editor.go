@@ -27,15 +27,8 @@ func ChangeFrameStyle() {
 	}
 }
 
-func prepareContentForDisplayAsText() {
-	if !items[cur].prepared {
-		primitives.Substitute(items[cur].src, '\r', newline)
-		parseSource()
-		items[cur].prepared = true
-	}
-}
-
-func parseSource() {
+func deriveConsoleFromSrc() {
+	primitives.Substitute(items[cur].src, '\r', newline)
 	items[cur].console = list.New()
 	s := items[cur].src
 	beg := 0
@@ -51,13 +44,15 @@ func parseSource() {
 }
 
 func cat() {
-	prepareContentForDisplayAsText()
+	if len(items[cur].src) != 0 && items[cur].console.Len() == 0 {
+		deriveConsoleFromSrc()
+	}
 	displayContentAsText()
 }
 
 func displayContentAsText() {
-	fmt.Println(Bar)
 	i := 0
+	fmt.Println(Bar)
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		fmt.Printf("%03d│ %s\n", i, x.Value.([]byte))
 		i++
@@ -210,7 +205,7 @@ func deleteLineAtIndex(ln int) {
 }
 
 func LinesPrint(arg []string) {
-	prepareContentForDisplayAsText()
+	deriveConsoleFromSrc()
 
 	indexes := parseAndSortIntArgs(arg)
 	total := len(indexes)

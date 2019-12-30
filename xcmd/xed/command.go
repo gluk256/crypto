@@ -19,12 +19,12 @@ func clear() {
 }
 
 func processCommand(cmd string) {
-	arg := strings.Fields(cmd)
-	if len(arg) == 0 {
+	args := strings.Fields(cmd)
+	if len(args) == 0 {
 		return
 	}
 
-	switch arg[0] {
+	switch args[0] {
 	case "h":
 		helpInternal()
 	case "help":
@@ -44,60 +44,58 @@ func processCommand(cmd string) {
 		info()
 	case "ls":
 		ls()
-	////////////////////////////////////////////
 	case "cat":
 		cat()
 	case "cc":
 		cat()
-	case "dx":
-		stegDecrypt(arg)
-	case "dc":
-		contentDecrypt(arg)
-	////////////////////////////////////////////
 	case "fd": // file decrypt
-		if FileLoad(arg, false) {
-			contentDecrypt(arg)
+		if FileLoad(args, false) {
+			contentDecrypt(args)
 		}
 	case "fl": // file load
-		FileLoad(arg, false)
+		FileLoad(args, false)
 	case "fo": // file open (print text without decrypting)
-		FileLoad(arg, true)
+		FileLoad(args, true)
 	case "fs": // file save (encrypted)
-		FileSave(arg)
-	case "fsx": // file save steg
-		FileSaveSteg(arg)
-	////////////////////////////////////////////
+		FileSave(args)
+	case "fx": // file save steg
+		FileSaveSteg(args, true)
+	case "fxi": // file save steg (insecure)
+		FileSaveSteg(args, false)
+	case "dc":
+		contentDecrypt(args)
+	case "dx":
+		stegDecrypt(args)
 	case "grep":
-		grep(arg, false, false)
+		grep(args, false, false)
 	case "g":
-		grep(arg, true, false)
+		grep(args, true, false)
 	case "G":
-		grep(arg, true, true)
+		grep(args, true, true)
 	case "a": // editor: append line to the end
 		LineAppend(false)
 	case "A": // editor: append line with cryptic input
 		LineAppend(true)
 	case "i": // editor: insert line at certain index
-		LineInsert(arg, false)
+		LineInsert(args, false)
 	case "I": // editor: insert line cryptic
-		LineInsert(arg, true)
+		LineInsert(args, true)
 	case "e": // editor: extend line (append to the end of line)
-		LineExtend(arg, false)
+		LineExtend(args, false)
 	case "E": // editor: extend line cryptic
-		LineExtend(arg, true)
+		LineExtend(args, true)
 	case "c": // editor: cut line (delete from the end)
-		LineCut(arg)
+		LineCut(args)
 	case "b": // editor: insert empty line
-		LineInsertSpace(arg)
+		LineInsertSpace(args)
 	case "d": // editor: delete lines
-		LinesDelete(arg)
+		LinesDelete(args)
 	case "m": // editor: merge lines
-		LinesMerge(arg)
+		LinesMerge(args)
 	case "s": // editor: split lines
-		LineSplit(arg)
+		LineSplit(args)
 	case "p": // editor: print lines
-		LinesPrint(arg)
-	////////////////////////////////////////////
+		LinesPrint(args)
 	default:
 		fmt.Printf(">>> Wrong command: '%s' [%x] \n", cmd, []byte(cmd))
 	}
@@ -113,13 +111,14 @@ func helpInternal() {
 	fmt.Println("sw:\t switch content")
 	fmt.Println("ls:\t list current directory contents")
 	fmt.Println("cat:\t print content")
+	fmt.Println("fl:\t file load")
+	fmt.Println("fo:\t file load and print content without decrypting")
+	fmt.Println("fd:\t file load and decrypt (options: [sm])")
+	fmt.Println("fs:\t file save face (options: [sm])")
+	fmt.Println("fx:\t file save steg (options: [smi])")
+	fmt.Println("fxi:\t file save steg (insecure)")
 	fmt.Println("dc:\t decrypt loaded content (options: [sm])")
-	fmt.Println("dx:\t decrypt steg content (options: [pm])")
-	fmt.Println("fl:\t file load (param filename required)")
-	fmt.Println("fo:\t file load and print content without decrypting (param filename required)")
-	fmt.Println("fd:\t file load and decrypt (param filename required)")
-	fmt.Println("fs:\t file save (param filename required)")
-	fmt.Println("fsx:\t file save steg (param filename required)")
+	fmt.Println("dx:\t decrypt steg content (options: [sm])")
 	fmt.Println("grep:\t normal grep")
 	fmt.Println("g:\t grep in password mode")
 	fmt.Println("G:\t grep in secure mode")
@@ -133,7 +132,7 @@ func helpInternal() {
 	fmt.Println("b:\t insert empty line")
 	fmt.Println("d:\t delete lines")
 	fmt.Println("m:\t merge lines")
-	fmt.Println("s:\t split lines")
+	fmt.Println("s:\t split a line")
 	fmt.Println("p:\t print lines")
 }
 

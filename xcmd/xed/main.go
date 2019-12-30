@@ -20,12 +20,11 @@ const (
 )
 
 type Content struct {
-	src      []byte
-	key      []byte
-	pad      []byte
-	console  *list.List
-	prepared bool
-	changed  bool
+	key     []byte
+	pad     []byte
+	src     []byte     // the original data src, represents the file with encrpted/decrypted raw data
+	console *list.List // originally derived from src, but then xxx
+	changed bool
 }
 
 var (
@@ -36,7 +35,6 @@ var (
 func initialize() {
 	for i := 0; i < NumItems; i++ {
 		items[i].console = list.New()
-		items[i].prepared = true
 	}
 }
 
@@ -70,6 +68,8 @@ func deleteContent(i int) {
 	items[cur].src = nil
 	items[cur].key = nil
 	items[cur].pad = nil
+	items[cur].changed = false
+	items[i].console = list.New()
 }
 
 func checkQuit() bool {
@@ -108,11 +108,11 @@ func ls() {
 	fmt.Println()
 }
 
-func getKey(cryptic bool, checkExisting bool) (res []byte) {
-	if len(items[cur].key) > 0 {
+func getKey(index int, cryptic bool, checkExisting bool) (res []byte) {
+	if len(items[index].key) > 0 {
 		if checkExisting {
 			if confirm("Do you want to use existing key? ") {
-				return items[cur].key
+				return items[index].key
 			}
 		}
 	}
@@ -123,24 +123,18 @@ func getKey(cryptic bool, checkExisting bool) (res []byte) {
 		res = common.GetPassword("p")
 	}
 
-	crutils.AnnihilateData(items[cur].key)
-	items[cur].key = res
+	crutils.AnnihilateData(items[index].key)
+	items[index].key = res
 	return res
 }
 
-func getFileName(arg []string) (res string) {
-	if len(arg) >= 2 {
-		res = arg[1]
-	} else {
-		fmt.Println("Enter file name: ")
-		f := terminal.PlainTextInput()
-		if f == nil {
-			return ""
-		} else {
-			res = string(f)
-		}
+func getFileName() string {
+	fmt.Println("Enter file name: ")
+	f := terminal.PlainTextInput()
+	if f == nil {
+		return string("")
 	}
-	return res
+	return string(f)
 }
 
 func content2raw(index int, capacity int) []byte {
@@ -206,13 +200,26 @@ func run() {
 	}
 }
 
-func FileLoad(arg []string, show bool) bool {
+func parcseSecondaryFlags(args []string) (secure bool, mute bool) {
+	if len(args) > 1 {
+		secure = strings.Contains(args[1], "s")
+		mute = strings.Contains(args[1], "m")
+	}
+	return secure, mute
+}
+
+func FileLoad(args []string, show bool) bool {
 	deleteContent(cur)
 
-	filename := getFileName(arg)
-	if len(filename) == 0 {
-		fmt.Println(">>> Error: filename is missing")
-		return false
+	var filename string
+	if len(args) >= 2 {
+		filename = args[1]
+	} else {
+		filename = getFileName()
+		if len(filename) == 0 {
+			fmt.Println(">>> Error: filename is missing")
+			return false
+		}
 	}
 
 	b, err := ioutil.ReadFile(filename)
@@ -222,24 +229,20 @@ func FileLoad(arg []string, show bool) bool {
 	}
 
 	items[cur].src = b
-	items[cur].console = list.New()
-	items[cur].prepared = false
-	items[cur].changed = false
-
 	if show {
+		deriveConsoleFromSrc()
 		cat()
 	}
-
 	return true
 }
 
-func saveData(arg []string, data []byte) {
+func saveData(data []byte) {
 	if len(data) == 0 {
 		fmt.Println(">>> Error: content is not found")
 		return
 	}
 
-	filename := getFileName(arg)
+	filename := getFileName()
 	if len(filename) == 0 {
 		fmt.Println(">>> Error: filename is empty")
 		return
@@ -263,27 +266,27 @@ func saveData(arg []string, data []byte) {
 // 	}
 // }
 
-func FileSave(arg []string) {
+func FileSave(args []string) {
 	b := content2raw(cur, 0)
-	x := encryptData(arg, b)
+	x := encryptData(args, b)
 	if b != nil {
-		saveData(arg, x)
+		saveData(x)
 		crutils.AnnihilateData(x)
 		crutils.AnnihilateData(b)
 	}
 }
 
-func FileSaveSteg(arg []string) {
+func FileSaveSteg(args []string, secureSteg bool) {
 	if steg < 0 || items[steg].console.Len() == 0 {
 		fmt.Println(">>> Error: steganographic content does not exist")
 		return
 	}
 
+	secureFace, _ := parcseSecondaryFlags(args)
 	plainContent := content2raw(face, 0)
 	stegContent := content2raw(steg, len(plainContent)*4)
 	defer crutils.AnnihilateData(plainContent)
 	defer crutils.AnnihilateData(stegContent)
-	secure := (len(arg) < 2) || !strings.Contains(arg[1], "i")
 	encrypedStegSize := len(stegContent) + crutils.EncryptedSizeDiff
 	allowedStegSize := primitives.FindNextPowerOfTwo(len(plainContent))
 	if encrypedStegSize > allowedStegSize {
@@ -292,15 +295,15 @@ func FileSaveSteg(arg []string) {
 		return
 	}
 
-	fmt.Println("password for steganographic content encryption")
-	keySteg := getKey(secure, true)
+	fmt.Print("steganographic content encryption: ")
+	keySteg := getKey(steg, secureSteg, true)
 	if len(keySteg) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return
 	}
 
-	fmt.Println("password for plain text encryption")
-	keyPlain := getKey(secure, true)
+	fmt.Print("face content encryption: ")
+	keyPlain := getKey(face, secureFace, true)
 	if len(keyPlain) == 0 {
 		crutils.AnnihilateData(keySteg)
 		fmt.Println(">>> Error: wrong key")
@@ -320,17 +323,14 @@ func FileSaveSteg(arg []string) {
 	}
 
 	if res != nil {
-		saveData(arg, res)
+		saveData(res)
 		crutils.AnnihilateData(res)
 	}
 }
 
 func encryptData(args []string, d []byte) []byte {
-	var secure bool
-	if len(args) > 1 {
-		secure = strings.Contains(args[1], "s")
-	}
-	key := getKey(secure, true)
+	secure, _ := parcseSecondaryFlags(args)
+	key := getKey(face, secure, true)
 	if len(key) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return nil
@@ -343,17 +343,12 @@ func encryptData(args []string, d []byte) []byte {
 	return res
 }
 
-func contentDecrypt(arg []string) bool {
-	var secure, mute bool
-	if len(arg) > 1 {
-		secure = strings.Contains(arg[1], "s")
-		mute = strings.Contains(arg[1], "m")
-	}
-
+func contentDecrypt(args []string) bool {
+	secure, mute := parcseSecondaryFlags(args)
 	content := make([]byte, len(items[cur].src))
 	copy(content, items[cur].src)
 
-	key := getKey(secure, true)
+	key := getKey(face, secure, true)
 	if len(key) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return false
@@ -367,37 +362,35 @@ func contentDecrypt(arg []string) bool {
 
 	items[cur].src = b
 	items[cur].pad = s
+	deriveConsoleFromSrc()
 	if !mute {
 		cat()
 	}
 	return true
 }
 
-func stegDecrypt(arg []string) bool {
-	var secure, mute bool
-	if len(arg) > 1 {
-		secure = !strings.Contains(arg[1], "p")
-		mute = strings.Contains(arg[1], "m")
-	}
+func stegDecrypt(args []string) bool {
+	secure, mute := parcseSecondaryFlags(args)
+	stegContent := make([]byte, len(items[face].pad))
+	copy(stegContent, items[face].pad)
 
-	stegContent := make([]byte, len(items[cur].pad))
-	copy(stegContent, items[cur].pad)
-
-	key := getKey(secure, false)
+	key := getKey(steg, secure, false)
 	if len(key) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return false
 	}
 
-	b, _, err := crutils.DecryptStegContentOfUnknownSize(key, stegContent)
+	b, ss2, err := crutils.DecryptStegContentOfUnknownSize(key, stegContent)
 	if err != nil {
 		fmt.Printf(">>> Error: %s\n", err)
 		return false
 	}
 
 	items[steg].src = b
+	items[steg].pad = ss2
 	items[steg].key = key
-	cur = (cur + 1) % 2
+	cur = steg
+	deriveConsoleFromSrc()
 	if !mute {
 		cat()
 	}
