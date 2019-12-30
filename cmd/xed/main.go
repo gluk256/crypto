@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/gluk256/crypto/algo/primitives"
+	"github.com/gluk256/crypto/cmd/common"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
-	"github.com/gluk256/crypto/xcmd/common"
 )
 
 const (

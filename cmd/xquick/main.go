@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gluk256/crypto/cmd/common"
 	"github.com/gluk256/crypto/crutils"
-	"github.com/gluk256/crypto/xcmd/common"
 )
 
 func help() {

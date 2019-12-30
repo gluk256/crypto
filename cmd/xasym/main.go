@@ -10,9 +10,9 @@ import (
 
 	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/asym"
+	"github.com/gluk256/crypto/cmd/common"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
-	"github.com/gluk256/crypto/xcmd/common"
 )
 
 var remotePeer *ecdsa.PublicKey
