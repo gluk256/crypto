@@ -50,7 +50,6 @@ func generateRandomKey() {
 		fmt.Printf("Failed to generate private key: %s\n", err.Error())
 	} else {
 		setMyKey(k)
-		printMyKey()
 	}
 }
 
@@ -59,6 +58,7 @@ func setMyKey(key *ecdsa.PrivateKey) {
 		asym.AnnihilatePrivateKey(myKey)
 	}
 	myKey = key
+	printMyKey()
 }
 
 func getText(cmd string, legend string) (text []byte) {
@@ -188,6 +188,9 @@ func processDecryption() {
 
 func processEncryption(cmd string) {
 	text := getText(cmd, "your text")
+	if remotePeer == nil {
+		importPubKey()
+	}
 	res, err := asym.Encrypt(remotePeer, text)
 	if err != nil {
 		fmt.Printf("Error: encryption failed: %s\n", err.Error())

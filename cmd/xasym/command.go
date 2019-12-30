@@ -5,30 +5,32 @@ import (
 )
 
 func processCommand(cmd string) {
-	switch cmd {
-	case "h":
+	if len(cmd) == 0 {
+		fmt.Println(">>> Error: empty command")
+	}
+
+	switch cmd[0] {
+	case 'h':
 		helpInternal()
-	case "e":
+	case 'e':
 		processEncryption(cmd)
-	case "d":
+	case 'd':
 		processDecryption()
-	case "f":
-		load2FA()
-	case "i":
+	case 'i':
 		importPubKey()
-	case "I":
+	case 'I':
 		importPrivateKey(cmd)
-	case "r":
+	case 'r':
 		generateRandomKey()
-	case "m":
+	case 'm':
 		printMyKey()
-	case "t":
+	case 't':
 		sign(cmd, false)
-	case "b":
+	case 'b':
 		sign(cmd, true)
-	case "v":
+	case 'v':
 		verify(false)
-	case "w":
+	case 'w':
 		verify(true)
 	default:
 		fmt.Printf(">>> Wrong command: %s \n", cmd)
@@ -49,7 +51,7 @@ func helpInternal() {
 	fmt.Println("\t -I import private key for decryption (from password)")
 	fmt.Println("\t\t -s secure input (only used together with another command)")
 	fmt.Println("\t\t -p password mode input (only used together with another command)")
-	fmt.Println("\t -f use a file as two-factor-authentification")
+	fmt.Println("\t\t -f use a file as two-factor-authentification")
 	fmt.Println("\t -r generate random private key")
 	fmt.Println("\t -m print my public key")
 	fmt.Println("\t -t sign text")
