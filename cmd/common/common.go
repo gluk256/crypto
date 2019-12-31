@@ -1,11 +1,15 @@
 package common
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
+	"github.com/gluk256/crypto/algo/keccak"
+	"github.com/gluk256/crypto/asym"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
 )
@@ -110,4 +114,44 @@ func SaveData(filename string, data []byte) error {
 
 	fmt.Println("Failed to save file after max tries. Exit.")
 	return errors.New("max tries exceeded")
+}
+
+func LoadCertificate() ([]byte, error) {
+	filename := os.Getenv("HOME") + string("/.xcry/certificate")
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		fmt.Printf("Failed to load data: %s\n", err.Error())
+		fmt.Printf("If file [%s] does not exist, please create it with random data.\n", filename)
+		return nil, err
+	}
+
+	h := keccak.Digest(data, 256)
+	return h, nil
+}
+
+func ImportPrivateKey(cmd string) (key *ecdsa.PrivateKey, err error) {
+	if strings.Contains(cmd, "r") {
+		s := string("Wrong flag 'r': random password is not allowed for private key import")
+		fmt.Println(s)
+		return nil, errors.New(s)
+	}
+	var hash2fa []byte
+	if strings.Contains(cmd, "f") {
+		hash2fa, err = LoadCertificate()
+		if err != nil {
+			return nil, err
+		}
+	}
+	pass := GetPassword(cmd)
+	for i := 0; i < len(pass) && i < len(hash2fa); i++ {
+		pass[i] ^= hash2fa[i]
+	}
+	raw := keccak.Digest(pass, 32)
+	key, err = asym.ImportPrivateKey(raw)
+	crutils.AnnihilateData(pass)
+	crutils.AnnihilateData(raw)
+	if err != nil {
+		fmt.Printf("Failed to import private key: %s\n", err.Error())
+	}
+	return key, err
 }

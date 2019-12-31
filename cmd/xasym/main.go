@@ -4,11 +4,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/gluk256/crypto/algo/keccak"
 	"github.com/gluk256/crypto/asym"
 	"github.com/gluk256/crypto/cmd/common"
 	"github.com/gluk256/crypto/crutils"
@@ -25,18 +23,8 @@ func cleanup() {
 	crutils.AnnihilateData(hash2fa)
 }
 
-func load2FA() {
-	filename := common.GetFileName()
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		fmt.Printf("Failed to load data: %s\n", err.Error())
-	} else {
-		hash2fa = keccak.Digest(data, 256)
-	}
-}
-
-func printMyKey() {
-	pub, err := asym.ExportPubKey(&myKey.PublicKey)
+func PrintPublicKey(k *ecdsa.PublicKey) {
+	pub, err := asym.ExportPubKey(k)
 	if err != nil {
 		fmt.Printf("Failed to export public key: %s", err.Error())
 	} else {
@@ -58,7 +46,7 @@ func setMyKey(key *ecdsa.PrivateKey) {
 		asym.AnnihilatePrivateKey(myKey)
 	}
 	myKey = key
-	printMyKey()
+	PrintPublicKey(&myKey.PublicKey)
 }
 
 func getText(cmd string, legend string) (text []byte) {
@@ -102,26 +90,10 @@ func importPubKey() {
 }
 
 func importPrivateKey(cmd string) {
-	if strings.Contains(cmd, "r") {
-		fmt.Println("Wrong flag 'r': random password is not allowed for import")
-		return
-	}
-	if strings.Contains(cmd, "f") {
-		load2FA()
-	}
-	pass := common.GetPassword(cmd)
-	for i := 0; i < len(pass) && i < len(hash2fa); i++ {
-		pass[i] ^= hash2fa[i]
-	}
-	raw := keccak.Digest(pass, 32)
-	key, err := asym.ImportPrivateKey(raw)
+	key, err := common.ImportPrivateKey(cmd)
 	if err != nil {
-		fmt.Printf("Failed to import private key: %s\n", err.Error())
-	} else {
 		setMyKey(key)
 	}
-	crutils.AnnihilateData(pass)
-	crutils.AnnihilateData(raw)
 }
 
 func run() {
@@ -151,7 +123,7 @@ func main() {
 		}
 
 		if strings.Contains(flags, "f") {
-			load2FA()
+			hash2fa, _ = common.LoadCertificate()
 		}
 	}
 

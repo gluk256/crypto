@@ -23,7 +23,7 @@ func processCommand(cmd string) {
 	case 'r':
 		generateRandomKey()
 	case 'm':
-		printMyKey()
+		PrintPublicKey(&myKey.PublicKey)
 	case 't':
 		sign(cmd, false)
 	case 'b':

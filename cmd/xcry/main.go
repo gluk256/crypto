@@ -28,6 +28,7 @@ func help() {
 	fmt.Println("\t\t -p output decrypted content as text, don't save")
 	fmt.Println("\t\t -g interactive grep (print specific text lines only)")
 	fmt.Println("\t\t -G interactive grep with secure input")
+	fmt.Println("\t\t -m mute - don't print the decrypted content")
 
 	fmt.Println("\t -l load file")
 	fmt.Println("\t\t -i insert file content into another file as steganographic content")
@@ -187,6 +188,10 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 	defer crutils.AnnihilateData(steg)
 	if err != nil {
 		return
+	}
+
+	if !strings.Contains(flags, "m") {
+		fmt.Printf("Decrypted:\n[%s]\n", string(decrypted))
 	}
 
 	if !strings.Contains(flags, "f") {
