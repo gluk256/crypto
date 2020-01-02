@@ -15,21 +15,10 @@ import (
 
 var remotePeer *ecdsa.PublicKey
 var myKey *ecdsa.PrivateKey
-var hash2fa []byte
 
 func cleanup() {
 	asym.AnnihilatePrivateKey(myKey)
 	asym.AnnihilatePubKey(remotePeer)
-	crutils.AnnihilateData(hash2fa)
-}
-
-func PrintPublicKey(k *ecdsa.PublicKey) {
-	pub, err := asym.ExportPubKey(k)
-	if err != nil {
-		fmt.Printf("Failed to export public key: %s", err.Error())
-	} else {
-		fmt.Printf("Your public key: %x\n", pub)
-	}
 }
 
 func generateRandomKey() {
@@ -46,7 +35,7 @@ func setMyKey(key *ecdsa.PrivateKey) {
 		asym.AnnihilatePrivateKey(myKey)
 	}
 	myKey = key
-	PrintPublicKey(&myKey.PublicKey)
+	common.PrintPublicKey(&myKey.PublicKey)
 }
 
 func getText(cmd string, legend string) (text []byte) {
@@ -120,10 +109,6 @@ func main() {
 			return
 		} else if strings.Contains(flags, "q") {
 			return
-		}
-
-		if strings.Contains(flags, "f") {
-			hash2fa, _ = common.LoadCertificate()
 		}
 	}
 

@@ -155,3 +155,12 @@ func ImportPrivateKey(cmd string) (key *ecdsa.PrivateKey, err error) {
 	}
 	return key, err
 }
+
+func PrintPublicKey(k *ecdsa.PublicKey) {
+	pub, err := asym.ExportPubKey(k)
+	if err != nil {
+		fmt.Printf("Failed to export public key: %s", err.Error())
+	} else {
+		fmt.Printf("Your public key: %x\n", pub)
+	}
+}

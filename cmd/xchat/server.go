@@ -1,0 +1,152 @@
+package main
+
+import (
+	"fmt"
+	"net"
+	"sync"
+	"time"
+
+	"github.com/gluk256/crypto/asym"
+	"github.com/gluk256/crypto/terminal"
+)
+
+var connexxions []net.Conn
+var mx sync.Mutex
+
+func init() {
+	connexxions = make([]net.Conn, 0, 32000)
+}
+
+func printDiagnosticInfo() {
+	var n int
+	mx.Lock()
+	n = len(connexxions)
+	mx.Unlock()
+	fmt.Printf("%d peers connected\n", n)
+}
+
+func verifyMessage(msg []byte) bool {
+	_, err := asym.Decrypt(serverKey, msg)
+	if err != nil {
+		fmt.Printf("verification failed: %s \n", err)
+		return false
+	}
+	return true
+}
+
+func addConnexxion(c net.Conn) {
+	mx.Lock()
+	defer mx.Unlock()
+	connexxions = append(connexxions, c)
+}
+
+func removeConnexxion(target net.Conn) {
+	mx.Lock()
+	defer mx.Unlock()
+
+	for i, c := range connexxions {
+		if c == target {
+			last := len(connexxions) - 1
+			connexxions[i] = connexxions[last]
+			connexxions = connexxions[:last]
+		}
+	}
+}
+
+func shutdownServer(ln net.Listener) {
+	err := ln.Close()
+	if err != nil {
+		fmt.Printf("Failed to close listener: %s \n", err.Error())
+	}
+
+	var sz int
+	mx.Lock()
+	sz = len(connexxions)
+	for _, c := range connexxions {
+		go c.Close()
+	}
+	mx.Unlock()
+
+	for i := 0; i < 200 && sz > 0; i++ {
+		time.Sleep(50 * time.Millisecond)
+		mx.Lock()
+		sz = len(connexxions)
+		mx.Unlock()
+	}
+}
+
+func runConnexxionsLoop(ln net.Listener) {
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			break
+		}
+
+		msg, err := receivePacket(conn)
+		if err != nil {
+			fmt.Printf("Connexxion error: %s \n", err.Error())
+			conn.Close()
+			continue
+		}
+
+		if !verifyMessage(msg) {
+			fmt.Println("Connexxion verification failed")
+			conn.Close()
+			continue
+		}
+
+		addConnexxion(conn)
+		go runServerMessageLoop(conn)
+	}
+}
+
+func runServerMessageLoop(conn net.Conn) {
+	for {
+		msg, err := receivePacket(conn)
+		if err != nil {
+			break
+		}
+		processPacketS(conn, msg)
+	}
+
+	removeConnexxion(conn)
+}
+
+func processPacketS(src net.Conn, msg []byte) {
+	mx.Lock()
+	defer mx.Unlock()
+
+	for _, c := range connexxions {
+		if c != src {
+			go sendPacket(c, msg)
+		}
+	}
+}
+
+func runServer() {
+	err := loadKeys()
+	if err != nil {
+		fmt.Printf("Failed to load private key: %s \n", err.Error())
+		return
+	}
+
+	ln, err := net.Listen("tcp", string("127.0.0.1:")+getPort())
+	if err != nil {
+		fmt.Printf("Server error: %s \n", err.Error())
+		return
+	}
+
+	fmt.Println("xserver v.1 started")
+	go runConnexxionsLoop(ln)
+
+	for {
+		cmd := terminal.PlainTextInput()
+		if isExitCmd(cmd) {
+			break
+		} else if string(cmd) == "i" {
+			printDiagnosticInfo()
+		}
+	}
+
+	shutdownServer(ln)
+}

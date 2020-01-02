@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/gluk256/crypto/cmd/common"
 )
 
 func processCommand(cmd string) {
@@ -22,8 +24,8 @@ func processCommand(cmd string) {
 		importPrivateKey(cmd)
 	case 'r':
 		generateRandomKey()
-	case 'm':
-		PrintPublicKey(&myKey.PublicKey)
+	case 'k':
+		common.PrintPublicKey(&myKey.PublicKey)
 	case 't':
 		sign(cmd, false)
 	case 'b':
@@ -53,7 +55,7 @@ func helpInternal() {
 	fmt.Println("\t\t -p password mode input (only used together with another command)")
 	fmt.Println("\t\t -f use a file as two-factor-authentification")
 	fmt.Println("\t -r generate random private key")
-	fmt.Println("\t -m print my public key")
+	fmt.Println("\t -k print my public key")
 	fmt.Println("\t -t sign text")
 	fmt.Println("\t -b sign binary data in hexadecimal representation")
 	fmt.Println("\t -v verify signature")
