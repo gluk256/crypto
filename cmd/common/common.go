@@ -208,3 +208,13 @@ func ImportPubKey() (key *ecdsa.PublicKey, err error) {
 	}
 	return key, err
 }
+
+func Confirm(question string) bool {
+	fmt.Printf("%s [y/n] ", question)
+	s := terminal.PlainTextInput()
+	if s == nil {
+		return false
+	}
+	answer := string(s)
+	return (answer == "y" || answer == "yes")
+}

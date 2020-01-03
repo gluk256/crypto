@@ -62,6 +62,7 @@ func loadKeys(flags string) error {
 
 	if strings.Contains(flags, "i") {
 		fmt.Println("======================> WARNING: insecure version without password, only use for test purposes!")
+		masterKey[0]++
 	} else {
 		pass := common.GetPassword(flags)
 		masterKey = primitives.XorInplace(masterKey, pass, 256)
@@ -176,5 +177,7 @@ func helpInternal() {
 	fmt.Println("\\h: display this help")
 	fmt.Println("\\f: send file")
 	fmt.Println("\\a: add remote peer")
+	fmt.Println("\\d: delete remote peer")
+	fmt.Println("\\i: print debug info")
 	fmt.Println("\\q: quit")
 }

@@ -168,9 +168,7 @@ func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, ste
 		}
 		crutils.AnnihilateData(key)
 		fmt.Printf("Failed to decrypt data: %s\n", err.Error())
-		fmt.Print("Do you want to retry? [y/n]: ")
-		res := terminal.PlainTextInput()
-		if len(res) > 0 && res[0] == 'n' {
+		if !common.Confirm("Do you want to retry?") {
 			return nil, nil, err
 		}
 	}

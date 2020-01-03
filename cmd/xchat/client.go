@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gluk256/crypto/asym"
 	"github.com/gluk256/crypto/cmd/common"
@@ -17,6 +19,7 @@ import (
 )
 
 type Session struct {
+	socket         net.Conn
 	permPeerKey    *ecdsa.PublicKey
 	ephPeerKey     *ecdsa.PublicKey
 	incomingMsgCnt uint32
@@ -27,18 +30,16 @@ type Session struct {
 const (
 	MessageTypeIndex = 5
 
-	Ack          = byte(8)
+	ACK          = byte(8)
 	EphemeralPub = byte(9)
 	TextType     = byte(64)
 	FileType     = byte(65)
 )
 
 var (
-	serverIP string
-	sess     Session
-
+	serverIP  string
+	sess      Session
 	whiteList [][]byte
-	blackList [][]byte
 )
 
 func resetSession() {
@@ -47,6 +48,15 @@ func resetSession() {
 	sess.incomingMsgCnt = 0
 	sess.outgoingMsgCnt = 0
 	sess.ack = false
+}
+
+func isListed(arr [][]byte, pub []byte) bool {
+	for _, b := range arr {
+		if bytes.Equal(b, pub) {
+			return true
+		}
+	}
+	return false
 }
 
 func startSession(conn net.Conn, override bool) bool {
@@ -60,27 +70,46 @@ func startSession(conn net.Conn, override bool) bool {
 		}
 	}
 
-	myEphemeral, err := asym.ExportPubKey(&ephemeralKey.PublicKey)
+	pub, err := asym.ExportPubKey(sess.permPeerKey)
 	if err != nil {
-		fmt.Printf("Failed to export pub key: %s \n", err.Error())
+		whiteList = append(whiteList, pub)
+	}
+
+	err = sendMyEphemeralKey()
+	if err != nil {
+		fmt.Printf("Failed to send ephemeral pub key: %s \n", err.Error())
 		return false
 	}
 
-	sig, err := asym.Sign(serverKey, myEphemeral)
+	return waitForAck()
+}
+
+func sendMyEphemeralKey() error {
+	myEphemeral, err := asym.ExportPubKey(&ephemeralKey.PublicKey)
 	if err != nil {
-		fmt.Printf("Failed to sign pub key: %s \n", err.Error())
-		return false
+		return err
+	}
+
+	sig, err := asym.Sign(clientKey, myEphemeral)
+	if err != nil {
+		return err
 	}
 
 	msg := append(myEphemeral, sig...)
-	err = sendMessage(conn, msg, EphemeralPub)
-	if err != nil {
-		return false
+	return sendMessage(sess.socket, msg, EphemeralPub)
+}
+
+func waitForAck() bool {
+	for i := 0; i < 100; i++ {
+		time.Sleep(100 * time.Millisecond)
+		if sess.ack && sess.ephPeerKey != nil {
+			fmt.Println("New session successfully established")
+			return true
+		}
 	}
 
-	// todo: wait for the completion
-	// todo: sometimes send new msgs
-	return true
+	fmt.Println("New session failed: ack was not received")
+	return false
 }
 
 func sendHandshakeToServer(conn net.Conn) error {
@@ -135,6 +164,8 @@ func runClientCmdLoop(conn net.Conn) {
 				resetSession()
 				startSession(conn, true)
 				continue
+			} else if strings.Contains(string(s), "i") {
+				printDiagnosticInfo()
 			} else {
 				continue
 			}
@@ -214,6 +245,7 @@ func runClient(flags string) {
 
 	fmt.Println("connected to server")
 	common.PrintPublicKey(&clientKey.PublicKey)
+	sess.socket = conn
 
 	err = sendHandshakeToServer(conn)
 	if err != nil {
@@ -251,12 +283,10 @@ func checkNonce(nonce uint32) {
 	if nonce != sess.incomingMsgCnt {
 		if sess.incomingMsgCnt != 0 {
 			fmt.Printf("unexpected msg nonce: [%d vs. %d] \n", nonce, sess.incomingMsgCnt)
-		} else {
-			sess.incomingMsgCnt = nonce
 		}
-	} else {
-		sess.incomingMsgCnt++
+		sess.incomingMsgCnt = nonce
 	}
+	sess.incomingMsgCnt++
 }
 
 func parsePacket(p []byte) (raw []byte, t byte, n uint32) {
@@ -272,6 +302,73 @@ func parsePacket(p []byte) (raw []byte, t byte, n uint32) {
 	return raw, t, n
 }
 
+func processIncomingEphemeralPub(msg []byte) {
+	const expectedSize = asym.PublicKeySize + asym.SignatureSize
+	if len(msg) != expectedSize {
+		fmt.Printf("Invalid EphemeralPub msg received: wrong size [%d vs %d] \n", len(msg), expectedSize)
+		return
+	}
+
+	data := msg[:asym.PublicKeySize]
+	sig := msg[asym.PublicKeySize:]
+	pub, err := asym.SigToPub(data, sig)
+	if err != nil {
+		fmt.Printf("Error processing EphemeralPub msg: signature recovery failed: %s \n", err.Error())
+		return
+	}
+
+	if sess.ack {
+		return
+	}
+
+	if !isListed(whiteList, pub) {
+		fmt.Printf("EphemeralPub msg received from: %x\n", pub)
+		if !common.Confirm("Would you like to accept?") {
+			fmt.Println("Session declined")
+			return
+		}
+	}
+
+	fmt.Println("Session init 3") // todo: delete
+	perm, err := asym.ImportPubKey(pub)
+	if err != nil {
+		fmt.Printf("Error processing EphemeralPub msg: failed to import main key: %s \n", err.Error())
+		return
+	}
+	fmt.Println("Session init 4") // todo: delete
+	eph, err := asym.ImportPubKey(data)
+	if err != nil {
+		fmt.Printf("Error processing EphemeralPub msg: failed to import ephemeral key: %s \n", err.Error())
+		return
+	}
+	fmt.Println("Session init 5") // todo: delete
+	sess.permPeerKey = perm
+	sess.ephPeerKey = eph
+
+	err = sendAck()
+	if err != nil {
+		fmt.Printf("Error sending ACK msg: %s \n", err.Error())
+		return
+	}
+
+	fmt.Println("Session init 6") // todo: delete
+	err = sendMyEphemeralKey()
+	if err != nil {
+		fmt.Printf("Error sending EPH msg: %s \n", err.Error())
+		return
+	}
+
+	fmt.Println("New session initiated")
+	waitForAck()
+}
+
+func sendAck() error {
+	msg := make([]byte, 64)
+	crutils.Randomize(msg)
+	return sendMessage(sess.socket, msg, ACK)
+}
+
+// todo: add param sig after decryption is implemented
 func processMessage(raw []byte, t byte, nonce uint32) {
 	// todo: process other types
 	if t == TextType {
@@ -281,18 +378,32 @@ func processMessage(raw []byte, t byte, nonce uint32) {
 		name := fmt.Sprintf("%x", h)
 		common.SaveData(name, raw)
 		fmt.Printf("[%03d]: saved msg as file %s \n", nonce, name)
+	} else if t == EphemeralPub {
+		processIncomingEphemeralPub(raw)
+	} else if t == ACK {
+		sess.ack = true // todo: check if sess.ephKey == sig
+		fmt.Println("ACK received!")
 	} else {
 		fmt.Println("unknown message type")
 	}
 }
 
 func processPacket(p []byte) {
-
-	// todo: decrypt, extract header, and decide what to do accordingly
-
+	// todo: decrypt
 	raw, t, nonce := parsePacket(p)
 	if raw != nil {
 		checkNonce(nonce)
 		processMessage(raw, t, nonce)
 	}
+}
+
+func printDiagnosticInfo() {
+	var eph, perm string
+	if sess.permPeerKey != nil {
+		perm = "ok"
+	}
+	if sess.ephPeerKey != nil {
+		eph = "ok"
+	}
+	fmt.Printf("eph: %s, perm: %s, in = %d, out = %d, ack = %v \n", eph, perm, sess.incomingMsgCnt, sess.outgoingMsgCnt, sess.ack)
 }

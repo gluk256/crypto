@@ -53,6 +53,10 @@ func TestGeneral(t *testing.T) {
 	if !bytes.Equal(p1, p2) {
 		t.Fatal("consistency check failed")
 	}
+
+	if len(p1) != PublicKeySize {
+		t.Fatalf("key export failed: wrong size [%d vs. %d]", len(p1), PublicKeySize)
+	}
 }
 
 func singleKeyTest(t *testing.T, key *ecdsa.PrivateKey) {
@@ -81,6 +85,10 @@ func singleKeyTest(t *testing.T, key *ecdsa.PrivateKey) {
 		sig, err = Sign(key, data)
 		if err != nil {
 			t.Fatalf("sign failed: %s", err.Error())
+		}
+
+		if len(sig) != SignatureSize {
+			t.Fatalf("wrong signature size: %d", len(sig))
 		}
 
 		recovered, err := SigToPub(data, sig)

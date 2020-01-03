@@ -74,7 +74,7 @@ func deleteContent(i int) {
 
 func checkQuit() bool {
 	if items[cur].changed {
-		//return confirm("The file is not saved. Do you really want to quit and lose the changes?") // todo: uncomment
+		return common.Confirm("The file is not saved. Do you really want to quit and lose the changes?") // todo: uncomment
 	}
 	return true
 }
@@ -85,16 +85,6 @@ func reset(all bool) {
 	} else {
 		deleteContent(cur)
 	}
-}
-
-func confirm(question string) bool {
-	fmt.Printf("%s [y/n] ", question)
-	s := terminal.PlainTextInput()
-	if s == nil {
-		return false
-	}
-	answer := string(s)
-	return (answer == "y" || answer == "yes")
 }
 
 func ls() {
@@ -111,7 +101,7 @@ func ls() {
 func getKey(index int, cryptic bool, checkExisting bool) (res []byte) {
 	if len(items[index].key) > 0 {
 		if checkExisting {
-			if confirm("Do you want to use existing key? ") {
+			if common.Confirm("Do you want to use existing key?") {
 				return items[index].key
 			}
 		}

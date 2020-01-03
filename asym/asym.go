@@ -17,6 +17,8 @@ import (
 // These functions are imported from ethereum - one of the most audited open source projects.
 
 const EncryptedSizeDiff = 113
+const SignatureSize = 65
+const PublicKeySize = 33
 
 func ImportPrivateKey(raw []byte) (key *ecdsa.PrivateKey, err error) {
 	return crypto.ToECDSA(raw)
