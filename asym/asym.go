@@ -22,8 +22,13 @@ func ImportPrivateKey(raw []byte) (key *ecdsa.PrivateKey, err error) {
 	return crypto.ToECDSA(raw)
 }
 
-func GenerateKey() (*ecdsa.PrivateKey, error) {
-	return crypto.GenerateKey()
+func GenerateKey() (key *ecdsa.PrivateKey, err error) {
+	raw := make([]byte, 32)
+	err = crutils.StochasticRand(raw)
+	if err == nil {
+		key, err = ImportPrivateKey(raw)
+	}
+	return key, err
 }
 
 func ExportPubKey(key *ecdsa.PublicKey) (res []byte, err error) {

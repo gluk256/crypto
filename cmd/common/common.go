@@ -2,6 +2,7 @@ package common
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -163,4 +164,47 @@ func PrintPublicKey(k *ecdsa.PublicKey) {
 	} else {
 		fmt.Printf("Your public key: %x\n", pub)
 	}
+}
+
+func GetText(cmd string, legend string) (text []byte) {
+	if strings.Contains(cmd, "s") {
+		text = terminal.SecureInput(false)
+	} else {
+		fmt.Printf("please enter %s: ", legend)
+		if strings.Contains(cmd, "p") {
+			text = terminal.PasswordModeInput()
+		} else {
+			text = terminal.PlainTextInput()
+		}
+	}
+	return text
+}
+
+func GetHexData(legend string) (res []byte) {
+	fmt.Printf("please enter %s: ", legend)
+	raw := terminal.PlainTextInput()
+	res = make([]byte, len(raw)/2)
+	_, err := hex.Decode(res, raw)
+	crutils.AnnihilateData(raw)
+	if err != nil {
+		fmt.Printf("Error decoding hex data: %s\n", err.Error())
+		return nil
+	}
+	return res
+}
+
+func ImportPubKey() (key *ecdsa.PublicKey, err error) {
+	x := GetHexData("public key")
+	defer crutils.AnnihilateData(x)
+	if x != nil {
+		key, err = asym.ImportPubKey(x)
+		if err != nil {
+			fmt.Printf("Error importing public key: %s\n", err.Error())
+		}
+	} else {
+		info := string("wrong input")
+		fmt.Println(info)
+		err = errors.New(info)
+	}
+	return key, err
 }

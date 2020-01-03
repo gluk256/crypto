@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -38,50 +37,17 @@ func setMyKey(key *ecdsa.PrivateKey) {
 	common.PrintPublicKey(&myKey.PublicKey)
 }
 
-func getText(cmd string, legend string) (text []byte) {
-	if strings.Contains(cmd, "s") {
-		text = terminal.SecureInput(false)
-	} else {
-		fmt.Printf("please enter %s: ", legend)
-		if strings.Contains(cmd, "p") {
-			text = terminal.PasswordModeInput()
-		} else {
-			text = terminal.PlainTextInput()
-		}
-	}
-	return text
-}
-
-func getHexData(legend string) (res []byte) {
-	fmt.Printf("please enter %s: ", legend)
-	raw := terminal.PlainTextInput()
-	res = make([]byte, len(raw)/2)
-	_, err := hex.Decode(res, raw)
-	crutils.AnnihilateData(raw)
-	if err != nil {
-		fmt.Printf("Error decoding hex data: %s\n", err.Error())
-		return nil
-	}
-	return res
-}
-
-func importPubKey() {
-	x := getHexData("public key")
-	if x != nil {
-		key, err := asym.ImportPubKey(x)
-		if err != nil {
-			fmt.Printf("Error importing public key: %s\n", err.Error())
-		} else {
-			remotePeer = key
-		}
-	}
-	crutils.AnnihilateData(x)
-}
-
 func importPrivateKey(cmd string) {
 	key, err := common.ImportPrivateKey(cmd)
 	if err != nil {
 		setMyKey(key)
+	}
+}
+
+func importPubKey() {
+	key, err := common.ImportPubKey()
+	if err != nil {
+		remotePeer = key
 	}
 }
 
@@ -123,7 +89,7 @@ func main() {
 }
 
 func processDecryption() {
-	data := getHexData("data for decryption")
+	data := common.GetHexData("data for decryption")
 	if data == nil {
 		return
 	}
@@ -144,7 +110,7 @@ func processDecryption() {
 }
 
 func processEncryption(cmd string) {
-	text := getText(cmd, "your text")
+	text := common.GetText(cmd, "your text")
 	if remotePeer == nil {
 		importPubKey()
 	}
@@ -161,9 +127,9 @@ func processEncryption(cmd string) {
 func sign(cmd string, hexadecimal bool) {
 	var data []byte
 	if hexadecimal {
-		data = getHexData("data for signing")
+		data = common.GetHexData("data for signing")
 	} else {
-		data = getText(cmd, "data for signing")
+		data = common.GetText(cmd, "data for signing")
 	}
 	if data == nil {
 		return
@@ -182,14 +148,14 @@ func sign(cmd string, hexadecimal bool) {
 func verify(hexadecimal bool) {
 	var data, sig []byte
 	if hexadecimal {
-		data = getHexData("data")
+		data = common.GetHexData("data")
 	} else {
-		data = getText("", "data")
+		data = common.GetText("", "data")
 	}
 	if data == nil {
 		return
 	}
-	sig = getHexData("signature")
+	sig = common.GetHexData("signature")
 	if sig == nil {
 		return
 	}

@@ -2,10 +2,11 @@ package primitives
 
 // this package must not import any dependencies
 
-func XorInplace(dst []byte, gamma []byte, sz int) {
+func XorInplace(dst []byte, gamma []byte, sz int) []byte {
 	for i := 0; i < sz; i++ {
 		dst[i] ^= gamma[i]
 	}
+	return dst
 }
 
 func Min(a, b int) int {
@@ -46,7 +47,7 @@ func Substitute(s []byte, prev byte, ersatz byte) {
 
 func IsDeepNotEqual(a []byte, b []byte, sz int) bool {
 	const block = 5
-	for i := 0; i < sz - block; i++ {
+	for i := 0; i < sz-block; i++ {
 		ok := isBlockNotEqual(a, b, i, block)
 		if !ok {
 			//fmt.Printf("%d [%x] [%x]\n[%x]\n[%x]\n", i, a[i:i+block], b[i:i+block], a, b)
@@ -57,7 +58,7 @@ func IsDeepNotEqual(a []byte, b []byte, sz int) bool {
 }
 
 func isBlockNotEqual(a []byte, b []byte, off int, block int) bool {
-	for i := off; i < off + block; i++ {
+	for i := off; i < off+block; i++ {
 		if a[i] != b[i] {
 			return true
 		}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gluk256/crypto/asym"
+	"github.com/gluk256/crypto/cmd/common"
 	"github.com/gluk256/crypto/terminal"
 )
 
@@ -18,7 +19,7 @@ func init() {
 	connexxions = make([]net.Conn, 0, 32000)
 }
 
-func printDiagnosticInfo() {
+func printServerInfo() {
 	var n int
 	mx.Lock()
 	n = len(connexxions)
@@ -26,7 +27,7 @@ func printDiagnosticInfo() {
 	fmt.Printf("%d peers connected\n", n)
 }
 
-func verifyMessage(msg []byte) bool {
+func verifyServerHandshake(msg []byte) bool {
 	_, err := asym.Decrypt(serverKey, msg)
 	if err != nil {
 		fmt.Printf("verification failed: %s \n", err)
@@ -35,13 +36,13 @@ func verifyMessage(msg []byte) bool {
 	return true
 }
 
-func addConnexxion(c net.Conn) {
+func addServerConnexxion(c net.Conn) {
 	mx.Lock()
 	defer mx.Unlock()
 	connexxions = append(connexxions, c)
 }
 
-func removeConnexxion(target net.Conn) {
+func removeServerConnexxion(target net.Conn) {
 	mx.Lock()
 	defer mx.Unlock()
 
@@ -80,7 +81,7 @@ func shutdownServer(ln net.Listener) {
 	}
 }
 
-func runConnexxionsLoop(ln net.Listener) {
+func runServerConnexxionsLoop(ln net.Listener) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -94,13 +95,13 @@ func runConnexxionsLoop(ln net.Listener) {
 			continue
 		}
 
-		if !verifyMessage(msg) {
+		if !verifyServerHandshake(msg) {
 			fmt.Println("Connexxion verification failed")
 			conn.Close()
 			continue
 		}
 
-		addConnexxion(conn)
+		addServerConnexxion(conn)
 		go runServerMessageLoop(conn)
 	}
 }
@@ -111,13 +112,13 @@ func runServerMessageLoop(conn net.Conn) {
 		if err != nil {
 			break
 		}
-		processPacketServer(conn, msg)
+		forwardPacketToClients(conn, msg)
 	}
 
-	removeConnexxion(conn)
+	removeServerConnexxion(conn)
 }
 
-func processPacketServer(src net.Conn, msg []byte) {
+func forwardPacketToClients(src net.Conn, msg []byte) {
 	mx.Lock()
 	defer mx.Unlock()
 
@@ -136,14 +137,15 @@ func runServer() {
 	}
 
 	fmt.Println("xserver v.1 started")
-	go runConnexxionsLoop(ln)
+	common.PrintPublicKey(&serverKey.PublicKey)
+	go runServerConnexxionsLoop(ln)
 
 	for {
 		cmd := terminal.PlainTextInput()
 		if strings.Contains(string(cmd), "q") {
 			break
 		} else if strings.Contains(string(cmd), "i") {
-			printDiagnosticInfo()
+			printServerInfo()
 		}
 	}
 

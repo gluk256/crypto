@@ -110,9 +110,12 @@ func TestXorInplace(t *testing.T) {
 		t.Fatal("xor failed deep check")
 	}
 
-	XorInplace(b1, gamma, sz)
+	z := XorInplace(b1, gamma, sz)
 	if !bytes.Equal(b1, b2) {
 		t.Fatal("decrypt failed")
+	}
+	if &z[0] != &b1[0] {
+		t.Fatal("wrong return value")
 	}
 
 	XorInplace(b1, b1, sz)

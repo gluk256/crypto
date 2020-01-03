@@ -22,9 +22,10 @@ const (
 )
 
 var (
-	masterKey []byte
-	serverKey *ecdsa.PrivateKey
-	clientKey *ecdsa.PrivateKey
+	masterKey    []byte
+	serverKey    *ecdsa.PrivateKey
+	clientKey    *ecdsa.PrivateKey
+	ephemeralKey *ecdsa.PrivateKey
 
 	remoteServerPubKey *ecdsa.PublicKey
 )
@@ -33,17 +34,19 @@ func cleanup() {
 	crutils.AnnihilateData(masterKey)
 	asym.AnnihilatePrivateKey(serverKey)
 	asym.AnnihilatePrivateKey(clientKey)
+	asym.AnnihilatePrivateKey(ephemeralKey)
 }
 
 func loadKeys(flags string) error {
-	h, err := common.LoadCertificate()
+	cert, err := common.LoadCertificate()
+	masterKey = cert
 	if err != nil {
 		return err
 	}
 
-	h = keccak.Digest(h, 432)
-	masterKey = h[:256]
-	serverKey, err = asym.ImportPrivateKey(h[300:332])
+	sk := keccak.Digest(cert, 32)
+	defer crutils.AnnihilateData(sk)
+	serverKey, err = asym.ImportPrivateKey(sk)
 	if err != nil {
 		return err
 	}
@@ -52,8 +55,8 @@ func loadKeys(flags string) error {
 		return nil
 	}
 
-	clientKey, err = asym.ImportPrivateKey(h[400:432])
-	if err == nil {
+	ephemeralKey, err = asym.GenerateKey()
+	if err != nil {
 		return err
 	}
 
@@ -61,7 +64,15 @@ func loadKeys(flags string) error {
 		fmt.Println("======================> WARNING: insecure version without password, only use for test purposes!")
 	} else {
 		pass := common.GetPassword(flags)
-		primitives.XorInplace(masterKey, pass, 256)
+		masterKey = primitives.XorInplace(masterKey, pass, 256)
+		crutils.AnnihilateData(pass)
+	}
+
+	ck := keccak.Digest(masterKey, 32)
+	defer crutils.AnnihilateData(ck)
+	clientKey, err = asym.ImportPrivateKey(ck)
+	if err != nil {
+		return err
 	}
 
 	return err
