@@ -1,12 +1,12 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/gluk256/crypto/asym"
@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	MessageType = 5
+	MessageTypeIndex = 5
 
 	Handshake    = byte(0)
 	EphemeralPub = byte(1)
@@ -26,21 +26,19 @@ const (
 )
 
 var (
+	serverIP       string
 	incomingMsgCnt uint32
 	outgoingMsgCnt uint32
 )
 
-func runHandshakeWithServer(conn net.Conn, local bool) error {
-	var pub *ecdsa.PublicKey
-	if local {
-		pub = &serverKey.PublicKey
-	} else {
-		// todo: parse params
-	}
+func invitePeerToChatSession() {
+	// todo: implement
+}
 
+func runHandshakeWithServer(conn net.Conn) error {
 	b := make([]byte, 256)
 	crutils.Randomize(b)
-	encrypted, err := asym.Encrypt(pub, b) // todo: get the key from params (unless server is on localhost)
+	encrypted, err := asym.Encrypt(remoteServerPubKey, b)
 	if err == nil {
 		err = sendPacket(conn, encrypted)
 	}
@@ -53,49 +51,42 @@ func runClientMessageLoop(c net.Conn) {
 		if err != nil {
 			break
 		}
-		go processPacketC(p)
+		go processPacketClient(p)
 	}
 	c.Close()
 }
 
-func runClient(flags string) {
-	local := strings.Contains(flags, "l")
-	if local {
-		err := loadKeys()
-		if err != nil {
-			fmt.Printf("Failed to load private key: %s \n", err.Error())
-			return
-		}
-	}
+func isCmd(b []byte) bool {
+	s := string(b)
+	return s[0] == '\\' || s[0] == '/'
+}
 
-	fmt.Println("xchat v.1 started")
-	conn, err := net.Dial("tcp", string("127.0.0.1:")+getPort())
-	if err != nil {
-		fmt.Printf("Client error: %s \n", err.Error())
-		return
-	}
-
-	fmt.Println("connected to server")
-	err = runHandshakeWithServer(conn, local)
-	if err != nil {
-		fmt.Printf("Handshake failed: %s \n", err.Error())
-	}
-
-	go runClientMessageLoop(conn)
-
+func runClientCmdLoop(conn net.Conn) {
+	var err error
 	for {
 		s := terminal.PlainTextInput()
+		if len(s) == 0 {
+			continue
+		}
 		data := s
 		t := TextType
 
-		if len(s) == 0 {
-			continue
-		} else if isExitCmd(s) {
-			break
-		} else if isSendFileCmd(s) {
-			t = FileType
-			data, err = loadFile()
-			if err != nil {
+		if isCmd(s) {
+			if strings.Contains(string(s), "h") {
+				helpInternal()
+				continue
+			} else if strings.Contains(string(s), "q") {
+				break
+			} else if strings.Contains(string(s), "f") {
+				t = FileType
+				data, err = loadFile()
+				if err != nil {
+					continue
+				}
+			} else if strings.Contains(string(s), "p") {
+				invitePeerToChatSession()
+				continue
+			} else {
 				continue
 			}
 		}
@@ -109,7 +100,51 @@ func runClient(flags string) {
 			break
 		}
 	}
+}
 
+func loadConnexxionParams(flags string) bool {
+	if strings.Contains(flags, "l") {
+		serverIP = getDefaultIP()
+		remoteServerPubKey = &serverKey.PublicKey
+	} else if len(os.Args) < 4 {
+		fmt.Println("Can not connect to the server: not enough parameters")
+		return false
+	} else {
+		serverIP = os.Args[2]
+		if !strings.Contains(serverIP, ":") {
+			serverIP += getDefaultPort()
+		}
+
+		k, err := asym.ImportPubKey([]byte(os.Args[3]))
+		if err != nil {
+			fmt.Println("Can not connect to the server: not enough parameters")
+			return false
+		}
+		remoteServerPubKey = k
+	}
+	return true
+}
+
+func runClient(flags string) {
+	if !loadConnexxionParams(flags) {
+		return
+	}
+
+	fmt.Println("xchat v.1 started")
+	conn, err := net.Dial("tcp", serverIP)
+	if err != nil {
+		fmt.Printf("Client error: %s \n", err.Error())
+		return
+	}
+
+	fmt.Println("connected to server")
+	err = runHandshakeWithServer(conn)
+	if err != nil {
+		fmt.Printf("Handshake failed: %s \n", err.Error())
+	}
+
+	go runClientMessageLoop(conn)
+	runClientCmdLoop(conn)
 	conn.Close()
 }
 
@@ -132,13 +167,13 @@ func prepareMessage(p []byte, msgType byte) ([]byte, error) {
 	suffix := make([]byte, SuffixSize)
 	outgoingMsgCnt++
 	binary.LittleEndian.PutUint32(suffix, outgoingMsgCnt)
-	suffix[MessageType] = msgType
+	suffix[MessageTypeIndex] = msgType
 	p = append(p, suffix...)
 	// todo: encryption here
 	return p, nil
 }
 
-func processPacketC(p []byte) error {
+func processPacketClient(p []byte) error {
 	// todo: decrypt, extract header, and decide what to do accordingly
 	sz := len(p)
 	if sz < SuffixSize {
@@ -146,7 +181,7 @@ func processPacketC(p []byte) error {
 	}
 	suffix := p[sz-SuffixSize:]
 	p = p[:sz-SuffixSize]
-	t := suffix[MessageType]
+	t := suffix[MessageTypeIndex]
 	num := binary.LittleEndian.Uint32(suffix)
 
 	if (t & 64) == 0 {

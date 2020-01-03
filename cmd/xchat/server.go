@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -73,6 +74,10 @@ func shutdownServer(ln net.Listener) {
 		sz = len(connexxions)
 		mx.Unlock()
 	}
+
+	if sz > 0 {
+		fmt.Printf("Incorrect shutdown: failed to close %d connexxions\n", sz)
+	}
 }
 
 func runConnexxionsLoop(ln net.Listener) {
@@ -106,13 +111,13 @@ func runServerMessageLoop(conn net.Conn) {
 		if err != nil {
 			break
 		}
-		processPacketS(conn, msg)
+		processPacketServer(conn, msg)
 	}
 
 	removeConnexxion(conn)
 }
 
-func processPacketS(src net.Conn, msg []byte) {
+func processPacketServer(src net.Conn, msg []byte) {
 	mx.Lock()
 	defer mx.Unlock()
 
@@ -124,13 +129,7 @@ func processPacketS(src net.Conn, msg []byte) {
 }
 
 func runServer() {
-	err := loadKeys()
-	if err != nil {
-		fmt.Printf("Failed to load private key: %s \n", err.Error())
-		return
-	}
-
-	ln, err := net.Listen("tcp", string("127.0.0.1:")+getPort())
+	ln, err := net.Listen("tcp", getDefaultIP())
 	if err != nil {
 		fmt.Printf("Server error: %s \n", err.Error())
 		return
@@ -141,9 +140,9 @@ func runServer() {
 
 	for {
 		cmd := terminal.PlainTextInput()
-		if isExitCmd(cmd) {
+		if strings.Contains(string(cmd), "q") {
 			break
-		} else if string(cmd) == "i" {
+		} else if strings.Contains(string(cmd), "i") {
 			printDiagnosticInfo()
 		}
 	}
