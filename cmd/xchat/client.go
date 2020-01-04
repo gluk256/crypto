@@ -19,7 +19,7 @@ import (
 )
 
 type Session struct {
-	socket         net.Conn
+	permPubHex     []byte
 	permPeerKey    *ecdsa.PublicKey
 	ephPeerKey     *ecdsa.PublicKey
 	incomingMsgCnt uint32
@@ -28,21 +28,31 @@ type Session struct {
 }
 
 const (
+	debugMode = true
+
+	MinMessageSize   = 256 // todo: use it for padding the thex
 	MessageTypeIndex = 5
 
-	ACK          = byte(8)
-	EphemeralPub = byte(9)
+	Invite       = byte(1)
+	ACK          = byte(2)
+	CloseSession = byte(4)
+	CloseAck     = byte(8)
 	TextType     = byte(64)
-	FileType     = byte(65)
+	FileType     = byte(128)
+
+	ProtoThreshold = CloseAck
+	UserThreshold  = TextType
 )
 
 var (
+	socket    net.Conn
 	serverIP  string
 	sess      Session
 	whiteList [][]byte
 )
 
 func resetSession() {
+	sess.permPubHex = nil
 	sess.permPeerKey = nil
 	sess.ephPeerKey = nil
 	sess.incomingMsgCnt = 0
@@ -59,7 +69,7 @@ func isListed(arr [][]byte, pub []byte) bool {
 	return false
 }
 
-func startSession(conn net.Conn, override bool) bool {
+func invitePeerToChatSession(override bool) bool {
 	if sess.permPeerKey == nil || override {
 		key, err := common.ImportPubKey()
 		if err != nil {
@@ -75,16 +85,17 @@ func startSession(conn net.Conn, override bool) bool {
 		whiteList = append(whiteList, pub)
 	}
 
-	err = sendMyEphemeralKey()
+	err = sendMyEphemeralKey(false)
 	if err != nil {
 		fmt.Printf("Failed to send ephemeral pub key: %s \n", err.Error())
 		return false
 	}
 
+	fmt.Println("New session successfully initiated")
 	return waitForAck()
 }
 
-func sendMyEphemeralKey() error {
+func sendMyEphemeralKey(ack bool) error {
 	myEphemeral, err := asym.ExportPubKey(&ephemeralKey.PublicKey)
 	if err != nil {
 		return err
@@ -96,7 +107,12 @@ func sendMyEphemeralKey() error {
 	}
 
 	msg := append(myEphemeral, sig...)
-	return sendMessage(sess.socket, msg, EphemeralPub)
+	t := Invite
+	if ack {
+		t |= ACK
+	}
+
+	return sendMessage(msg, t)
 }
 
 func waitForAck() bool {
@@ -112,25 +128,25 @@ func waitForAck() bool {
 	return false
 }
 
-func sendHandshakeToServer(conn net.Conn) error {
+func sendHandshakeToServer() error {
 	b := make([]byte, 256)
 	crutils.Randomize(b)
 	encrypted, err := asym.Encrypt(remoteServerPubKey, b)
 	if err == nil {
-		err = sendPacket(conn, encrypted)
+		err = sendPacket(socket, encrypted)
 	}
 	return err
 }
 
-func runClientMessageLoop(c net.Conn) {
+func runClientMessageLoop() {
 	for {
-		p, err := receivePacket(c)
+		p, err := receivePacket(socket)
 		if err != nil {
-			break
+			socket.Close()
+			return
 		}
 		go processPacket(p)
 	}
-	c.Close()
 }
 
 func isCmd(b []byte) bool {
@@ -138,7 +154,7 @@ func isCmd(b []byte) bool {
 	return s[0] == '\\' || s[0] == '/'
 }
 
-func runClientCmdLoop(conn net.Conn) {
+func runClientCmdLoop() {
 	var err error
 	for {
 		s := terminal.PlainTextInput()
@@ -162,7 +178,7 @@ func runClientCmdLoop(conn net.Conn) {
 				}
 			} else if strings.Contains(string(s), "a") {
 				resetSession()
-				startSession(conn, true)
+				invitePeerToChatSession(true)
 				continue
 			} else if strings.Contains(string(s), "i") {
 				printDiagnosticInfo()
@@ -171,17 +187,17 @@ func runClientCmdLoop(conn net.Conn) {
 			}
 		}
 
-		err = sendMessage(conn, data, t)
+		err = sendMessage(data, t)
 		if err != nil {
 			break
 		}
 	}
 }
 
-func sendMessage(conn net.Conn, data []byte, t byte) error {
+func sendMessage(data []byte, t byte) error {
 	p, err := packMessage(data, t)
 	if err == nil {
-		err = sendPacket(conn, p)
+		err = sendPacket(socket, p)
 	}
 	if err != nil {
 		fmt.Printf("Failed to send message: %s \n", err.Error())
@@ -189,7 +205,31 @@ func sendMessage(conn net.Conn, data []byte, t byte) error {
 	return err
 }
 
+func padMessage(p []byte) []byte {
+	newSize := getRandMessageSize()
+	prevSize := len(p)
+	if newSize > prevSize {
+		suffix := make([]byte, newSize-prevSize)
+		crutils.Randomize(suffix)
+		suffix[0] = 0
+		p = append(p, suffix...)
+	}
+	return p
+}
+
+func removePadding(p []byte) []byte {
+	i := bytes.IndexByte(p, byte(0))
+	if i >= 0 {
+		p = p[:i]
+	}
+	return p
+}
+
 func packMessage(p []byte, msgType byte) ([]byte, error) {
+	if msgType == TextType {
+		p = padMessage(p)
+	}
+	// todo: data destruction
 	suffix := make([]byte, SuffixSize)
 	sess.outgoingMsgCnt++
 	binary.LittleEndian.PutUint32(suffix, sess.outgoingMsgCnt)
@@ -232,6 +272,7 @@ func loadConnexxionParams(flags string) bool {
 }
 
 func runClient(flags string) {
+	common.PrintPublicKey(&clientKey.PublicKey)
 	if !loadConnexxionParams(flags) {
 		return
 	}
@@ -242,25 +283,23 @@ func runClient(flags string) {
 		fmt.Printf("Client error: %s \n", err.Error())
 		return
 	}
-
 	fmt.Println("connected to server")
-	common.PrintPublicKey(&clientKey.PublicKey)
-	sess.socket = conn
+	socket = conn
 
-	err = sendHandshakeToServer(conn)
+	err = sendHandshakeToServer()
 	if err != nil {
 		fmt.Printf("Handshake failed: %s \n", err.Error())
 	}
 
-	go runClientMessageLoop(conn)
+	go runClientMessageLoop()
 
 	if sess.permPeerKey != nil || strings.Contains(flags, "a") {
-		if !startSession(conn, false) {
+		if !invitePeerToChatSession(false) {
 			return
 		}
 	}
 
-	runClientCmdLoop(conn)
+	runClientCmdLoop()
 	conn.Close()
 }
 
@@ -317,74 +356,97 @@ func processIncomingEphemeralPub(msg []byte) {
 		return
 	}
 
-	if sess.ack {
+	// if sess.ephPeerKey != nil {
+	// 	return
+	// }
+
+	if !isListed(whiteList, pub) {
+		fmt.Printf("\nSession invite received from: %x\n", pub)
+		fmt.Println("If you trust this key, you should add it explicitly [use '\\a' command]")
 		return
 	}
 
-	if !isListed(whiteList, pub) {
-		fmt.Printf("EphemeralPub msg received from: %x\n", pub)
-		if !common.Confirm("Would you like to accept?") {
-			fmt.Println("Session declined")
-			return
-		}
-	}
-
-	fmt.Println("Session init 3") // todo: delete
 	perm, err := asym.ImportPubKey(pub)
 	if err != nil {
 		fmt.Printf("Error processing EphemeralPub msg: failed to import main key: %s \n", err.Error())
 		return
 	}
-	fmt.Println("Session init 4") // todo: delete
 	eph, err := asym.ImportPubKey(data)
 	if err != nil {
 		fmt.Printf("Error processing EphemeralPub msg: failed to import ephemeral key: %s \n", err.Error())
 		return
 	}
-	fmt.Println("Session init 5") // todo: delete
 	sess.permPeerKey = perm
 	sess.ephPeerKey = eph
 
-	err = sendAck()
-	if err != nil {
-		fmt.Printf("Error sending ACK msg: %s \n", err.Error())
-		return
-	}
-
-	fmt.Println("Session init 6") // todo: delete
-	err = sendMyEphemeralKey()
+	err = sendMyEphemeralKey(true)
 	if err != nil {
 		fmt.Printf("Error sending EPH msg: %s \n", err.Error())
 		return
 	}
 
-	fmt.Println("New session initiated")
+	fmt.Println("New session initiated by remote peer")
 	waitForAck()
 }
 
-func sendAck() error {
-	msg := make([]byte, 64)
-	crutils.Randomize(msg)
-	return sendMessage(sess.socket, msg, ACK)
+func getRandMessageSize() (r int) {
+	r = MinMessageSize
+	r += int(crutils.PseudorandomUint64()) % MinMessageSize
+	return r
 }
 
-// todo: add param sig after decryption is implemented
-func processMessage(raw []byte, t byte, nonce uint32) {
-	// todo: process other types
-	if t == TextType {
-		fmt.Printf("[%03d][%s] \n", nonce, string(raw))
-	} else if t == FileType {
+func sendRandomMessage(t byte) error {
+	msg := make([]byte, getRandMessageSize())
+	crutils.Randomize(msg)
+	return sendMessage(msg, t)
+}
+
+func processUserMessage(raw []byte, t byte, nonce uint32) {
+	if t == FileType {
 		h := crutils.Sha2(raw)
 		name := fmt.Sprintf("%x", h)
 		common.SaveData(name, raw)
 		fmt.Printf("[%03d]: saved msg as file %s \n", nonce, name)
-	} else if t == EphemeralPub {
-		processIncomingEphemeralPub(raw)
-	} else if t == ACK {
-		sess.ack = true // todo: check if sess.ephKey == sig
-		fmt.Println("ACK received!")
+	} else if t == TextType {
+		raw = removePadding(raw)
+		fmt.Printf("[%03d][%s] \n", nonce, string(raw))
 	} else {
-		fmt.Println("unknown message type")
+		fmt.Printf("[%03d]: unknown message type %d \n", nonce, int(t))
+	}
+}
+
+func processProtocolMessage(raw []byte, t byte, nonce uint32) {
+	if debugMode {
+		fmt.Printf("[%03d]{msg received: type = %d, size = %d} \n", nonce, int(t), len(raw))
+	}
+
+	if t > ProtoThreshold {
+		fmt.Printf("unknown protocol message type: %d \n", int(t))
+	}
+
+	if (t & Invite) != 0 {
+		processIncomingEphemeralPub(raw)
+	}
+
+	if (t & ACK) != 0 {
+		sess.ack = true // todo: check if sess.ephKey == sig
+	}
+
+	if (t & CloseSession) != 0 {
+		// todo: implement
+	}
+
+	if (t & CloseAck) != 0 {
+		// todo: implement?
+	}
+}
+
+// todo: add param sig after decryption is implemented
+func processMessage(raw []byte, t byte, nonce uint32) {
+	if t < UserThreshold {
+		processProtocolMessage(raw, t, nonce)
+	} else {
+		processUserMessage(raw, t, nonce)
 	}
 }
 

@@ -83,31 +83,6 @@ func isServer(flags string) bool {
 	return len(flags) == 0
 }
 
-func main() {
-	var flags string
-	if len(os.Args) > 1 {
-		flags = os.Args[1]
-	}
-
-	if strings.Contains(flags, "h") {
-		help()
-		return
-	}
-
-	defer cleanup()
-	err := loadKeys(flags)
-	if err != nil {
-		fmt.Printf("Failed to load private key: %s \n", err.Error())
-		return
-	}
-
-	if isServer(flags) {
-		runServer()
-	} else {
-		runClient(flags)
-	}
-}
-
 func getDefaultIP() string {
 	return string("127.0.0.1:") + getDefaultPort()
 }
@@ -180,4 +155,29 @@ func helpInternal() {
 	fmt.Println("\\d: delete remote peer")
 	fmt.Println("\\i: print debug info")
 	fmt.Println("\\q: quit")
+}
+
+func main() {
+	var flags string
+	if len(os.Args) > 1 {
+		flags = os.Args[1]
+	}
+
+	if strings.Contains(flags, "h") {
+		help()
+		return
+	}
+
+	defer cleanup()
+	err := loadKeys(flags)
+	if err != nil {
+		fmt.Printf("Failed to load private key: %s \n", err.Error())
+		return
+	}
+
+	if isServer(flags) {
+		runServer()
+	} else {
+		runClient(flags)
+	}
 }

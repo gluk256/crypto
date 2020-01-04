@@ -162,7 +162,7 @@ func PrintPublicKey(k *ecdsa.PublicKey) {
 	if err != nil {
 		fmt.Printf("Failed to export public key: %s", err.Error())
 	} else {
-		fmt.Printf("Your public key: %x\n", pub)
+		fmt.Printf("public key: %x\n", pub)
 	}
 }
 

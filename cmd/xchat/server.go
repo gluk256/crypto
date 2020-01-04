@@ -130,6 +130,7 @@ func forwardPacketToClients(src net.Conn, msg []byte) {
 }
 
 func runServer() {
+	common.PrintPublicKey(&serverKey.PublicKey)
 	ln, err := net.Listen("tcp", getDefaultIP())
 	if err != nil {
 		fmt.Printf("Server error: %s \n", err.Error())
@@ -137,7 +138,6 @@ func runServer() {
 	}
 
 	fmt.Println("xserver v.1 started")
-	common.PrintPublicKey(&serverKey.PublicKey)
 	go runServerConnexxionsLoop(ln)
 
 	for {
