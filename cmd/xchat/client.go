@@ -37,54 +37,53 @@ const (
 	Invite   = byte(1)
 	ACK      = byte(2)
 	Quit     = byte(4)
-	QuitAck  = byte(8)
 	TextType = byte(64)
 	FileType = byte(128)
 
-	ProtoThreshold = QuitAck
+	ProtoThreshold = Quit
 	UserThreshold  = TextType
 )
 
 const (
-	Uninitialized    = 0
-	Restarted        = 1
-	InviteSent       = 2
-	InviteReceived   = 4
-	AckSent          = 8
-	AckReceived      = 16
-	Active           = 32
-	QuitSent         = 64
-	QuitReceived     = 128
-	QuitAckSent      = 256
-	QuitAckReceived  = 512
-	UnexpectedClosed = 1024
-	GracefullyClosed = 2048
+	Uninitialized  = 0
+	Restarted      = 1
+	InviteSent     = 2
+	InviteReceived = 4
+	AckSent        = 8
+	AckReceived    = 16
+	Active         = 32
+	QuitSent       = 64
+	QuitReceived   = 128
+	Closed         = 256
 )
 
 var (
 	socket    net.Conn
 	serverIP  string
 	sess      Session
-	whiteList [][]byte
+	whitelist [][]byte
 )
 
-func typeName(t byte) string {
-	switch t {
-	case Invite:
-		return "Invite"
-	case ACK:
-		return "ACK"
-	case Quit:
-		return "Quit"
-	case QuitAck:
-		return "QuitAck"
-	case TextType:
-		return "TextType"
-	case FileType:
-		return "FileType"
-	default:
-		return "unknown"
+func typeName(t byte) (s string) {
+	if t&Invite != 0 {
+		s += "Invite "
 	}
+	if t&ACK != 0 {
+		s += "ACK "
+	}
+	if t&Quit != 0 {
+		s += "Quit "
+	}
+	if t&TextType != 0 {
+		s += "TextType "
+	}
+	if t&FileType != 0 {
+		s += "FileType "
+	}
+	if len(s) == 0 {
+		s = fmt.Sprintf("%d", int(t))
+	}
+	return s
 }
 
 func updateState(t byte) {
@@ -95,8 +94,6 @@ func updateState(t byte) {
 		sess.state |= AckSent
 	case Quit:
 		sess.state |= QuitSent
-	case QuitAck:
-		sess.state |= QuitAckSent
 	}
 }
 
@@ -141,7 +138,7 @@ func invitePeerToChatSession(override bool) bool {
 		if err != nil {
 			return false
 		}
-		whiteList = append(whiteList, raw)
+		whitelist = append(whitelist, raw)
 		sess.permPeerKey = key
 		sess.permPeerHex = raw
 		sess.state = Restarted
@@ -153,7 +150,7 @@ func invitePeerToChatSession(override bool) bool {
 		return false
 	}
 
-	fmt.Println("New session successfully initiated")
+	fmt.Println("Invite sent to remote peer")
 	go retryInviteUntilSessionEstablished()
 	return true
 }
@@ -188,7 +185,7 @@ func sendInvite(ack bool) error {
 func retryInviteUntilSessionEstablished() {
 	for i := 0; i < 1000; i++ {
 		time.Sleep(1 * time.Second) // todo: review
-		if (sess.state&InviteReceived) == 0 || (sess.state&AckReceived) == 0 {
+		if (sess.state & AckReceived) != 0 {
 			return
 		} else {
 			err := sendInvite(false)
@@ -203,26 +200,14 @@ func retryInviteUntilSessionEstablished() {
 }
 
 func closeSession() {
-	err := sendRandomMessage(Quit)
+	fmt.Println("Quit command received")
+	err := sendProtocolMessage(Quit)
 	if err != nil {
 		fmt.Printf("Failed to send quit msg: %s \n", err.Error())
-		return
+	} else {
+		fmt.Println("Session closed")
 	}
-
-	for i := 0; i < 10; i++ {
-		time.Sleep(1 * time.Second)
-		if (sess.state & QuitReceived) == 0 {
-			err := sendRandomMessage(Quit)
-			if err != nil {
-				fmt.Printf("Failed to send quit msg: %s \n", err.Error())
-				return
-			}
-		} else {
-			return
-		}
-	}
-
-	fmt.Println("Session did not close gracefully: timeout")
+	time.Sleep(time.Millisecond)
 }
 
 func sendHandshakeToServer() error {
@@ -253,7 +238,7 @@ func isCmd(b []byte) bool {
 
 func runClientCmdLoop() {
 	var err error
-	for err == nil && sess.state < UnexpectedClosed {
+	for err == nil && sess.state < Closed {
 		s := terminal.PlainTextInput()
 		if len(s) != 0 {
 			data := s
@@ -269,7 +254,7 @@ func runClientCmdLoop() {
 				} else if strings.Contains(string(s), "w") {
 					_, p, err := common.ImportPubKey()
 					if err == nil {
-						whiteList = append(whiteList, p)
+						whitelist = append(whitelist, p)
 					}
 					continue
 				} else if strings.Contains(string(s), "c") {
@@ -282,7 +267,7 @@ func runClientCmdLoop() {
 					// todo: delete peer
 					continue
 				} else if strings.Contains(string(s), "D") {
-					removeFromList(whiteList, sess.permPeerHex)
+					removeFromList(whitelist, sess.permPeerHex)
 					resetSession()
 					continue
 				} else if strings.Contains(string(s), "o") {
@@ -293,7 +278,7 @@ func runClientCmdLoop() {
 					continue
 				} else if strings.Contains(string(s), "q") {
 					closeSession()
-					break
+					return
 				} else {
 					continue
 				}
@@ -316,6 +301,8 @@ func sendMessage(data []byte, t byte) error {
 }
 
 func padMessage(p []byte) []byte {
+	// todo: data destruction
+	// todo: realloc with big capacity
 	newSize := getRandMessageSize()
 	prevSize := len(p)
 	if newSize > prevSize {
@@ -335,15 +322,15 @@ func removePadding(p []byte) []byte {
 	return p
 }
 
-func packMessage(p []byte, msgType byte) ([]byte, error) {
-	if msgType == TextType {
+func packMessage(p []byte, t byte) ([]byte, error) {
+	if t != FileType {
 		p = padMessage(p)
 	}
 	// todo: data destruction
 	suffix := make([]byte, SuffixSize)
-	sess.outgoingMsgCnt++
 	binary.LittleEndian.PutUint32(suffix, sess.outgoingMsgCnt)
-	suffix[MessageTypeIndex] = msgType
+	sess.outgoingMsgCnt++
+	suffix[MessageTypeIndex] = t
 	p = append(p, suffix...)
 	// todo: encryption here
 	return p, nil
@@ -371,7 +358,7 @@ func importPermPeerKey(s string) bool {
 		return false
 	}
 
-	whiteList = append(whiteList, raw)
+	whitelist = append(whitelist, raw)
 	sess.permPeerKey = k
 	sess.permPeerHex = raw
 	sess.state = Restarted
@@ -382,8 +369,8 @@ func loadConnexxionParams(flags string) bool {
 	if strings.Contains(flags, "l") {
 		serverIP = getDefaultIP()
 		remoteServerPubKey = &serverKey.PublicKey
-		if len(os.Args) > 3 {
-			return importPermPeerKey(os.Args[3])
+		if len(os.Args) > 2 {
+			return importPermPeerKey(os.Args[2])
 		}
 	} else if len(os.Args) < 4 {
 		fmt.Println("Can not connect to the server: not enough parameters")
@@ -404,8 +391,8 @@ func loadConnexxionParams(flags string) bool {
 			return false
 		}
 		remoteServerPubKey = k
-		if len(os.Args) > 5 {
-			return importPermPeerKey(os.Args[5])
+		if len(os.Args) > 4 {
+			return importPermPeerKey(os.Args[4])
 		}
 	}
 	return true
@@ -433,7 +420,7 @@ func runClient(flags string) {
 
 	go runClientMessageLoop()
 
-	if sess.permPeerKey != nil || strings.Contains(flags, "c") {
+	if strings.Contains(flags, "c") {
 		if !invitePeerToChatSession(false) {
 			return
 		}
@@ -481,13 +468,13 @@ func parsePacket(p []byte) (raw []byte, t byte, n uint32) {
 	return raw, t, n
 }
 
-func processIncomingEphemeralPub(msg []byte) {
-	const expectedSize = asym.PublicKeySize + asym.SignatureSize
-	if len(msg) != expectedSize {
-		fmt.Printf("Invalid EphemeralPub msg received: wrong size [%d vs %d] \n", len(msg), expectedSize)
+func processIncomingInvite(msg []byte) {
+	const payloadSize = asym.PublicKeySize + asym.SignatureSize
+	if len(msg) < payloadSize {
+		fmt.Printf("Invalid Invite received: less than expected size [%d vs %d] \n", len(msg), payloadSize)
 		return
 	}
-
+	msg = msg[:payloadSize]
 	data := msg[:asym.PublicKeySize]
 	sig := msg[asym.PublicKeySize:]
 	pub, err := asym.SigToPub(data, sig)
@@ -497,12 +484,12 @@ func processIncomingEphemeralPub(msg []byte) {
 	}
 
 	if sess.permPeerHex != nil && !bytes.Equal(pub, sess.permPeerHex) {
-		fmt.Printf("Warning: rejecting invite from unexpected peer: %s \n", pub)
+		fmt.Printf("Warning: rejecting invite from unexpected peer: %x \n", pub)
 		return
 	}
 
-	if sess.permPeerHex == nil && !isListed(whiteList, pub) {
-		fmt.Printf("Warning: rejecting invite from unlisted peer: %s \n", pub)
+	if sess.permPeerHex == nil && !isListed(whitelist, pub) {
+		fmt.Printf("Warning: rejecting invite from unlisted peer: %x \n", pub)
 		fmt.Println("If you trust this key, you should add it to the whitelist (use '\\w' or '\\n' commands)")
 		return
 	}
@@ -522,26 +509,29 @@ func processIncomingEphemeralPub(msg []byte) {
 	sess.ephPeerKey = eph
 	sess.state |= InviteReceived
 
-	err = sendInvite(true)
+	if sess.state&InviteSent == 0 {
+		err = sendInvite(true)
+	} else {
+		err = sendProtocolMessage(ACK)
+	}
 	if err != nil {
 		fmt.Printf("Error sending EPH msg: %s \n", err.Error())
 		return
 	}
 
-	fmt.Println("New session initiated by remote peer")
 	go retryInviteUntilSessionEstablished()
 }
 
-func getRandMessageSize() (r int) {
-	r = MinMessageSize
-	r += int(crutils.PseudorandomUint64()) % MinMessageSize
-	return r
+func getRandMessageSize() int {
+	x := uint64(MinMessageSize)
+	r := crutils.PseudorandomUint64() % x
+	r += x
+	return int(r)
 }
 
-func sendRandomMessage(t byte) error {
-	msg := make([]byte, getRandMessageSize())
-	crutils.Randomize(msg)
-	err := sendMessage(msg, t)
+func sendProtocolMessage(t byte) error {
+	var empty []byte
+	err := sendMessage(empty, t)
 	if err == nil {
 		updateState(t)
 	}
@@ -576,7 +566,7 @@ func processProtocolMessage(raw []byte, t byte, nonce uint32) {
 	}
 
 	if (t & Invite) != 0 {
-		processIncomingEphemeralPub(raw)
+		processIncomingInvite(raw)
 		sess.state |= InviteReceived
 	}
 
@@ -586,24 +576,8 @@ func processProtocolMessage(raw []byte, t byte, nonce uint32) {
 	}
 
 	if (t & Quit) != 0 {
-		sess.state |= QuitReceived
-		err := sendRandomMessage(Quit | QuitAck)
-		if err != nil {
-			fmt.Printf("Failed to send QuitAck: %s \n", err.Error())
-			sess.state = UnexpectedClosed
-		} else {
-			sess.state |= QuitSent
-			sess.state |= QuitAckSent
-		}
-	}
-
-	if (t & QuitAck) != 0 {
-		if (sess.state & QuitSent) != 0 {
-			sess.state |= GracefullyClosed
-		} else {
-			sess.state = UnexpectedClosed
-			fmt.Println("Warning: session interrupted")
-		}
+		sess.state |= Closed
+		fmt.Println("Remote peer closed the session")
 	}
 }
 
