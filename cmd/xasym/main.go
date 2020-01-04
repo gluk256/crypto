@@ -45,7 +45,7 @@ func importPrivateKey(cmd string) {
 }
 
 func importPubKey() {
-	key, err := common.ImportPubKey()
+	key, _, err := common.ImportPubKey()
 	if err != nil {
 		remotePeer = key
 	}

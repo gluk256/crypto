@@ -139,21 +139,24 @@ func help() {
 	fmt.Printf("xchat v.0.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypted chat between remote peers, with ephemeral keys and forward secrecy")
 	fmt.Println("USAGE: xchat flags ip_address[:port] server_pub_key [client_pub_key]")
-	fmt.Println("\t -c chat client")
-	fmt.Println("\t -l client running on the same machine as server (other params are not required)")
+	fmt.Println("\t -z chat client")
+	fmt.Println("\t -l client running on the same machine as server (server-related params are not required)")
 	fmt.Println("\t -s secure password")
-	fmt.Println("\t -i insecure - without password")
-	fmt.Println("\t -a add remote peer")
+	fmt.Println("\t -i insecure (without password)")
+	fmt.Println("\t -c initiate new chat session")
 	fmt.Println("\t -h help")
 }
 
 func helpInternal() {
 	fmt.Println("COMMANDS")
-	fmt.Println("\\h: display this help")
 	fmt.Println("\\f: send file")
-	fmt.Println("\\a: add remote peer")
-	fmt.Println("\\d: delete remote peer")
-	fmt.Println("\\i: print debug info")
+	fmt.Println("\\w: whitelist another peer")
+	fmt.Println("\\c: initiate new chat session with current peer")
+	fmt.Println("\\n: initiate new chat session with new peer")
+	fmt.Println("\\d: de-list another peer")
+	fmt.Println("\\D: de-list current peer")
+	fmt.Println("\\o: output debug info")
+	fmt.Println("\\h: help")
 	fmt.Println("\\q: quit")
 }
 

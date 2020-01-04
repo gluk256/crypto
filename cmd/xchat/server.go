@@ -51,6 +51,7 @@ func removeServerConnexxion(target net.Conn) {
 			last := len(connexxions) - 1
 			connexxions[i] = connexxions[last]
 			connexxions = connexxions[:last]
+			break
 		}
 	}
 }

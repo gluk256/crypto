@@ -193,11 +193,10 @@ func GetHexData(legend string) (res []byte) {
 	return res
 }
 
-func ImportPubKey() (key *ecdsa.PublicKey, err error) {
-	x := GetHexData("public key")
-	defer crutils.AnnihilateData(x)
-	if x != nil {
-		key, err = asym.ImportPubKey(x)
+func ImportPubKey() (key *ecdsa.PublicKey, raw []byte, err error) {
+	raw = GetHexData("public key")
+	if raw != nil {
+		key, err = asym.ImportPubKey(raw)
 		if err != nil {
 			fmt.Printf("Error importing public key: %s\n", err.Error())
 		}
@@ -206,7 +205,7 @@ func ImportPubKey() (key *ecdsa.PublicKey, err error) {
 		fmt.Println(info)
 		err = errors.New(info)
 	}
-	return key, err
+	return key, raw, err
 }
 
 func Confirm(question string) bool {
