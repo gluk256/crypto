@@ -14,7 +14,7 @@ import (
 )
 
 var entropy keccak.Keccak512
-var destructionProof keccak.Keccak512
+var destructor keccak.Keccak512
 
 func init() {
 	b := make([]byte, 32)
@@ -26,7 +26,7 @@ func init() {
 	entropy.Write(b)
 	CollectEntropy()
 	entropy.Read(b)
-	destructionProof.Write(b)
+	destructor.Write(b)
 }
 
 func CollectEntropy() {
@@ -78,32 +78,33 @@ func PseudorandomUint64() uint64 {
 	return entropy.RandUint64()
 }
 
+func RecordDestruction(i uint64) {
+	destructor.AddEntropy(i)
+}
+
 func AnnihilateData(b []byte) {
 	if len(b) > 0 {
 		RandXor(b)
-		destructionProof.AddEntropy(PseudorandomUint64()) // reshuffle entropy and destructionProof
-		destructionProof.Write(b)
+		destructor.AddEntropy(PseudorandomUint64()) // reshuffle entropy and destructionProof
+		destructor.Write(b)
 		if len(b) < 1024*1024 {
 			// small data are likely to contain very sensitive info (e.g. RCX cryptographic setup),
 			// and therefore it is important to prevent the compiler optimization.
 			primitives.ReverseBytes(b)
 			RandXor(b)
-			destructionProof.AddEntropy(PseudorandomUint64())
-			destructionProof.Write(b)
+			destructor.AddEntropy(PseudorandomUint64())
+			destructor.Write(b)
 		}
 	}
 }
 
-func RecordDestruction(i uint64) {
-	destructionProof.AddEntropy(i)
-}
-
 // this function should be called once, before the program exit
 func ProveDataDestruction() {
+	RecordDestruction(keccak.Destructor.RandUint64())
 	b := make([]byte, 1032)
 	entropy.Read(b)
-	destructionProof.Write(b)
-	destructionProof.Read(b)
+	destructor.Write(b)
+	destructor.Read(b)
 	fmt.Printf("\nProof of destruction: %x\n", b[1000:])
 }
 

@@ -15,6 +15,8 @@ type Keccak512 struct {
 	buf       []byte // points into storage
 }
 
+var Destructor Keccak512
+
 // copy [Rate] bytes of src into the state
 // we assume that at this point len(src) == Rate
 func (k *Keccak512) absorb(src []byte) {
@@ -126,10 +128,12 @@ func Digest(src []byte, sz int) []byte {
 	var k Keccak512
 	k.Write(src)
 	k.Read(res)
+	permute(&k.a)
+	Destructor.AddEntropy(k.RandUint64())
 	return res
 }
 
-// working with wntropy ////////////////////////////////////////////
+// working with entropy ////////////////////////////////////////////
 
 func (k *Keccak512) AddEntropy(e uint64) {
 	j := (k.a[0] + e) % 25
@@ -139,7 +143,7 @@ func (k *Keccak512) AddEntropy(e uint64) {
 
 func (k *Keccak512) RandUint64() uint64 {
 	permute(&k.a)
-	j := k.a[0] % 25
+	j := k.a[24] % 25
 	res := k.a[j]
 	permute(&k.a)
 	return res

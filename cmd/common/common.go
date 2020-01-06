@@ -10,21 +10,11 @@ import (
 	"strings"
 
 	"github.com/gluk256/crypto/algo/keccak"
+	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/asym"
 	"github.com/gluk256/crypto/crutils"
 	"github.com/gluk256/crypto/terminal"
 )
-
-// password for xcmd apps should always be 256 bytes
-func expand(prev []byte) []byte {
-	res := make([]byte, 256)
-	for i := 0; i < 256; i++ {
-		res[i] = prev[i%len(prev)]
-		res[i] += byte(i)
-	}
-	crutils.AnnihilateData(prev)
-	return res
-}
 
 func GetPassword(flags string) (res []byte) {
 	if strings.Contains(flags, "r") {
@@ -53,7 +43,7 @@ func GetPassword(flags string) (res []byte) {
 		//fmt.Println("======================> WARNING: the password is too short, not safe to use!") // todo: uncomment this line
 	}
 
-	res = expand(res)
+	res = keccak.Digest(res, 256) // the keys for all crypto apps must always be 256 bytes
 	return res
 }
 
@@ -117,12 +107,16 @@ func SaveData(filename string, data []byte) error {
 	return errors.New("max tries exceeded")
 }
 
+func GetFullFileName(name string) string {
+	return os.Getenv("HOME") + string("/.xcry/") + name
+}
+
 func LoadCertificate() ([]byte, error) {
-	filename := os.Getenv("HOME") + string("/.xcry/certificate")
-	data, err := ioutil.ReadFile(filename)
+	fullname := GetFullFileName("certificate")
+	data, err := ioutil.ReadFile(fullname)
 	if err != nil {
 		fmt.Printf("Failed to load data: %s\n", err.Error())
-		fmt.Printf("If file [%s] does not exist, please create it with random data.\n", filename)
+		fmt.Printf("If file [%s] does not exist, please create it with random data.\n", fullname)
 		return nil, err
 	}
 
@@ -193,17 +187,32 @@ func GetHexData(legend string) (res []byte) {
 	return res
 }
 
+func CheckRawPubValidity(raw []byte) error {
+	if len(raw) != asym.PublicKeySize {
+		return fmt.Errorf("Wrong public key size: %d vs. %d \n", len(raw), asym.PublicKeySize)
+	}
+	zero := make([]byte, asym.PublicKeySize)
+	if !primitives.IsDeepNotEqual(raw, zero, asym.PublicKeySize) {
+		return errors.New("Wrong public key: too many zeroes")
+	}
+	return nil
+}
+
 func ImportPubKey() (key *ecdsa.PublicKey, raw []byte, err error) {
 	raw = GetHexData("public key")
+	err = CheckRawPubValidity(raw)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	if raw != nil {
 		key, err = asym.ImportPubKey(raw)
 		if err != nil {
 			fmt.Printf("Error importing public key: %s\n", err.Error())
 		}
 	} else {
-		info := string("wrong input")
-		fmt.Println(info)
-		err = errors.New(info)
+		err := errors.New("wrong input")
+		fmt.Println(err.Error())
 	}
 	return key, raw, err
 }

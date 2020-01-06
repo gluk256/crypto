@@ -22,11 +22,10 @@ const (
 )
 
 var (
-	masterKey    []byte
-	serverKey    *ecdsa.PrivateKey
-	clientKey    *ecdsa.PrivateKey
-	ephemeralKey *ecdsa.PrivateKey
-
+	masterKey          []byte
+	serverKey          *ecdsa.PrivateKey
+	clientKey          *ecdsa.PrivateKey
+	ephemeralKey       *ecdsa.PrivateKey
 	remoteServerPubKey *ecdsa.PublicKey
 )
 
@@ -37,13 +36,19 @@ func cleanup() {
 	asym.AnnihilatePrivateKey(ephemeralKey)
 }
 
+func getFileEncryptionKey() []byte {
+	return keccak.Digest(masterKey, 256)
+}
+
 func loadKeys(flags string) error {
+	fmt.Println("loading cert") // todo: delete
 	cert, err := common.LoadCertificate()
 	masterKey = cert
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("importing server key") // todo: delete
 	sk := keccak.Digest(cert, 32)
 	defer crutils.AnnihilateData(sk)
 	serverKey, err = asym.ImportPrivateKey(sk)
@@ -55,11 +60,13 @@ func loadKeys(flags string) error {
 		return nil
 	}
 
+	fmt.Println("generating eph") // todo: delete
 	ephemeralKey, err = asym.GenerateKey()
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("loading master pass") // todo: delete
 	if strings.Contains(flags, "i") {
 		fmt.Println("======================> WARNING: insecure version without password, only use for test purposes!")
 		masterKey[0]++
@@ -69,13 +76,17 @@ func loadKeys(flags string) error {
 		crutils.AnnihilateData(pass)
 	}
 
-	ck := keccak.Digest(masterKey, 32)
+	fmt.Println("loading client key") // todo: delete
+	ck := keccak.Digest(masterKey, 288)
+	ck = ck[256:]
+	fmt.Printf("%x\n", ck) // todo: delete
 	defer crutils.AnnihilateData(ck)
 	clientKey, err = asym.ImportPrivateKey(ck)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("done") // todo: delete
 	return err
 }
 
@@ -138,12 +149,13 @@ func receivePacket(c net.Conn) (msg []byte, err error) {
 func help() {
 	fmt.Printf("xchat v.0.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypted chat between remote peers, with ephemeral keys and forward secrecy")
-	fmt.Println("USAGE: xchat flags ip_address[:port] server_pub_key [client_pub_key]")
+	fmt.Println("USAGE: xchat flags [ip_address[:port]] [server_pub_key] [client_pub_key]")
 	fmt.Println("\t -z chat client")
 	fmt.Println("\t -l client running on the same machine as server (server-related params are not required)")
 	fmt.Println("\t -s secure password")
 	fmt.Println("\t -i insecure (without password)")
 	fmt.Println("\t -c initiate new chat session")
+	fmt.Println("\t -y restart previous session")
 	fmt.Println("\t -h help")
 }
 
@@ -152,11 +164,15 @@ func helpInternal() {
 	fmt.Println("\\f: send file")
 	fmt.Println("\\w: whitelist another peer")
 	fmt.Println("\\c: initiate new chat session with current peer")
+	fmt.Println("\\y: restart session")
 	fmt.Println("\\n: initiate new chat session with new peer")
-	fmt.Println("\\d: de-list another peer")
-	fmt.Println("\\D: de-list current peer")
-	fmt.Println("\\o: output debug info")
+	fmt.Println("\\d: delete another peer form whitelist")
+	fmt.Println("\\D: delete current peer form whitelist")
+	fmt.Println("\\p: add session password for additional symmetric encryption")
+	fmt.Println("\\P: add session password (secure mode)")
+	fmt.Println("\\b: output debug info")
 	fmt.Println("\\h: help")
+	fmt.Println("\\e: exit current session")
 	fmt.Println("\\q: quit")
 }
 

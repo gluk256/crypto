@@ -23,7 +23,7 @@ type Content struct {
 	key     []byte
 	pad     []byte
 	src     []byte     // the original data src, represents the file with encrpted/decrypted raw data
-	console *list.List // originally derived from src, but then xxx
+	console *list.List // represents the visual output, originally derived from src
 	changed bool
 }
 
@@ -74,7 +74,7 @@ func deleteContent(i int) {
 
 func checkQuit() bool {
 	if items[cur].changed {
-		return common.Confirm("The file is not saved. Do you really want to quit and lose the changes?") // todo: uncomment
+		return common.Confirm("The file is not saved. Do you really want to quit and lose the changes?")
 	}
 	return true
 }
