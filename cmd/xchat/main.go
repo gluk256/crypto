@@ -40,15 +40,13 @@ func getFileEncryptionKey() []byte {
 	return keccak.Digest(masterKey, 256)
 }
 
-func loadKeys(flags string) error {
-	fmt.Println("loading cert") // todo: delete
+func loadEncryptionKeys(flags string) error {
 	cert, err := common.LoadCertificate()
 	masterKey = cert
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("importing server key") // todo: delete
 	sk := keccak.Digest(cert, 32)
 	defer crutils.AnnihilateData(sk)
 	serverKey, err = asym.ImportPrivateKey(sk)
@@ -60,14 +58,12 @@ func loadKeys(flags string) error {
 		return nil
 	}
 
-	fmt.Println("generating eph") // todo: delete
 	ephemeralKey, err = asym.GenerateKey()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("loading master pass") // todo: delete
-	if strings.Contains(flags, "i") {
+	if strings.Contains(flags, "z") {
 		fmt.Println("======================> WARNING: insecure version without password, only use for test purposes!")
 		masterKey[0]++
 	} else {
@@ -76,17 +72,14 @@ func loadKeys(flags string) error {
 		crutils.AnnihilateData(pass)
 	}
 
-	fmt.Println("loading client key") // todo: delete
 	ck := keccak.Digest(masterKey, 288)
 	ck = ck[256:]
-	fmt.Printf("%x\n", ck) // todo: delete
 	defer crutils.AnnihilateData(ck)
 	clientKey, err = asym.ImportPrivateKey(ck)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("done") // todo: delete
 	return err
 }
 
@@ -150,11 +143,11 @@ func help() {
 	fmt.Printf("xchat v.0.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypted chat between remote peers, with ephemeral keys and forward secrecy")
 	fmt.Println("USAGE: xchat flags [ip_address[:port]] [server_pub_key] [client_pub_key]")
-	fmt.Println("\t -z chat client")
-	fmt.Println("\t -l client running on the same machine as server (server-related params are not required)")
+	fmt.Println("\t -c chat client")
+	fmt.Println("\t -l localhost (server-related params are not required)")
 	fmt.Println("\t -s secure password")
-	fmt.Println("\t -i insecure (without password)")
-	fmt.Println("\t -c initiate new chat session")
+	fmt.Println("\t -z insecure mode (without password)") // todo: change to "Z"
+	fmt.Println("\t -i initiate chat session")
 	fmt.Println("\t -y restart previous session")
 	fmt.Println("\t -h help")
 }
@@ -163,14 +156,14 @@ func helpInternal() {
 	fmt.Println("COMMANDS")
 	fmt.Println("\\f: send file")
 	fmt.Println("\\w: whitelist another peer")
-	fmt.Println("\\c: initiate new chat session with current peer")
 	fmt.Println("\\y: restart session")
+	fmt.Println("\\i: initiate new chat session with current peer")
 	fmt.Println("\\n: initiate new chat session with new peer")
 	fmt.Println("\\d: delete another peer form whitelist")
 	fmt.Println("\\D: delete current peer form whitelist")
 	fmt.Println("\\p: add session password for additional symmetric encryption")
 	fmt.Println("\\P: add session password (secure mode)")
-	fmt.Println("\\b: output debug info")
+	fmt.Println("\\b: print debug info")
 	fmt.Println("\\h: help")
 	fmt.Println("\\e: exit current session")
 	fmt.Println("\\q: quit")
@@ -188,7 +181,7 @@ func main() {
 	}
 
 	defer cleanup()
-	err := loadKeys(flags)
+	err := loadEncryptionKeys(flags)
 	if err != nil {
 		fmt.Printf("Failed to load private key: %s \n", err.Error())
 		return

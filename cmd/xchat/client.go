@@ -40,7 +40,7 @@ const (
 	ACK            = byte(2)
 	Reject         = byte(4)
 	Quit           = byte(8)
-	ProtoThreshold = Quit
+	ProtoThreshold = Quit * 2
 	UserThreshold  = TextType
 	TextType       = byte(64)
 	FileType       = byte(128)
@@ -305,7 +305,7 @@ func runClientCmdLoop() {
 						addToWhitelist(p)
 					}
 					continue
-				} else if strings.Contains(string(s), "c") {
+				} else if strings.Contains(string(s), "i") {
 					invitePeerToChatSession(false)
 					continue
 				} else if strings.Contains(string(s), "y") {
@@ -321,7 +321,7 @@ func runClientCmdLoop() {
 					continue
 				} else if strings.Contains(string(s), "D") {
 					removeFromWhitelist(sess.permPeerHex)
-					resetSession()
+					closeSession(true)
 					continue
 				} else if strings.Contains(string(s), "p") {
 					sess.symKey = common.GetPassword("p")
@@ -498,7 +498,7 @@ func runClient(flags string) {
 
 	go runClientMessageLoop()
 
-	if strings.Contains(flags, "c") || strings.Contains(flags, "y") {
+	if strings.Contains(flags, "i") || strings.Contains(flags, "y") {
 		if !invitePeerToChatSession(false) {
 			return
 		}
@@ -647,7 +647,7 @@ func processProtocolMessage(raw []byte, t byte, nonce uint32) {
 		fmt.Printf("[%03d]{msg received: type = %s, size = %d} \n", nonce, typeName(t), len(raw))
 	}
 
-	if t > ProtoThreshold {
+	if t >= ProtoThreshold {
 		fmt.Printf("unknown protocol message type: %d \n", int(t))
 	}
 
@@ -763,6 +763,7 @@ func loadPeers(flags string) {
 		return
 	}
 	remoteServerPubKey = k
+	fmt.Printf("Last forwarding server: %x \n", server)
 
 	if strings.Contains(flags, "y") {
 		if len(whitelist) < 2 { // server key is always present, so we need at least one additional key
@@ -778,6 +779,7 @@ func loadPeers(flags string) {
 
 		sess.permPeerHex = whitelist[0]
 		sess.permPeerKey = key
+		fmt.Printf("Last session with peer: %x \n", sess.permPeerHex)
 	}
 
 	fmt.Printf("Peers list is loaded: %d entries, including remote server \n", len(whitelist))
