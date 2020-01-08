@@ -41,7 +41,7 @@ func getFileEncryptionKey() []byte {
 }
 
 func loadEncryptionKeys(flags string) error {
-	cert, err := common.LoadCertificate()
+	cert, err := common.LoadCertificate(true)
 	masterKey = cert
 	if err != nil {
 		return err
@@ -84,7 +84,10 @@ func loadEncryptionKeys(flags string) error {
 }
 
 func isServer(flags string) bool {
-	return len(flags) == 0
+	if len(flags) == 0 {
+		return true
+	}
+	return strings.Contains(flags, "m")
 }
 
 func getDefaultPort() string {
@@ -92,10 +95,10 @@ func getDefaultPort() string {
 }
 
 func getDefaultIP() string {
-	return getMyIP() + getDefaultPort()
+	return getLocalIP() + getDefaultPort()
 }
 
-func getMyIP() string {
+func getLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		fmt.Println("error", err.Error())
@@ -164,12 +167,14 @@ func help() {
 	fmt.Printf("xchat v.0.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypted chat between remote peers, with ephemeral keys and forward secrecy")
 	fmt.Println("USAGE: xchat flags [ip_address[:port]] [server_pub_key] [client_pub_key]")
+	fmt.Println("\t -m main node (server)")
 	fmt.Println("\t -c chat client")
 	fmt.Println("\t -l localhost (server-related params are not required)")
 	fmt.Println("\t -s secure password")
 	fmt.Println("\t -z insecure mode (without password)") // todo: change to "Z"
 	fmt.Println("\t -i initiate chat session")
 	fmt.Println("\t -y restart previous session")
+	fmt.Println("\t -f allow to receive files")
 	fmt.Println("\t -h help")
 }
 
@@ -184,7 +189,8 @@ func helpInternal() {
 	fmt.Println("\\D: delete current peer form whitelist")
 	fmt.Println("\\p: add session password for additional symmetric encryption")
 	fmt.Println("\\P: add session password (secure mode)")
-	fmt.Println("\\b: print debug info")
+	fmt.Println("\\f: allow to receive files")
+	fmt.Println("\\o: output debug info")
 	fmt.Println("\\h: help")
 	fmt.Println("\\e: exit current session")
 	fmt.Println("\\q: quit")

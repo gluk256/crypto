@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -130,18 +131,26 @@ func forwardPacketToClients(src net.Conn, msg []byte) {
 	}
 }
 
+func getServerIP() string {
+	if len(os.Args) > 2 {
+		return os.Args[2]
+	}
+	return getLocalIP()
+}
+
 func runServer() {
-	common.PrintPublicKey(&serverKey.PublicKey)
-	ip := getMyIP()
-	ln, err := net.Listen("tcp", ip+getDefaultPort())
+	ip := getServerIP()
+	listener, err := net.Listen("tcp", ip+getDefaultPort())
 	if err != nil {
 		fmt.Printf("Server error: %s \n", err.Error())
 		return
 	}
 
-	fmt.Printf("your ip address: %s \n", ip)
+	common.PrintPublicKey(&serverKey.PublicKey)
+	fmt.Printf("your ip address: <%s> \n", ip)
 	fmt.Println("xserver v.1 started")
-	go runServerConnexxionsLoop(ln)
+
+	go runServerConnexxionsLoop(listener)
 
 	for {
 		cmd := terminal.PlainTextInput()
@@ -152,5 +161,5 @@ func runServer() {
 		}
 	}
 
-	shutdownServer(ln)
+	shutdownServer(listener)
 }

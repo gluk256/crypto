@@ -60,10 +60,11 @@ const (
 )
 
 var (
-	socket    net.Conn
-	serverIP  string
-	sess      Session
-	whitelist [][]byte
+	socket       net.Conn
+	serverIP     string
+	sess         Session
+	whitelist    [][]byte
+	filesEnabled bool
 )
 
 func typeName(t byte) (s string) {
@@ -329,7 +330,10 @@ func runClientCmdLoop() {
 				} else if strings.Contains(string(s), "P") {
 					sess.symKey = common.GetPassword("s")
 					continue
-				} else if strings.Contains(string(s), "b") {
+				} else if strings.Contains(string(s), "f") {
+					filesEnabled = true
+					continue
+				} else if strings.Contains(string(s), "o") {
 					printDiagnosticInfo()
 					continue
 				} else if strings.Contains(string(s), "h") {
@@ -429,6 +433,8 @@ func importPermPeerKey(s string) bool {
 }
 
 func loadConnexxionParams(flags string) bool {
+	filesEnabled = strings.Contains(flags, "f")
+
 	if strings.Contains(flags, "l") {
 		serverIP = getDefaultIP()
 		remoteServerPubKey = &serverKey.PublicKey
@@ -631,10 +637,14 @@ func processUserMessage(raw []byte, t byte, nonce uint32) {
 	}
 
 	if t == FileType {
-		h := crutils.Sha2(raw)
-		name := fmt.Sprintf("%x", h)
-		common.SaveData(name, raw)
-		fmt.Printf("[%03d]: saved msg as file %s \n", nonce, name)
+		if filesEnabled {
+			h := crutils.Sha2(raw)
+			name := fmt.Sprintf("%x", h)
+			common.SaveData(name, raw)
+			fmt.Printf("[%03d]: saved msg as file %s \n", nonce, name)
+		} else {
+			fmt.Printf("[%03d]: file received, but not saved - files are not enabled for this session \n", nonce)
+		}
 	} else if t == TextType {
 		raw = removePadding(raw)
 		fmt.Printf("[%03d][%s] \n", nonce, string(raw))
@@ -645,7 +655,7 @@ func processUserMessage(raw []byte, t byte, nonce uint32) {
 
 func processProtocolMessage(raw []byte, t byte, nonce uint32) {
 	if debugMode {
-		fmt.Printf("[%03d]{msg received: type = %s, size = %d} \n", nonce, typeName(t), len(raw))
+		fmt.Printf("[%03d]<msg received: type = %s, size = %d> \n", nonce, typeName(t), len(raw))
 	}
 
 	if t >= ProtoThreshold {
@@ -706,7 +716,7 @@ func printDiagnosticInfo() {
 		fmt.Printf("peer[%d] = %x\n", i, p)
 	}
 
-	fmt.Printf("Your IP: %s\n", getMyIP())
+	fmt.Printf("Your IP: %s\n", getLocalIP())
 }
 
 func getPeersFileName() (string, error) {
@@ -786,7 +796,7 @@ func loadPeers(flags string) {
 		fmt.Printf("Last session with peer: %x \n", sess.permPeerHex)
 	}
 
-	fmt.Printf("Peers list is loaded: %d entries, including remote server \n", len(whitelist))
+	fmt.Printf("%d peers loaded \n", len(whitelist)-1)
 }
 
 func savePeersList() {

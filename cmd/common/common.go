@@ -67,7 +67,7 @@ func IsHexData(data []byte) bool {
 
 func GetFileName() string {
 	for i := 0; i < 3; i++ {
-		fmt.Print("Please enter file name: ")
+		fmt.Print("please enter file name: ")
 		f := terminal.PlainTextInput()
 		if len(f) == 0 {
 			fmt.Println("Error: empty filename, please try again")
@@ -111,13 +111,25 @@ func GetFullFileName(name string) string {
 	return os.Getenv("HOME") + string("/.xcry/") + name
 }
 
-func LoadCertificate() ([]byte, error) {
+func LoadCertificate(retry bool) ([]byte, error) {
 	fullname := GetFullFileName("certificate")
 	data, err := ioutil.ReadFile(fullname)
-	if err != nil {
+	if err != nil && !retry {
 		fmt.Printf("Failed to load data: %s\n", err.Error())
 		fmt.Printf("If file [%s] does not exist, please create it with random data.\n", fullname)
 		return nil, err
+	}
+
+	for err != nil {
+		fmt.Print("Loading certificate, ")
+		filename := GetFileName()
+		if filename == "q" {
+			return nil, errors.New("quit cmd received")
+		}
+		data, err = ioutil.ReadFile(filename)
+		if err != nil {
+			fmt.Printf("Failed to load data: %s\n", err.Error())
+		}
 	}
 
 	h := keccak.Digest(data, 256)
@@ -132,7 +144,7 @@ func ImportPrivateKey(cmd string) (key *ecdsa.PrivateKey, err error) {
 	}
 	var hash2fa []byte
 	if strings.Contains(cmd, "f") {
-		hash2fa, err = LoadCertificate()
+		hash2fa, err = LoadCertificate(true)
 		if err != nil {
 			return nil, err
 		}
