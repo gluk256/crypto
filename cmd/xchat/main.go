@@ -103,7 +103,7 @@ func sendPacket(conn net.Conn, msg []byte) error {
 		return err
 	}
 	if n != PrefixSize {
-		return errors.New("prefix not sent")
+		return errors.New("message size not sent")
 	}
 
 	n, err = conn.Write(msg)
@@ -126,15 +126,18 @@ func readNBytes(c net.Conn, sz uint32) ([]byte, error) {
 	return msg, nil
 }
 
-func receivePacket(c net.Conn) (msg []byte, err error) {
+func receivePacket(conn net.Conn) (msg []byte, err error) {
+	var prefix []byte
 	const limit = 20 * 1024 * 1024
-	prefix, err := readNBytes(c, PrefixSize)
+
+	prefix, err = readNBytes(conn, PrefixSize)
 	if err == nil {
 		sz := binary.LittleEndian.Uint32(prefix)
 		if sz > limit {
 			return nil, errors.New("huge message")
+		} else {
+			msg, err = readNBytes(conn, sz)
 		}
-		msg, err = readNBytes(c, sz)
 	}
 	return msg, err
 }

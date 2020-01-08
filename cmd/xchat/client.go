@@ -259,7 +259,7 @@ func closeSession(reset bool) {
 }
 
 func sendHandshakeToServer() error {
-	b := make([]byte, 256)
+	b := make([]byte, getRandMessageSize())
 	crutils.Randomize(b)
 	encrypted, err := asym.Encrypt(remoteServerPubKey, b)
 	if err == nil {
