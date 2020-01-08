@@ -87,12 +87,30 @@ func isServer(flags string) bool {
 	return len(flags) == 0
 }
 
-func getDefaultIP() string {
-	return string("127.0.0.1:") + getDefaultPort()
+func getDefaultPort() string {
+	return ":26594"
 }
 
-func getDefaultPort() string {
-	return "26594"
+func getDefaultIP() string {
+	return getMyIP() + getDefaultPort()
+}
+
+func getMyIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Println("error", err.Error())
+		return ""
+	}
+
+	for _, a := range addrs {
+		ipnet, ok := a.(*net.IPNet)
+		if ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
 }
 
 func sendPacket(conn net.Conn, msg []byte) error {

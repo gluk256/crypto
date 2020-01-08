@@ -401,23 +401,23 @@ func packMessage(p []byte, t byte) ([]byte, error) {
 
 func importPermPeerKey(s string) bool {
 	if len(s) != asym.PublicKeySize*2 {
-		fmt.Printf("Wrong key length: %d \n", len(s)/2)
+		fmt.Printf("Wrong peer's permanent key string: %d bytes \n", len(s))
 		return false
 	}
 	raw := make([]byte, asym.PublicKeySize)
 	n, err := hex.Decode(raw, []byte(s))
 	if err != nil {
-		fmt.Printf("Failed to import the peer's perm key: %s \n", err.Error())
+		fmt.Printf("Failed to import the peer's permanent key: %s \n", err.Error())
 		return false
 	}
 	if n != asym.PublicKeySize {
-		fmt.Printf("Wrong size of imported key: %d \n", n)
+		fmt.Printf("Wrong size of peer's permanent key: %d \n", n)
 		return false
 	}
 
 	key, err := asym.ImportPubKey(raw)
 	if err != nil {
-		fmt.Println("Failed to import the peer's pub key")
+		fmt.Println("Failed to import the peer's permanent key")
 		return false
 	}
 
@@ -605,6 +605,7 @@ func processIncomingInvite(msg []byte) {
 		return
 	}
 
+	fmt.Printf("Accepted invite from remote peer: %x \n", pub)
 	go retryInviteUntilSessionEstablished()
 }
 
@@ -700,9 +701,15 @@ func printDiagnosticInfo() {
 		eph = "ok"
 	}
 	fmt.Printf("eph: %s, perm: %s, in = %d, out = %d, state = %d \n", eph, perm, sess.incomingMsgCnt, sess.outgoingMsgCnt, sess.state)
+
+	for i, p := range whitelist {
+		fmt.Printf("peer[%d] = %x\n", i, p)
+	}
+
+	fmt.Printf("Your IP: %s\n", getMyIP())
 }
 
-func getWhitelistFileName() (string, error) {
+func getPeersFileName() (string, error) {
 	name := "peers-"
 	pub, err := asym.ExportPubKey(&clientKey.PublicKey)
 	if err != nil {
@@ -716,7 +723,7 @@ func getWhitelistFileName() (string, error) {
 }
 
 func loadPeers(flags string) {
-	fullname, err := getWhitelistFileName()
+	fullname, err := getPeersFileName()
 	if err != nil {
 		return
 	}
@@ -749,21 +756,18 @@ func loadPeers(flags string) {
 		return
 	}
 
-	var p []byte
-	for i := 0; i < sz; i += asym.PublicKeySize {
-		p = data[i : i+asym.PublicKeySize]
-		fmt.Printf("Loaded peer: %x \n", p)
-		addToWhitelist(p)
+	for i := 0; i < sz-asym.PublicKeySize; i += asym.PublicKeySize {
+		addToWhitelist(data[i : i+asym.PublicKeySize])
 	}
 
-	server := p // server key is always the last
+	server := data[sz-asym.PublicKeySize:] // server key is always the last
 	k, err := asym.ImportPubKey(server)
 	if err != nil {
 		fmt.Printf("Warning: failed to load remote server pub key: %s \n", err.Error())
 		return
 	}
 	remoteServerPubKey = k
-	fmt.Printf("Last forwarding server: %x \n", server)
+	fmt.Printf("Last server connection: %x \n", server)
 
 	if strings.Contains(flags, "y") {
 		if len(whitelist) < 2 { // server key is always present, so we need at least one additional key
@@ -798,7 +802,7 @@ func savePeersList() {
 	}
 	raw = append(raw, server...)
 
-	fullName, err := getWhitelistFileName()
+	fullName, err := getPeersFileName()
 	if err != nil {
 		return
 	}
