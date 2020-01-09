@@ -191,7 +191,7 @@ func invitePeerToChatSession(override bool) bool {
 	}
 
 	if sess.permPeerKey == nil {
-		fmt.Println("Inviting remote peer to the chat session")
+		fmt.Print("Inviting remote peer to the chat session")
 		key, raw, err := common.ImportPubKey()
 		if err != nil {
 			return false
@@ -303,7 +303,7 @@ func enableFiles() {
 		filesEnabled = true
 		fmt.Println("Enabled to receive files")
 	} else {
-		fmt.Printf("Unable to receive files: directory '%d' does not exist \n", dir)
+		fmt.Printf("Unable to receive files: directory '%s' does not exist \n", dir)
 	}
 }
 
@@ -460,6 +460,29 @@ func importPermPeerKey(s string) bool {
 	return true
 }
 
+func importServerPubParameter(s string) bool {
+	pub := []byte(s)
+	if len(pub) != asym.PublicKeySize*2 {
+		fmt.Printf("Wrong size of the third param: %d vs. %d \n", len(pub), asym.PublicKeySize*2)
+		return false
+	}
+
+	raw := make([]byte, len(pub)/2)
+	_, err := hex.Decode(raw, pub)
+	if err != nil {
+		fmt.Printf("Error decoding server pub key: %s\n", err.Error())
+		return false
+	}
+
+	k, err := asym.ImportPubKey(raw)
+	if err != nil {
+		fmt.Printf("Failed to import remote server's pub key: %s \n", err.Error())
+		return false
+	}
+	remoteServerPubKey = k
+	return true
+}
+
 func loadConnexxionParams(flags string) bool {
 	if strings.Contains(flags, "F") {
 		enableFiles()
@@ -482,17 +505,9 @@ func loadConnexxionParams(flags string) bool {
 	}
 
 	if len(os.Args) > 3 {
-		pub := []byte(os.Args[3])
-		if len(pub) != asym.PublicKeySize*2 {
-			fmt.Printf("Wrong size of the third param: %d vs. %d \n", len(pub), asym.PublicKeySize*2)
+		if !importServerPubParameter(os.Args[3]) {
 			return false
 		}
-		k, err := asym.ImportPubKey(pub)
-		if err != nil {
-			fmt.Println("Failed to import remote server's pub key")
-			return false
-		}
-		remoteServerPubKey = k
 	}
 
 	if len(os.Args) > 4 {
@@ -518,13 +533,12 @@ func runClient(flags string) {
 	if !loadConnexxionParams(flags) {
 		return
 	}
-	fmt.Println("xchat v.1 started")
 	conn, err := net.Dial("tcp", serverIP)
 	if err != nil {
 		fmt.Printf("Client error: %s \n", err.Error())
 		return
 	}
-	fmt.Println("connected to server")
+	fmt.Println("Connected to server")
 	socket = conn
 
 	err = sendHandshakeToServer()
@@ -800,7 +814,7 @@ func loadPeers(flags string) {
 		return
 	}
 	remoteServerPubKey = k
-	fmt.Printf("Last server connection: %x \n", server)
+	fmt.Printf("Last server pub: %x \n", server)
 
 	if strings.Contains(flags, "y") {
 		if len(whitelist) < 2 { // server key is always present, so we need at least one additional key
@@ -819,7 +833,7 @@ func loadPeers(flags string) {
 		fmt.Printf("Last session with peer: %x \n", sess.permPeerHex)
 	}
 
-	fmt.Printf("%d peers loaded \n", len(whitelist))
+	fmt.Printf("Number of known peers: %d \n", len(whitelist))
 }
 
 func savePeersList() {
