@@ -204,7 +204,6 @@ func invitePeerToChatSession(override bool) bool {
 
 	err := sendInvite(false)
 	if err != nil {
-		fmt.Printf("Failed to send ephemeral pub key: %s \n", err.Error())
 		return false
 	}
 
@@ -218,11 +217,13 @@ func invitePeerToChatSession(override bool) bool {
 func sendInvite(ack bool) error {
 	myEphemeral, err := asym.ExportPubKey(&ephemeralKey.PublicKey)
 	if err != nil {
+		fmt.Printf("Failed to export public key: %s \n", err.Error())
 		return err
 	}
 
 	sig, err := asym.Sign(clientKey, myEphemeral)
 	if err != nil {
+		fmt.Printf("Failed to sign the message: %s \n", err.Error())
 		return err
 	}
 
@@ -260,14 +261,15 @@ func retryInviteUntilSessionEstablished() {
 }
 
 func closeSession(reset bool) {
-	err := sendProtocolMessage(Quit)
-	if err != nil {
-		fmt.Printf("Failed to send quit msg: %s \n", err.Error())
-	} else {
-		fmt.Println("Session closed")
+	if sess.state > Restarted {
+		err := sendProtocolMessage(Quit)
+		if err != nil {
+			fmt.Printf("Failed to send quit msg: %s \n", err.Error())
+		} else {
+			fmt.Println("Session closed")
+		}
 	}
 	if reset {
-		time.Sleep(time.Millisecond)
 		resetSession()
 	}
 }
@@ -309,86 +311,80 @@ func enableFiles() {
 }
 
 func runClientCmdLoop() {
-	var err error
 	for {
 		s := terminal.PlainTextInput()
 		if len(s) != 0 {
-			data := s
-			t := TextType
-
-			if isCmd(s) {
-				if strings.Contains(string(s), "f") {
-					t = FileType
-					data, err = loadFile()
-					if err != nil {
-						continue
-					}
-				} else if strings.Contains(string(s), "F") {
-					enableFiles()
-					continue
-				} else if strings.Contains(string(s), "w") {
-					_, p, err := common.ImportPubKey()
-					if err == nil {
-						addToWhitelist(p)
-					}
-					continue
-				} else if strings.Contains(string(s), "W") {
-					printWhitelist()
-					continue
-				} else if strings.Contains(string(s), "i") {
-					invitePeerToChatSession(false)
-					continue
-				} else if strings.Contains(string(s), "y") {
-					invitePeerToChatSession(false)
-					continue
-				} else if strings.Contains(string(s), "n") {
-					invitePeerToChatSession(true)
-					continue
-				} else if strings.Contains(string(s), "d") {
-					if _, raw, err := common.ImportPubKey(); err == nil {
-						removeFromWhitelist(raw)
-					}
-					continue
-				} else if strings.Contains(string(s), "D") {
-					removeFromWhitelist(sess.permPeerHex)
-					closeSession(true)
-					continue
-				} else if strings.Contains(string(s), "p") {
-					sess.symKey = common.GetPassword("p")
-					continue
-				} else if strings.Contains(string(s), "P") {
-					sess.symKey = common.GetPassword("s")
-					continue
-				} else if strings.Contains(string(s), "o") {
-					printDiagnosticInfo()
-					continue
-				} else if strings.Contains(string(s), "h") {
-					helpInternal()
-					continue
-				} else if strings.Contains(string(s), "b") {
-					beepEnabled = true
-					continue
-				} else if strings.Contains(string(s), "B") {
-					beepEnabled = false
-					continue
-				} else if strings.Contains(string(s), "t") {
-					tst()
-					continue
-				} else if strings.Contains(string(s), "e") {
-					closeSession(false)
-					continue
-				} else if strings.Contains(string(s), "q") {
-					fmt.Println("Quit command received")
-					closeSession(true)
-					return
-				} else {
-					continue
-				}
+			if !isCmd(s) {
+				sendMessage(s, TextType)
+				continue
 			}
 
-			err = sendMessage(data, t)
-			if err != nil {
+			if strings.Contains(string(s), "f") {
+				data, err := loadFile()
+				if err == nil {
+					sendMessage(data, FileType)
+				}
+				continue
+			} else if strings.Contains(string(s), "F") {
+				enableFiles()
+				continue
+			} else if strings.Contains(string(s), "w") {
+				_, p, err := common.ImportPubKey()
+				if err == nil {
+					addToWhitelist(p)
+				}
+				continue
+			} else if strings.Contains(string(s), "W") {
+				printWhitelist()
+				continue
+			} else if strings.Contains(string(s), "i") {
+				invitePeerToChatSession(false)
+				continue
+			} else if strings.Contains(string(s), "y") {
+				invitePeerToChatSession(false)
+				continue
+			} else if strings.Contains(string(s), "n") {
+				invitePeerToChatSession(true)
+				continue
+			} else if strings.Contains(string(s), "d") {
+				if _, raw, err := common.ImportPubKey(); err == nil {
+					removeFromWhitelist(raw)
+				}
+				continue
+			} else if strings.Contains(string(s), "D") {
+				removeFromWhitelist(sess.permPeerHex)
+				closeSession(true)
+				continue
+			} else if strings.Contains(string(s), "p") {
+				sess.symKey = common.GetPassword("p")
+				continue
+			} else if strings.Contains(string(s), "P") {
+				sess.symKey = common.GetPassword("s")
+				continue
+			} else if strings.Contains(string(s), "o") {
+				printDiagnosticInfo()
+				continue
+			} else if strings.Contains(string(s), "h") {
+				helpInternal()
+				continue
+			} else if strings.Contains(string(s), "b") {
+				beepEnabled = true
+				continue
+			} else if strings.Contains(string(s), "B") {
+				beepEnabled = false
+				continue
+			} else if strings.Contains(string(s), "t") {
+				tst()
+				continue
+			} else if strings.Contains(string(s), "e") {
+				closeSession(false)
+				continue
+			} else if strings.Contains(string(s), "q") {
+				fmt.Println("Quit command received")
+				closeSession(true)
 				return
+			} else {
+				continue
 			}
 		}
 	}
@@ -407,19 +403,29 @@ func beep() {
 }
 
 func sendMessage(data []byte, t byte) error {
+	if sess.state <= Restarted && (t&Invite) == 0 {
+		fmt.Printf("Failed to send message %s: session is not initialized \n", typeName(t))
+		return nil
+	}
+
+	if t == FileType || t == TextType {
+		if sess.state < AckSent {
+			fmt.Printf("Failed to send message: session is not in the right state [%d] \n", sess.state)
+			return nil
+		}
+	}
+
 	p, err := packMessage(data, t)
 	if err == nil {
 		err = sendPacket(socket, p)
 	}
 	if err != nil {
-		fmt.Printf("Failed to send message: %s \n", err.Error())
+		fmt.Printf("Failed to send message %s: %s \n", typeName(t), err.Error())
 	}
 	return err
 }
 
 func padMessage(p []byte) []byte {
-	// todo: data destruction
-	// todo: realloc with big capacity
 	newSize := getRandMessageSize()
 	prevSize := len(p)
 	if newSize > prevSize {
@@ -439,18 +445,34 @@ func removePadding(p []byte) []byte {
 	return p
 }
 
-func packMessage(p []byte, t byte) ([]byte, error) {
+func packMessage(msg []byte, t byte) ([]byte, error) {
 	if t != FileType {
-		p = padMessage(p)
+		msg = padMessage(msg)
 	}
-	// todo: data destruction
 	suffix := make([]byte, SuffixSize)
+	binary.LittleEndian.PutUint64(suffix, crutils.PseudorandomUint64())
 	binary.LittleEndian.PutUint32(suffix, sess.outgoingMsgCnt)
 	sess.outgoingMsgCnt++
 	suffix[MessageTypeIndex] = t
-	p = append(p, suffix...)
-	// todo: encryption here
-	return p, nil
+	msg = append(msg, suffix...)
+
+	// todo: encryption here, including sym xxxxxxxxx
+
+	var pub *ecdsa.PublicKey
+	if sess.state >= AckSent {
+		if sess.ephPeerKey == nil {
+			return nil, errors.New("missing ephemeral key")
+		}
+		pub = sess.ephPeerKey
+	} else {
+		if sess.permPeerKey == nil {
+			return nil, errors.New("missing the peer's permanent key")
+		}
+		pub = sess.permPeerKey
+	}
+
+	encrypted, err := asym.Encrypt(pub, msg)
+	return encrypted, err
 }
 
 func importPermPeerKey(s string) bool {
@@ -738,7 +760,6 @@ func processProtocolMessage(raw []byte, t byte, nonce uint32) {
 	}
 
 	if (t & ACK) != 0 {
-		// todo: check if it was encrypted with my eph key
 		sess.state |= AckReceived
 	}
 
@@ -753,8 +774,6 @@ func processProtocolMessage(raw []byte, t byte, nonce uint32) {
 	}
 }
 
-// todo: add param sig after decryption is implemented (only for protocol msg invite)
-// check signature for perm, otherwise it should be encrypted with my eph key
 func processMessage(raw []byte, t byte, nonce uint32) {
 	if t < UserThreshold {
 		processProtocolMessage(raw, t, nonce)
@@ -763,12 +782,26 @@ func processMessage(raw []byte, t byte, nonce uint32) {
 	}
 }
 
-func processPacket(p []byte) {
-	// todo: decrypt
-	raw, t, nonce := parsePacket(p)
-	if raw != nil {
+func processPacket(pack []byte) {
+	var privateKey *ecdsa.PrivateKey
+	if sess.state >= AckReceived {
+		privateKey = ephemeralKey
+	} else {
+		privateKey = clientKey
+	}
+
+	decrypted, err := asym.Decrypt(privateKey, pack)
+	if err != nil {
+		fmt.Printf("Failed to decrypt msg: %s \n", err.Error()) // todo: delete after tests
+		return
+	}
+
+	// todo: decrypt sym xxxxxxxxxxxx
+
+	msg, t, nonce := parsePacket(decrypted)
+	if msg != nil {
 		checkNonce(nonce)
-		processMessage(raw, t, nonce)
+		processMessage(msg, t, nonce)
 	}
 }
 

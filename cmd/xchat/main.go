@@ -18,7 +18,7 @@ import (
 
 const (
 	PrefixSize = 4
-	SuffixSize = 6
+	SuffixSize = 8
 )
 
 var (
@@ -45,7 +45,7 @@ func loadEncryptionKeys(flags string) (err error) {
 	if strings.Contains(flags, "M") {
 		cert = keccak.Digest([]byte("7c6860a2cbc905d54438e36fbf82772c63519112a6958ebfc4da171d8c55c4bd"), 256)
 	} else {
-		cert, err := common.LoadCertificate(true)
+		cert, err = common.LoadCertificate(true)
 		masterKey = cert
 		if err != nil {
 			return err
@@ -68,8 +68,8 @@ func loadEncryptionKeys(flags string) (err error) {
 		return err
 	}
 
-	if strings.Contains(flags, "z") {
-		fmt.Println("======================> WARNING: insecure version without password, use it only for test purposes!")
+	if strings.Contains(flags, "T") {
+		fmt.Println("======================> WARNING: test mode (without password), not safe to use for any other purposes!")
 		masterKey[0]++
 	} else {
 		pass := common.GetPassword(flags)
@@ -177,7 +177,7 @@ func help() {
 	fmt.Println("\t -c chat client")
 	fmt.Println("\t -l localhost (server-related params are not required)")
 	fmt.Println("\t -s secure password")
-	fmt.Println("\t -z insecure mode (without password)") // todo: change to "Z"
+	fmt.Println("\t -T test mode (without password)")
 	fmt.Println("\t -i initiate chat session")
 	fmt.Println("\t -y restart previous session")
 	fmt.Println("\t -F allow to receive files")
