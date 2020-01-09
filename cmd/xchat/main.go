@@ -40,11 +40,16 @@ func getFileEncryptionKey() []byte {
 	return keccak.Digest(masterKey, 256)
 }
 
-func loadEncryptionKeys(flags string) error {
-	cert, err := common.LoadCertificate(true)
-	masterKey = cert
-	if err != nil {
-		return err
+func loadEncryptionKeys(flags string) (err error) {
+	var cert []byte
+	if strings.Contains(flags, "M") {
+		cert = keccak.Digest([]byte("7c6860a2cbc905d54438e36fbf82772c63519112a6958ebfc4da171d8c55c4bd"), 256)
+	} else {
+		cert, err := common.LoadCertificate(true)
+		masterKey = cert
+		if err != nil {
+			return err
+		}
 	}
 
 	sk := keccak.Digest(cert, 32)
@@ -87,7 +92,7 @@ func isServer(flags string) bool {
 	if len(flags) == 0 {
 		return true
 	}
-	return strings.Contains(flags, "m")
+	return strings.Contains(flags, "m") || strings.Contains(flags, "M")
 }
 
 func getDefaultPort() string {
@@ -168,6 +173,7 @@ func help() {
 	fmt.Println("encrypted chat between remote peers, with ephemeral keys and forward secrecy")
 	fmt.Println("USAGE: xchat flags [ip_address[:port]] [server_pub_key] [client_pub_key]")
 	fmt.Println("\t -m main node (server)")
+	fmt.Println("\t -M main node with precompriled certificate")
 	fmt.Println("\t -c chat client")
 	fmt.Println("\t -l localhost (server-related params are not required)")
 	fmt.Println("\t -s secure password")
@@ -175,6 +181,7 @@ func help() {
 	fmt.Println("\t -i initiate chat session")
 	fmt.Println("\t -y restart previous session")
 	fmt.Println("\t -F allow to receive files")
+	fmt.Println("\t -b beep on incoming message")
 	fmt.Println("\t -h help")
 }
 
@@ -192,6 +199,8 @@ func helpInternal() {
 	fmt.Println("\\p: add session password for additional symmetric encryption")
 	fmt.Println("\\P: add session password (secure mode)")
 	fmt.Println("\\o: output debug info")
+	fmt.Println("\\b: beep on incoming message")
+	fmt.Println("\\B: disable beeping")
 	fmt.Println("\\h: help")
 	fmt.Println("\\e: exit current session")
 	fmt.Println("\\q: quit")

@@ -65,6 +65,7 @@ var (
 	sess         Session
 	whitelist    [][]byte
 	filesEnabled bool
+	beepEnabled  bool
 )
 
 func typeName(t byte) (s string) {
@@ -364,6 +365,15 @@ func runClientCmdLoop() {
 				} else if strings.Contains(string(s), "h") {
 					helpInternal()
 					continue
+				} else if strings.Contains(string(s), "b") {
+					beepEnabled = true
+					continue
+				} else if strings.Contains(string(s), "B") {
+					beepEnabled = false
+					continue
+				} else if strings.Contains(string(s), "t") {
+					tst()
+					continue
 				} else if strings.Contains(string(s), "e") {
 					closeSession(false)
 					continue
@@ -381,6 +391,18 @@ func runClientCmdLoop() {
 				return
 			}
 		}
+	}
+}
+
+func tst() {
+	beep()
+}
+
+func beep() {
+	if beepEnabled {
+		fmt.Printf("%c", byte(7))
+		time.Sleep(128 * time.Millisecond)
+		fmt.Printf("%c", byte(7))
 	}
 }
 
@@ -484,6 +506,7 @@ func importServerPubParameter(s string) bool {
 }
 
 func loadConnexxionParams(flags string) bool {
+	beepEnabled = strings.Contains(flags, "b")
 	if strings.Contains(flags, "F") {
 		enableFiles()
 	}
@@ -696,6 +719,8 @@ func processUserMessage(raw []byte, t byte, nonce uint32) {
 	} else {
 		fmt.Printf("[%03d]: unknown message type %d \n", nonce, int(t))
 	}
+
+	beep()
 }
 
 func processProtocolMessage(raw []byte, t byte, nonce uint32) {

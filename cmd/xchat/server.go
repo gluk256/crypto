@@ -148,7 +148,7 @@ func runServer() {
 
 	common.PrintPublicKey(&serverKey.PublicKey)
 	fmt.Printf("your ip address: <%s> \n", ip)
-	fmt.Println("xserver v.1 started")
+	fmt.Println("xserver started")
 
 	go runServerConnexxionsLoop(listener)
 
