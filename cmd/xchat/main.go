@@ -64,7 +64,7 @@ func loadEncryptionKeys(flags string) error {
 	}
 
 	if strings.Contains(flags, "z") {
-		fmt.Println("======================> WARNING: insecure version without password, only use for test purposes!")
+		fmt.Println("======================> WARNING: insecure version without password, use it only for test purposes!")
 		masterKey[0]++
 	} else {
 		pass := common.GetPassword(flags)
@@ -174,22 +174,23 @@ func help() {
 	fmt.Println("\t -z insecure mode (without password)") // todo: change to "Z"
 	fmt.Println("\t -i initiate chat session")
 	fmt.Println("\t -y restart previous session")
-	fmt.Println("\t -f allow to receive files")
+	fmt.Println("\t -F allow to receive files")
 	fmt.Println("\t -h help")
 }
 
 func helpInternal() {
 	fmt.Println("COMMANDS")
 	fmt.Println("\\f: send file")
+	fmt.Println("\\F: allow to receive files")
 	fmt.Println("\\w: whitelist another peer")
-	fmt.Println("\\y: restart session")
+	fmt.Println("\\W: print whitelist")
+	fmt.Println("\\y: restart last session")
 	fmt.Println("\\i: initiate new chat session with current peer")
 	fmt.Println("\\n: initiate new chat session with new peer")
 	fmt.Println("\\d: delete another peer form whitelist")
 	fmt.Println("\\D: delete current peer form whitelist")
 	fmt.Println("\\p: add session password for additional symmetric encryption")
 	fmt.Println("\\P: add session password (secure mode)")
-	fmt.Println("\\f: allow to receive files")
 	fmt.Println("\\o: output debug info")
 	fmt.Println("\\h: help")
 	fmt.Println("\\e: exit current session")

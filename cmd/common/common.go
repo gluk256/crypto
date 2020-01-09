@@ -107,8 +107,19 @@ func SaveData(filename string, data []byte) error {
 	return errors.New("max tries exceeded")
 }
 
+func GetCryptoDir() (dir string, exist bool) {
+	dir = os.Getenv("HOME")
+	if len(dir) != 0 {
+		dir += string("/.xcry")
+		_, err := os.Stat(dir)
+		exist = (err == nil)
+	}
+	return dir, exist
+}
+
 func GetFullFileName(name string) string {
-	return os.Getenv("HOME") + string("/.xcry/") + name
+	dir, _ := GetCryptoDir()
+	return dir + "/" + name
 }
 
 func LoadCertificate(retry bool) ([]byte, error) {

@@ -113,6 +113,18 @@ func resetSession() {
 	sess.state = Restarted
 }
 
+func printWhitelist() {
+	if len(whitelist) == 0 {
+		fmt.Println("Whielist is empty")
+		return
+	}
+
+	fmt.Println("Whielisted peers:")
+	for _, p := range whitelist {
+		fmt.Printf("%x \n", p)
+	}
+}
+
 func isWhitelisted(p []byte) bool {
 	for _, b := range whitelist {
 		if bytes.Equal(b, p) {
@@ -285,9 +297,19 @@ func isCmd(b []byte) bool {
 	return s[0] == '\\' || s[0] == '/'
 }
 
+func enableFiles() {
+	dir, exist := common.GetCryptoDir()
+	if exist {
+		filesEnabled = true
+		fmt.Println("Enabled to receive files")
+	} else {
+		fmt.Printf("Unable to receive files: directory '%d' does not exist \n", dir)
+	}
+}
+
 func runClientCmdLoop() {
 	var err error
-	for err == nil {
+	for {
 		s := terminal.PlainTextInput()
 		if len(s) != 0 {
 			data := s
@@ -300,11 +322,17 @@ func runClientCmdLoop() {
 					if err != nil {
 						continue
 					}
+				} else if strings.Contains(string(s), "F") {
+					enableFiles()
+					continue
 				} else if strings.Contains(string(s), "w") {
 					_, p, err := common.ImportPubKey()
 					if err == nil {
 						addToWhitelist(p)
 					}
+					continue
+				} else if strings.Contains(string(s), "W") {
+					printWhitelist()
 					continue
 				} else if strings.Contains(string(s), "i") {
 					invitePeerToChatSession(false)
@@ -330,9 +358,6 @@ func runClientCmdLoop() {
 				} else if strings.Contains(string(s), "P") {
 					sess.symKey = common.GetPassword("s")
 					continue
-				} else if strings.Contains(string(s), "f") {
-					filesEnabled = true
-					continue
 				} else if strings.Contains(string(s), "o") {
 					printDiagnosticInfo()
 					continue
@@ -352,6 +377,9 @@ func runClientCmdLoop() {
 			}
 
 			err = sendMessage(data, t)
+			if err != nil {
+				return
+			}
 		}
 	}
 }
@@ -433,7 +461,9 @@ func importPermPeerKey(s string) bool {
 }
 
 func loadConnexxionParams(flags string) bool {
-	filesEnabled = strings.Contains(flags, "f")
+	if strings.Contains(flags, "F") {
+		enableFiles()
+	}
 
 	if strings.Contains(flags, "l") {
 		serverIP = getDefaultIP()
@@ -529,7 +559,7 @@ func loadFile() (data []byte, err error) {
 	}
 	data, err = ioutil.ReadFile(string(name))
 	if err != nil {
-		fmt.Printf("Error: %s \n", err.Error())
+		fmt.Printf("Error loading file: %s \n", err.Error())
 	}
 	return data, err
 }
@@ -639,7 +669,8 @@ func processUserMessage(raw []byte, t byte, nonce uint32) {
 	if t == FileType {
 		if filesEnabled {
 			h := crutils.Sha2(raw)
-			name := fmt.Sprintf("%x", h)
+			name := fmt.Sprintf("%x", h[:6])
+			name = common.GetFullFileName(name)
 			common.SaveData(name, raw)
 			fmt.Printf("[%03d]: saved msg as file %s \n", nonce, name)
 		} else {
@@ -703,19 +734,9 @@ func processPacket(p []byte) {
 }
 
 func printDiagnosticInfo() {
-	var eph, perm string
-	if sess.permPeerKey != nil {
-		perm = "ok"
-	}
-	if sess.ephPeerKey != nil {
-		eph = "ok"
-	}
-	fmt.Printf("eph: %s, perm: %s, in = %d, out = %d, state = %d \n", eph, perm, sess.incomingMsgCnt, sess.outgoingMsgCnt, sess.state)
-
-	for i, p := range whitelist {
-		fmt.Printf("peer[%d] = %x\n", i, p)
-	}
-
+	p := (sess.permPeerKey != nil)
+	e := (sess.ephPeerKey != nil)
+	fmt.Printf("eph: %v, perm: %v, in = %d, out = %d, state = %d \n", e, p, sess.incomingMsgCnt, sess.outgoingMsgCnt, sess.state)
 	fmt.Printf("Your IP: %s\n", getLocalIP())
 }
 
@@ -766,11 +787,13 @@ func loadPeers(flags string) {
 		return
 	}
 
-	for i := 0; i < sz-asym.PublicKeySize; i += asym.PublicKeySize {
+	for i := 0; i < sz; i += asym.PublicKeySize {
 		addToWhitelist(data[i : i+asym.PublicKeySize])
 	}
 
-	server := data[sz-asym.PublicKeySize:] // server key is always the last
+	si := len(whitelist) - 1 // server key is always the last
+	server := whitelist[si]
+	whitelist = whitelist[:si]
 	k, err := asym.ImportPubKey(server)
 	if err != nil {
 		fmt.Printf("Warning: failed to load remote server pub key: %s \n", err.Error())
@@ -796,7 +819,7 @@ func loadPeers(flags string) {
 		fmt.Printf("Last session with peer: %x \n", sess.permPeerHex)
 	}
 
-	fmt.Printf("%d peers loaded \n", len(whitelist)-1)
+	fmt.Printf("%d peers loaded \n", len(whitelist))
 }
 
 func savePeersList() {
