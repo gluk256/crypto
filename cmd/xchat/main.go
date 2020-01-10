@@ -18,7 +18,8 @@ import (
 
 const (
 	PrefixSize = 4
-	SuffixSize = 8
+	MacSize    = 8
+	SuffixSize = 8 + MacSize
 )
 
 var (

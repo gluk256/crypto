@@ -324,67 +324,48 @@ func runClientCmdLoop() {
 				if err == nil {
 					sendMessage(data, FileType)
 				}
-				continue
 			} else if strings.Contains(string(s), "F") {
 				enableFiles()
-				continue
 			} else if strings.Contains(string(s), "w") {
 				_, p, err := common.ImportPubKey()
 				if err == nil {
 					addToWhitelist(p)
 				}
-				continue
 			} else if strings.Contains(string(s), "W") {
 				printWhitelist()
-				continue
 			} else if strings.Contains(string(s), "i") {
 				invitePeerToChatSession(false)
-				continue
 			} else if strings.Contains(string(s), "y") {
 				invitePeerToChatSession(false)
-				continue
 			} else if strings.Contains(string(s), "n") {
 				invitePeerToChatSession(true)
-				continue
 			} else if strings.Contains(string(s), "d") {
 				if _, raw, err := common.ImportPubKey(); err == nil {
 					removeFromWhitelist(raw)
 				}
-				continue
 			} else if strings.Contains(string(s), "D") {
 				removeFromWhitelist(sess.permPeerHex)
 				closeSession(true)
-				continue
 			} else if strings.Contains(string(s), "p") {
 				sess.symKey = common.GetPassword("p")
-				continue
 			} else if strings.Contains(string(s), "P") {
 				sess.symKey = common.GetPassword("s")
-				continue
 			} else if strings.Contains(string(s), "o") {
 				printDiagnosticInfo()
-				continue
 			} else if strings.Contains(string(s), "h") {
 				helpInternal()
-				continue
 			} else if strings.Contains(string(s), "b") {
 				beepEnabled = true
-				continue
 			} else if strings.Contains(string(s), "B") {
 				beepEnabled = false
-				continue
 			} else if strings.Contains(string(s), "t") {
 				tst()
-				continue
 			} else if strings.Contains(string(s), "e") {
 				closeSession(false)
-				continue
 			} else if strings.Contains(string(s), "q") {
 				fmt.Println("Quit command received")
 				closeSession(true)
 				return
-			} else {
-				continue
 			}
 		}
 	}
@@ -396,8 +377,6 @@ func tst() {
 
 func beep() {
 	if beepEnabled {
-		fmt.Printf("%c", byte(7))
-		time.Sleep(128 * time.Millisecond)
 		fmt.Printf("%c", byte(7))
 	}
 }
@@ -445,30 +424,47 @@ func removePadding(p []byte) []byte {
 	return p
 }
 
+func insertMac(msg []byte) {
+	x := len(msg) - MacSize
+	mac := keccak.Digest(msg[:x], MacSize)
+	copy(msg[x:], mac)
+}
+
+func validateMac(msg []byte) bool {
+	x := len(msg) - MacSize
+	expected := keccak.Digest(msg[:x], MacSize)
+	return bytes.Equal(expected, msg[x:])
+}
+
 func packMessage(msg []byte, t byte) ([]byte, error) {
 	if t != FileType {
 		msg = padMessage(msg)
 	}
 	suffix := make([]byte, SuffixSize)
-	binary.LittleEndian.PutUint64(suffix, crutils.PseudorandomUint64())
+	binary.LittleEndian.PutUint64(suffix, crutils.PseudorandomUint64()) // it will serve as internal salt
 	binary.LittleEndian.PutUint32(suffix, sess.outgoingMsgCnt)
 	sess.outgoingMsgCnt++
 	suffix[MessageTypeIndex] = t
 	msg = append(msg, suffix...)
+	insertMac(msg)
 
-	// todo: encryption here, including sym xxxxxxxxx
-
+	var sym []byte
 	var pub *ecdsa.PublicKey
 	if sess.state >= AckSent {
 		if sess.ephPeerKey == nil {
 			return nil, errors.New("missing ephemeral key")
 		}
 		pub = sess.ephPeerKey
+		sym = sess.symKey
 	} else {
 		if sess.permPeerKey == nil {
 			return nil, errors.New("missing the peer's permanent key")
 		}
 		pub = sess.permPeerKey
+	}
+
+	if sym != nil {
+		crutils.EncryptInplaceRCX(sym, msg)
 	}
 
 	encrypted, err := asym.Encrypt(pub, msg)
@@ -708,6 +704,8 @@ func getRandMessageSize() int {
 	x := uint64(MinMessageSize)
 	r := crutils.PseudorandomUint64() % x
 	r += x
+	odd := r % 4
+	r -= odd
 	return int(r)
 }
 
@@ -782,21 +780,30 @@ func processMessage(raw []byte, t byte, nonce uint32) {
 	}
 }
 
-func processPacket(pack []byte) {
+func processPacket(packet []byte) {
+	var sym []byte
 	var privateKey *ecdsa.PrivateKey
-	if sess.state >= AckReceived {
+	if sess.state >= AckReceived && sess.state < QuitSent {
 		privateKey = ephemeralKey
+		sym = sess.symKey
 	} else {
 		privateKey = clientKey
 	}
 
-	decrypted, err := asym.Decrypt(privateKey, pack)
+	decrypted, err := asym.Decrypt(privateKey, packet)
 	if err != nil {
-		fmt.Printf("Failed to decrypt msg: %s \n", err.Error()) // todo: delete after tests
+		fmt.Printf("Failed to decrypt a packet: %s \n", err.Error()) // todo: delete after tests
 		return
 	}
 
-	// todo: decrypt sym xxxxxxxxxxxx
+	if sym != nil {
+		crutils.DecryptInplaceRCX(sym, decrypted)
+	}
+
+	if !validateMac(decrypted) {
+		fmt.Println("Warning: received a msg with invalid MAC (may be encrypted with different sym key)") // todo: delete after tests
+		return
+	}
 
 	msg, t, nonce := parsePacket(decrypted)
 	if msg != nil {
