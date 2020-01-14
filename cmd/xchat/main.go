@@ -19,7 +19,7 @@ import (
 const (
 	PrefixSize = 4
 	MacSize    = 8
-	SuffixSize = 8 + MacSize
+	SuffixSize = 4 + 8 + 4 + MacSize
 )
 
 var (
@@ -197,8 +197,8 @@ func helpInternal() {
 	fmt.Println("\\n: initiate new chat session with new peer")
 	fmt.Println("\\d: delete another peer form whitelist")
 	fmt.Println("\\D: delete current peer form whitelist")
-	fmt.Println("\\p: add session password for additional symmetric encryption")
-	fmt.Println("\\P: add session password (secure mode)")
+	fmt.Println("\\k: add session key for additional symmetric encryption")
+	fmt.Println("\\K: add session key (secure mode)")
 	fmt.Println("\\o: output debug info")
 	fmt.Println("\\b: beep on incoming message")
 	fmt.Println("\\B: disable beeping")

@@ -191,3 +191,31 @@ func generateRandomBytes(t *testing.T) []byte {
 	}
 	return b
 }
+
+func BenchmarkDecryptShort(b *testing.B) {
+	key, err := GenerateKey()
+	if err != nil {
+		b.Fatalf("key generation failed: %s", err.Error())
+	}
+
+	data := make([]byte, 1024)
+	encrypted, err := Encrypt(&key.PublicKey, data)
+	if err != nil {
+		b.Fatalf("encryption failed: %s", err.Error())
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := Decrypt(key, encrypted)
+		if err != nil {
+			b.Fatalf("decryption failed: %s", err.Error())
+		}
+	}
+}
+
+func BenchmarkHash(b *testing.B) {
+	data := make([]byte, 1024)
+
+	for i := 0; i < b.N; i++ {
+		keccak.Digest(data, 8)
+	}
+}
