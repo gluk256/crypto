@@ -34,6 +34,7 @@ type Session struct {
 
 const (
 	DebugMode        = true
+	FingerprintLen   = 32
 	MinMessageSize   = 256
 	MessageTypeIndex = 12
 	SessionTimeout   = 60 // seconds
@@ -71,6 +72,7 @@ var (
 	whitelist    [][]byte
 	filesEnabled bool
 	beepEnabled  bool
+	exiting      bool
 )
 
 func typeName(t byte) (s string) {
@@ -105,10 +107,13 @@ func updateState(t byte) {
 	switch t {
 	case INVITE:
 		sess.state |= InviteSent
-	case ACK:
-		sess.state |= AckSent
 	case QUIT:
 		sess.state |= QuitSent
+	case ACK:
+		sess.state |= AckSent
+		if sess.state&AckReceived != 0 {
+			sess.state |= Active
+		}
 	}
 }
 
@@ -244,9 +249,8 @@ func sendInvite(ack bool) error {
 
 	err = sendMessage(msg, t)
 	if err == nil {
-		sess.state |= newState
+		sess.state = newState
 	}
-
 	return err
 }
 
@@ -258,7 +262,7 @@ func runPulse() {
 		sessionPingTime += MaxPingTime / 2
 	}
 
-	for err == nil {
+	for !exiting {
 		cur := time.Now().Unix()
 		elapsed := uint64(cur-sess.outgoingLastPing) * uint64(time.Second)
 		nextInterval := crutils.PseudorandomUint64() % sessionPingTime
@@ -276,11 +280,10 @@ func runPulse() {
 			} else {
 				err = sendProtocolMessage(PING)
 			}
+			if err != nil {
+				time.Sleep(time.Second)
+			}
 		}
-	}
-
-	if err != nil && DebugMode {
-		fmt.Printf("Warning: ping loop exit: %s \n", err.Error())
 	}
 }
 
@@ -390,6 +393,7 @@ func runClientCmdLoop() {
 			} else if strings.Contains(string(s), "q") {
 				fmt.Println("Quit command received")
 				closeSession(true)
+				exiting = true
 				return
 			}
 		}
@@ -410,13 +414,6 @@ func sendMessage(data []byte, t byte) error {
 	if sess.state <= Restarted && (t&INVITE) == 0 && (t&PING) == 0 {
 		fmt.Printf("Failed to send message %s: session is not initialized \n", typeName(t))
 		return nil
-	}
-
-	if t == FILE || t == TEXT {
-		if sess.state < AckSent {
-			fmt.Printf("Failed to send message: session is not in the right state [%d] \n", sess.state)
-			return nil
-		}
 	}
 
 	p, err := packMessage(data, t)
@@ -463,8 +460,42 @@ func validateMac(msg []byte) bool {
 	return bytes.Equal(expected, msg[x:])
 }
 
-func packMessage(msg []byte, t byte) ([]byte, error) {
-	if t != FILE {
+func encryptUserMessage(msg []byte) ([]byte, error) {
+	if sess.state < Active || sess.state >= QuitSent {
+		return nil, fmt.Errorf("session is not in the right state [%d] \n", sess.state)
+	}
+
+	if sess.ephPeerKey == nil {
+		return nil, errors.New("ephemeral peer key is not available")
+	}
+
+	if sess.symKey != nil {
+		crutils.EncryptInplaceRCX(sess.symKey, msg)
+	}
+
+	return asym.Encrypt(sess.ephPeerKey, msg)
+}
+
+func encryptProtocolMessage(msg []byte) ([]byte, error) {
+	if sess.permPeerKey != nil {
+		return asym.Encrypt(sess.permPeerKey, msg)
+	} else {
+		return nil, errors.New("permanent peer key is not available")
+	}
+}
+
+func encryptPing(msg []byte) ([]byte, error) {
+	if sess.ephPeerKey != nil {
+		return asym.Encrypt(sess.ephPeerKey, msg)
+	} else if sess.permPeerKey != nil {
+		return asym.Encrypt(sess.permPeerKey, msg)
+	} else {
+		return asym.Encrypt(&ephemeralKey.PublicKey, msg)
+	}
+}
+
+func packMessage(msg []byte, ty byte) ([]byte, error) {
+	if ty != FILE {
 		msg = padMessage(msg)
 	}
 	suffix := make([]byte, SuffixSize)
@@ -472,33 +503,17 @@ func packMessage(msg []byte, t byte) ([]byte, error) {
 	binary.LittleEndian.PutUint32(suffix, sess.outgoingMsgCnt)
 	sess.outgoingMsgCnt++
 	binary.LittleEndian.PutUint64(suffix[4:], uint64(time.Now().Unix()))
-	suffix[MessageTypeIndex] = t
+	suffix[MessageTypeIndex] = ty
 	msg = append(msg, suffix...)
 	insertMac(msg)
 
-	// todo: review this func
-	var sym []byte
-	pub := sess.permPeerKey
-	if sess.state >= AckSent && sess.state < Closed { // todo: fix, this is a bug!!
-		if sess.ephPeerKey == nil {
-			return nil, errors.New("missing ephemeral key")
-		}
-		pub = sess.ephPeerKey
-		sym = sess.symKey
-	} else if pub == nil {
-		if t == PING {
-			pub = &ephemeralKey.PublicKey // send message into the void, in order to ensure darkness
-		} else {
-			return nil, errors.New("missing the peer's permanent key")
-		}
+	if ty == FILE || ty == TEXT {
+		return encryptUserMessage(msg)
+	} else if ty == PING {
+		return encryptPing(msg)
+	} else {
+		return encryptProtocolMessage(msg)
 	}
-
-	if sym != nil {
-		crutils.EncryptInplaceRCX(sym, msg)
-	}
-
-	encrypted, err := asym.Encrypt(pub, msg)
-	return encrypted, err
 }
 
 func importPermPeerKey(s string) bool {
@@ -598,8 +613,27 @@ func loadConnexxionParams(flags string) bool {
 	return true
 }
 
-func runClient(flags string) {
+func reportFingerprint(key *ecdsa.PublicKey, name string) bool {
+	k, err := asym.ExportPubKey(&ephemeralKey.PublicKey)
+	if err != nil {
+		fmt.Printf("Failed to export %s key: %s \n", name, err.Error())
+		return false
+	}
+
+	hash := keccak.Digest(k, FingerprintLen)
+	fmt.Printf("%s key fingerprint: %x \n", name, hash)
+	return true
+}
+
+func printKeys() bool {
 	common.PrintPublicKey(&clientKey.PublicKey)
+	return reportFingerprint(&ephemeralKey.PublicKey, "your ephemeral")
+}
+
+func runClient(flags string) {
+	if !printKeys() {
+		return
+	}
 	loadPeers(flags) // this func should be called before processing the cmd args
 	if !loadConnexxionParams(flags) {
 		return
@@ -611,7 +645,6 @@ func runClient(flags string) {
 	}
 	fmt.Println("Connected to server")
 	socket = conn
-
 	err = sendHandshakeToServer()
 	if err != nil {
 		fmt.Printf("Handshake failed: %s \n", err.Error())
@@ -690,6 +723,10 @@ func parsePacket(p []byte) (raw []byte, t byte, n uint32, timestamp int64) {
 }
 
 func processIncomingInvite(msg []byte) {
+	if sess.state >= QuitSent {
+		sess.state = Restarted
+	}
+
 	const payloadSize = asym.PublicKeySize + asym.SignatureSize
 	if len(msg) < payloadSize {
 		fmt.Printf("Invalid Invite received: less than expected size [%d vs %d] \n", len(msg), payloadSize)
@@ -732,6 +769,10 @@ func processIncomingInvite(msg []byte) {
 		return
 	}
 
+	if !reportFingerprint(eph, "peer's ephemeral") {
+		return
+	}
+
 	sess.permPeerHex = pub
 	sess.permPeerKey = perm
 	sess.ephPeerKey = eph
@@ -768,12 +809,13 @@ func sendProtocolMessage(t byte) error {
 	return err
 }
 
-func processUserMessage(raw []byte, t byte, nonce uint32) {
-	if sess.state < Active {
-		sess.state = Active
-	}
-
+func processUserMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
 	if t == FILE {
+		if !ephemeral {
+			fmt.Println("Warning: rejecting a user msg encrypted with permanent key")
+			return
+		}
+
 		if filesEnabled {
 			h := crutils.Sha2(raw)
 			name := fmt.Sprintf("%x", h[:6])
@@ -785,7 +827,9 @@ func processUserMessage(raw []byte, t byte, nonce uint32) {
 		}
 	} else if t == TEXT {
 		raw = removePadding(raw)
-		if common.IsAscii(raw) {
+		if !ephemeral {
+			fmt.Printf("[%03d]<WRONG KEY>[%s] \n", nonce, string(raw))
+		} else if common.IsAscii(raw) {
 			fmt.Printf("[%03d][%s] \n", nonce, string(raw))
 		} else {
 			fmt.Printf("[%03d]<hex>[%x] \n", nonce, raw)
@@ -806,19 +850,15 @@ func processProtocolMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
 		fmt.Printf("unknown protocol message type: %d \n", int(t))
 	}
 
-	if !ephemeral && sess.state >= AckReceived && sess.state < QuitSent {
-		if (t & PING) != 0 {
-			fmt.Println("Warning: rejecting a protocol msg encrypted with permanent key")
-			return
-		}
-	}
-
 	if (t & INVITE) != 0 {
 		processIncomingInvite(raw)
 	}
 
 	if (t & ACK) != 0 {
 		sess.state |= AckReceived
+		if sess.state&AckSent != 0 {
+			sess.state |= Active
+		}
 	}
 
 	if (t & REJECT) != 0 {
@@ -835,17 +875,15 @@ func processProtocolMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
 func processMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
 	if t < UserThreshold {
 		processProtocolMessage(raw, t, nonce, ephemeral)
-	} else if ephemeral {
-		processUserMessage(raw, t, nonce)
 	} else {
-		fmt.Println("Warning: rejecting a user msg encrypted with permanent key")
+		processUserMessage(raw, t, nonce, ephemeral)
 	}
 }
 
 func processPacket(packet []byte) {
-	var ephemeral bool
 	var err error
 	var decrypted []byte
+	var ephemeral bool
 
 	if sess.state >= AckReceived && sess.state < QuitSent {
 		decrypted, err = asym.Decrypt(ephemeralKey, packet)
@@ -855,15 +893,16 @@ func processPacket(packet []byte) {
 				crutils.DecryptInplaceRCX(sess.symKey, decrypted)
 			}
 		} else {
-			decrypted, err = asym.Decrypt(clientKey, packet)
+			fmt.Printf("Failed to decrypt a packet with eph key: %s \n", err.Error()) // todo: delete after tests
 		}
-	} else {
-		decrypted, err = asym.Decrypt(clientKey, packet)
 	}
 
-	if err != nil {
-		fmt.Printf("Failed to decrypt a packet: %s \n", err.Error()) // todo: delete after tests
-		return
+	if !ephemeral {
+		decrypted, err = asym.Decrypt(clientKey, packet)
+		if err != nil {
+			fmt.Printf("Failed to decrypt a packet: %s \n", err.Error()) // todo: delete after tests
+			return
+		}
 	}
 
 	if !validateMac(decrypted) {
