@@ -126,6 +126,7 @@ func resetSession() {
 	sess.incomingMsgCnt = 0
 	sess.outgoingMsgCnt = 0
 	sess.incomingLastPing = 0
+	changeEphemeralKey()
 }
 
 func printWhitelist() {
@@ -203,6 +204,8 @@ func updateLastPeer() {
 func invitePeerToChatSession(override bool) bool {
 	if override {
 		resetSession()
+	} else {
+		changeEphemeralKey()
 	}
 
 	if sess.permPeerKey == nil {
@@ -267,7 +270,7 @@ func runPulse() {
 		elapsed := uint64(cur-sess.outgoingLastPing) * uint64(time.Second)
 		nextInterval := crutils.PseudorandomUint64() % sessionPingTime
 		if elapsed < nextInterval {
-			s := nextInterval - elapsed + uint64(10)
+			s := nextInterval - elapsed + uint64(time.Millisecond*5)
 			time.Sleep(time.Duration(s))
 			continue
 		}
@@ -298,6 +301,8 @@ func closeSession(reset bool) {
 	}
 	if reset {
 		resetSession()
+	} else {
+		changeEphemeralKey()
 	}
 }
 
@@ -494,7 +499,15 @@ func encryptPing(msg []byte) ([]byte, error) {
 	}
 }
 
-func packMessage(msg []byte, ty byte) ([]byte, error) {
+func signMessage(key *ecdsa.PrivateKey, data []byte, ty byte) ([]byte, error) {
+	sig, err := asym.Sign(key, data)
+	if err == nil {
+		data = append(data, sig...)
+	}
+	return data, err
+}
+
+func packMessage(msg []byte, ty byte) (res []byte, err error) {
 	if ty != FILE {
 		msg = padMessage(msg)
 	}
@@ -508,12 +521,22 @@ func packMessage(msg []byte, ty byte) ([]byte, error) {
 	insertMac(msg)
 
 	if ty == FILE || ty == TEXT {
-		return encryptUserMessage(msg)
+		msg, err = signMessage(ephemeralKey, msg, ty)
+		if err == nil {
+			res, err = encryptUserMessage(msg)
+		}
 	} else if ty == PING {
-		return encryptPing(msg)
+		msg, err = signMessage(clientKey, msg, ty)
+		if err == nil {
+			res, err = encryptPing(msg)
+		}
 	} else {
-		return encryptProtocolMessage(msg)
+		msg, err = signMessage(clientKey, msg, ty)
+		if err == nil {
+			res, err = encryptProtocolMessage(msg)
+		}
 	}
+	return res, err
 }
 
 func importPermPeerKey(s string) bool {
@@ -684,7 +707,7 @@ func loadFile() (data []byte, err error) {
 	return data, err
 }
 
-func validateMessageParams(nonce uint32, timestamp int64) bool {
+func validateStamps(nonce uint32, timestamp int64) bool {
 	cur := time.Now().Unix()
 	futureThreshold := cur + SessionTimeout/2
 	pastThreshold := cur - SessionTimeout
@@ -903,18 +926,68 @@ func processPacket(packet []byte) {
 		}
 	}
 
-	if !validateMac(decrypted) {
+	threshold := len(decrypted) - asym.SignatureSize
+	raw := decrypted[:threshold]
+	sig := decrypted[threshold:]
+
+	if !validateMac(raw) {
 		fmt.Println("Warning: received a msg with invalid MAC (may be encrypted with different sym key)") // todo: delete after tests
 		return
 	}
 
-	msg, ty, nonce, timestamp := parsePacket(decrypted)
-	if msg != nil {
-		if validateMessageParams(nonce, timestamp) {
-			processMessage(msg, ty, nonce, ephemeral)
-			sess.incomingLastPing = time.Now().Unix()
-		}
+	msg, ty, nonce, timestamp := parsePacket(raw)
+	if msg == nil {
+		return
 	}
+
+	if !validateStamps(nonce, timestamp) {
+		return
+	}
+
+	if !validateMessageSignature(raw, sig, ty) {
+		return
+	}
+
+	processMessage(msg, ty, nonce, ephemeral)
+	sess.incomingLastPing = time.Now().Unix()
+}
+
+func validateMessageSignature(msg []byte, sig []byte, ty byte) bool {
+	var key *ecdsa.PublicKey
+	var name string
+	if ty == TEXT || ty == FILE {
+		key = sess.ephPeerKey
+		name = "ephemeral"
+	} else if ty == INVITE {
+		return true
+	} else {
+		key = sess.permPeerKey
+		name = "permanent"
+	}
+
+	if key == nil {
+		fmt.Printf("Peer's %s key is missing [type=%d] \n", name, int(ty))
+		return false
+	}
+
+	expected, err := asym.ExportPubKey(key)
+	if err != nil {
+		fmt.Printf("Failed to export peer's key (sgnature verfication): %s \n", err.Error())
+		return false
+	}
+
+	pub, err := asym.SigToPub(msg, sig)
+	if err != nil {
+		fmt.Printf("Failed to verify msg signature: %s \n", err.Error())
+		return false
+	}
+
+	if !bytes.Equal(pub, expected) {
+		fmt.Printf("Error: msg signed with wrong key [%x] \n", pub)
+		return false
+	}
+
+	return true
 }
 
 func printDiagnosticInfo() {

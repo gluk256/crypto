@@ -37,6 +37,18 @@ func cleanup() {
 	asym.AnnihilatePrivateKey(ephemeralKey)
 }
 
+func changeEphemeralKey() bool {
+	k, err := asym.GenerateKey()
+	if err != nil {
+		fmt.Printf("Failed to change ephemeral key: %s \n", err.Error())
+	} else {
+		asym.AnnihilatePrivateKey(ephemeralKey)
+		ephemeralKey = k
+		printFingerprint(&ephemeralKey.PublicKey, "Your ephemeral")
+	}
+	return err == nil
+}
+
 func getFileEncryptionKey() []byte {
 	return keccak.Digest(masterKey, 256)
 }
