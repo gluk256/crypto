@@ -34,7 +34,7 @@ type Session struct {
 
 const (
 	DebugMode        = true
-	FingerprintLen   = 32
+	FingerprintLen   = 33
 	MinMessageSize   = 256
 	MessageTypeIndex = 12
 	SessionTimeout   = 60 // seconds
@@ -276,7 +276,7 @@ func runPulse() {
 			closeSession(true)
 		} else {
 			if sess.state >= InviteSent && sess.state < AckReceived {
-				err = sendInvite(false)
+				err = sendInvite(sess.state&InviteReceived != 0)
 			} else {
 				err = sendProtocolMessage(PING)
 			}
@@ -613,21 +613,21 @@ func loadConnexxionParams(flags string) bool {
 	return true
 }
 
-func reportFingerprint(key *ecdsa.PublicKey, name string) bool {
-	k, err := asym.ExportPubKey(&ephemeralKey.PublicKey)
+func printFingerprint(key *ecdsa.PublicKey, name string) bool {
+	pub, err := asym.ExportPubKey(key)
 	if err != nil {
 		fmt.Printf("Failed to export %s key: %s \n", name, err.Error())
 		return false
 	}
 
-	hash := keccak.Digest(k, FingerprintLen)
+	hash := keccak.Digest(pub, FingerprintLen)
 	fmt.Printf("%s key fingerprint: %x \n", name, hash)
 	return true
 }
 
 func printKeys() bool {
 	common.PrintPublicKey(&clientKey.PublicKey)
-	return reportFingerprint(&ephemeralKey.PublicKey, "your ephemeral")
+	return printFingerprint(&ephemeralKey.PublicKey, "Your ephemeral")
 }
 
 func runClient(flags string) {
@@ -769,7 +769,8 @@ func processIncomingInvite(msg []byte) {
 		return
 	}
 
-	if !reportFingerprint(eph, "peer's ephemeral") {
+	fmt.Printf("Accepted invite from remote peer: %x \n", pub)
+	if !printFingerprint(eph, "Peer's ephemeral") {
 		return
 	}
 
@@ -785,10 +786,7 @@ func processIncomingInvite(msg []byte) {
 	}
 	if err != nil {
 		fmt.Printf("Error sending EPH msg: %s \n", err.Error())
-		return
 	}
-
-	fmt.Printf("Accepted invite from remote peer: %x \n", pub)
 }
 
 func getRandMessageSize() int {

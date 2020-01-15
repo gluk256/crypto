@@ -11,6 +11,32 @@ import (
 	"github.com/gluk256/crypto/algo/primitives"
 )
 
+func TestImpEx(t *testing.T) {
+	priv, err := GenerateKey()
+	if err != nil {
+		t.Fatalf("key generation failed: %s", err.Error())
+	}
+
+	pub, err := ExportPubKey(&priv.PublicKey)
+	if err != nil {
+		t.Fatalf("key export failed: %s", err.Error())
+	}
+
+	k, err := ImportPubKey(pub)
+	if err != nil {
+		t.Fatalf("key import failed: %s", err.Error())
+	}
+
+	p2, err := ExportPubKey(k)
+	if err != nil {
+		t.Fatalf("key re-export failed: %s", err.Error())
+	}
+
+	if !bytes.Equal(pub, p2) {
+		t.Fatalf("keys are not equal: %x vs. %x", pub, p2)
+	}
+}
+
 func TestGeneral(t *testing.T) {
 	seed := time.Now().Unix()
 	rand.Seed(seed)
