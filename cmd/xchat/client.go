@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gluk256/crypto/algo/keccak"
+	"github.com/gluk256/crypto/algo/primitives"
 	"github.com/gluk256/crypto/asym"
 	"github.com/gluk256/crypto/cmd/common"
 	"github.com/gluk256/crypto/crutils"
@@ -104,8 +105,42 @@ func typeName(t byte) (s string) {
 	return s
 }
 
+func updateSymKey(flag string) {
+	pass := common.GetPassword("p")
+	salt := keccak.Digest(pass, 256)
+	crutils.AnnihilateData(pass)
+	if len(sess.symKey) == 256 {
+		sess.symKey = primitives.XorInplace(sess.symKey, salt, 256)
+		crutils.AnnihilateData(salt)
+	} else {
+		sess.symKey = salt
+	}
+}
+
+func createSymKey() {
+	myKey, err1 := asym.ExportPubKey(&ephemeralKey.PublicKey)
+	if err1 != nil {
+		fmt.Printf("Failed to export my public key: %s \n", err1.Error())
+	}
+
+	peerKey, err2 := asym.ExportPubKey(sess.ephPeerKey)
+	if err2 != nil {
+		fmt.Printf("Failed to export peer's public key: %s \n", err2.Error())
+	}
+
+	if err1 != nil || err2 != nil {
+		fmt.Println("ERROR: failed to generate symmetric key. Please restart the session.")
+	} else {
+		crutils.AnnihilateData(sess.symKey)
+		commonKey := primitives.XorInplace(myKey, peerKey, len(myKey))
+		sess.symKey = keccak.Digest(commonKey, 256)
+		crutils.AnnihilateData(commonKey)
+	}
+}
+
 func commenceSession() {
 	if sess.state&Active == 0 {
+		createSymKey()
 		sess.state |= Active
 		fmt.Println("New session initialized, key exchange complete\n----------------------------------------------------------------------------------------------------")
 	}
@@ -126,6 +161,10 @@ func updateState(t byte) {
 }
 
 func resetSession() {
+	crutils.AnnihilateData(sess.symKey)
+	asym.AnnihilatePubKey(sess.ephPeerKey)
+	changeEphemeralKey()
+
 	sess.state = Restarted
 	sess.permPeerHex = nil
 	sess.permPeerKey = nil
@@ -134,7 +173,6 @@ func resetSession() {
 	sess.incomingMsgCnt = 0
 	sess.outgoingMsgCnt = 0
 	sess.incomingLastPing = 0
-	changeEphemeralKey()
 }
 
 func printWhitelist() {
@@ -382,9 +420,9 @@ func runClientCmdLoop() {
 				removeFromWhitelist(sess.permPeerHex)
 				closeSession(true)
 			} else if strings.Contains(string(s), "k") {
-				sess.symKey = common.GetPassword("p")
+				updateSymKey("p")
 			} else if strings.Contains(string(s), "K") {
-				sess.symKey = common.GetPassword("s")
+				updateSymKey("s")
 			} else if strings.Contains(string(s), "b") {
 				beepEnabled = !beepEnabled
 			} else if strings.Contains(string(s), "v") {
