@@ -868,7 +868,8 @@ func sendProtocolMessage(t byte) error {
 }
 
 func processUserMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
-	prefix := "\n\t\t\t\t\t\t\t\t\t"
+	timestamp := time.Now().Local().String()
+	prefix := fmt.Sprintf("\n\t\t\t\t\t\t\t\t\t<%s>", timestamp[11:19])
 	if verbose {
 		prefix += fmt.Sprintf("[%03d]", nonce)
 	}
@@ -894,9 +895,9 @@ func processUserMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
 		if !ephemeral {
 			fmt.Printf("%s<errkey>[ %s ]\n", prefix, string(raw))
 		} else if common.IsAscii(raw) {
-			fmt.Printf("\t%s[ %s ]\n", prefix, string(raw))
+			fmt.Printf("%s[ %s ]\n", prefix, string(raw))
 		} else {
-			fmt.Printf("%s   <hex>[ %x ]\n", prefix, raw)
+			fmt.Printf("%s<hex>[ %x ]\n", prefix, raw)
 		}
 	} else {
 		fmt.Printf("%s<unknown message type %d>\n", prefix, int(t))
@@ -977,7 +978,7 @@ func processPacket(packet []byte) {
 
 	if !validateMac(raw) {
 		if verbose {
-			fmt.Println("Warning: received a msg with invalid MAC (may be encrypted with different sym key)") // todo: delete after tests
+			fmt.Println("Warning: received a msg with invalid MAC (may be encrypted with different sym key)")
 		}
 		return
 	}
