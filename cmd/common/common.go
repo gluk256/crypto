@@ -22,7 +22,7 @@ func GetPassword(flags string) (res []byte) {
 		res, err = crutils.GenerateRandomPassword(20)
 		fmt.Println(string(res))
 		if err != nil {
-			fmt.Println("======================> WARNING: the data is not entirely random, not safe to use!")
+			fmt.Println("====================> WARNING: the data is not entirely random, not safe to use!")
 			fmt.Printf("Error: %s\n", err.Error())
 			return res
 		}
@@ -40,7 +40,7 @@ func GetPassword(flags string) (res []byte) {
 	if len(res) == 0 {
 		panic("empty password")
 	} else if len(res) < 8 {
-		//fmt.Println("======================> WARNING: the password is too short, not safe to use!") // todo: uncomment this line
+		//fmt.Println("====================> WARNING: the password is too short, not safe to use!") // todo: uncomment this line
 	}
 
 	res = keccak.Digest(res, 256) // the keys for all crypto apps must always be 256 bytes

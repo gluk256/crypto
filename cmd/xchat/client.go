@@ -33,7 +33,6 @@ type Session struct {
 }
 
 const (
-	DebugMode        = true
 	FingerprintLen   = 33
 	MinMessageSize   = 256
 	MessageTypeIndex = 12
@@ -66,13 +65,15 @@ const (
 )
 
 var (
-	socket       net.Conn
-	serverIP     string
-	sess         Session
-	whitelist    [][]byte
+	socket    net.Conn
+	serverIP  string
+	sess      Session
+	whitelist [][]byte
+
 	filesEnabled bool
 	beepEnabled  bool
 	exiting      bool
+	verbose      bool
 )
 
 func typeName(t byte) (s string) {
@@ -103,6 +104,13 @@ func typeName(t byte) (s string) {
 	return s
 }
 
+func commenceSession() {
+	if sess.state&Active == 0 {
+		sess.state |= Active
+		fmt.Println("New session initialized, key exchange complete\n----------------------------------------------------------------------------------------------------")
+	}
+}
+
 func updateState(t byte) {
 	switch t {
 	case INVITE:
@@ -112,7 +120,7 @@ func updateState(t byte) {
 	case ACK:
 		sess.state |= AckSent
 		if sess.state&AckReceived != 0 {
-			sess.state |= Active
+			commenceSession()
 		}
 	}
 }
@@ -344,7 +352,7 @@ func enableFiles() {
 }
 
 func runClientCmdLoop() {
-	for {
+	for !exiting {
 		s := terminal.PlainTextInput()
 		if len(s) != 0 {
 			if !isCmd(s) {
@@ -353,17 +361,13 @@ func runClientCmdLoop() {
 			}
 
 			if strings.Contains(string(s), "f") {
-				data, err := loadFile()
-				if err == nil {
+				if data, err := loadFile(); err == nil {
 					sendMessage(data, FILE)
 				}
 			} else if strings.Contains(string(s), "F") {
 				enableFiles()
 			} else if strings.Contains(string(s), "w") {
-				_, p, err := common.ImportPubKey()
-				if err == nil {
-					addToWhitelist(p)
-				}
+				changeWhitelist(true)
 			} else if strings.Contains(string(s), "W") {
 				printWhitelist()
 			} else if strings.Contains(string(s), "i") {
@@ -373,9 +377,7 @@ func runClientCmdLoop() {
 			} else if strings.Contains(string(s), "n") {
 				invitePeerToChatSession(true)
 			} else if strings.Contains(string(s), "d") {
-				if _, raw, err := common.ImportPubKey(); err == nil {
-					removeFromWhitelist(raw)
-				}
+				changeWhitelist(false)
 			} else if strings.Contains(string(s), "D") {
 				removeFromWhitelist(sess.permPeerHex)
 				closeSession(true)
@@ -383,24 +385,35 @@ func runClientCmdLoop() {
 				sess.symKey = common.GetPassword("p")
 			} else if strings.Contains(string(s), "K") {
 				sess.symKey = common.GetPassword("s")
+			} else if strings.Contains(string(s), "b") {
+				beepEnabled = !beepEnabled
+			} else if strings.Contains(string(s), "v") {
+				verbose = !verbose
 			} else if strings.Contains(string(s), "o") {
 				printDiagnosticInfo()
 			} else if strings.Contains(string(s), "h") {
 				helpInternal()
-			} else if strings.Contains(string(s), "b") {
-				beepEnabled = true
-			} else if strings.Contains(string(s), "B") {
-				beepEnabled = false
-			} else if strings.Contains(string(s), "t") {
-				tst()
 			} else if strings.Contains(string(s), "e") {
 				closeSession(false)
+			} else if strings.Contains(string(s), "t") {
+				tst()
 			} else if strings.Contains(string(s), "q") {
 				fmt.Println("Quit command received")
 				closeSession(true)
 				exiting = true
 				return
 			}
+		}
+	}
+}
+
+func changeWhitelist(add bool) {
+	_, raw, err := common.ImportPubKey()
+	if err == nil {
+		if add {
+			addToWhitelist(raw)
+		} else {
+			removeFromWhitelist(raw)
 		}
 	}
 }
@@ -415,22 +428,62 @@ func beep() {
 	}
 }
 
-func sendMessage(data []byte, t byte) error {
-	if sess.state <= Restarted && (t&INVITE) == 0 && (t&PING) == 0 {
-		fmt.Printf("Failed to send message %s: session is not initialized \n", typeName(t))
+func sendMessage(data []byte, ty byte) (err error) {
+	if sess.state <= Restarted && (ty&INVITE) == 0 && (ty&PING) == 0 {
+		fmt.Printf("Failed to send message %s: session is not initialized \n", typeName(ty))
 		return nil
 	}
 
-	p, err := packMessage(data, t)
+	p := stampMessage(data, ty)
+	p, err = sealMessage(p, ty)
 	if err == nil {
 		err = sendPacket(socket, p)
 	}
+
 	if err != nil {
-		fmt.Printf("Failed to send message %s: %s \n", typeName(t), err.Error())
+		fmt.Printf("Failed to send message %s: %s \n", typeName(ty), err.Error())
 	} else {
 		sess.outgoingLastPing = time.Now().Unix()
 	}
 	return err
+}
+
+func sendReject(dst []byte) error {
+	var zero []byte
+	key, err := asym.ImportPubKey(dst)
+	if err != nil {
+		return err
+	}
+
+	msg := stampMessage(zero, REJECT)
+	msg, err = signMessage(clientKey, msg)
+	if err == nil {
+		msg, err = asym.Encrypt(key, msg)
+		if err == nil {
+			err = sendPacket(socket, msg)
+		}
+	}
+	return err
+}
+
+func sealMessage(msg []byte, ty byte) (res []byte, err error) {
+	if ty == FILE || ty == TEXT {
+		msg, err = signMessage(ephemeralKey, msg)
+		if err == nil {
+			res, err = encryptUserMessage(msg)
+		}
+	} else if ty == PING {
+		msg, err = signMessage(clientKey, msg)
+		if err == nil {
+			res, err = encryptPing(msg)
+		}
+	} else {
+		msg, err = signMessage(clientKey, msg)
+		if err == nil {
+			res, err = encryptProtocolMessage(msg)
+		}
+	}
+	return res, err
 }
 
 func padMessage(p []byte) []byte {
@@ -499,7 +552,7 @@ func encryptPing(msg []byte) ([]byte, error) {
 	}
 }
 
-func signMessage(key *ecdsa.PrivateKey, data []byte, ty byte) ([]byte, error) {
+func signMessage(key *ecdsa.PrivateKey, data []byte) ([]byte, error) {
 	sig, err := asym.Sign(key, data)
 	if err == nil {
 		data = append(data, sig...)
@@ -507,7 +560,7 @@ func signMessage(key *ecdsa.PrivateKey, data []byte, ty byte) ([]byte, error) {
 	return data, err
 }
 
-func packMessage(msg []byte, ty byte) (res []byte, err error) {
+func stampMessage(msg []byte, ty byte) []byte {
 	if ty != FILE {
 		msg = padMessage(msg)
 	}
@@ -519,24 +572,7 @@ func packMessage(msg []byte, ty byte) (res []byte, err error) {
 	suffix[MessageTypeIndex] = ty
 	msg = append(msg, suffix...)
 	insertMac(msg)
-
-	if ty == FILE || ty == TEXT {
-		msg, err = signMessage(ephemeralKey, msg, ty)
-		if err == nil {
-			res, err = encryptUserMessage(msg)
-		}
-	} else if ty == PING {
-		msg, err = signMessage(clientKey, msg, ty)
-		if err == nil {
-			res, err = encryptPing(msg)
-		}
-	} else {
-		msg, err = signMessage(clientKey, msg, ty)
-		if err == nil {
-			res, err = encryptProtocolMessage(msg)
-		}
-	}
-	return res, err
+	return msg
 }
 
 func importPermPeerKey(s string) bool {
@@ -591,7 +627,8 @@ func importServerPubParameter(s string) bool {
 	return true
 }
 
-func loadConnexxionParams(flags string) bool {
+func loadCleintParams(flags string) bool {
+	verbose = strings.Contains(flags, "v")
 	beepEnabled = strings.Contains(flags, "b")
 	if strings.Contains(flags, "F") {
 		enableFiles()
@@ -658,7 +695,7 @@ func runClient(flags string) {
 		return
 	}
 	loadPeers(flags) // this func should be called before processing the cmd args
-	if !loadConnexxionParams(flags) {
+	if !loadCleintParams(flags) {
 		return
 	}
 	conn, err := net.Dial("tcp", serverIP)
@@ -722,7 +759,7 @@ func validateStamps(nonce uint32, timestamp int64) bool {
 	}
 
 	if nonce != sess.incomingMsgCnt {
-		if sess.incomingMsgCnt != 0 {
+		if sess.incomingMsgCnt != 0 && verbose {
 			fmt.Printf("Warning: unexpected msg nonce [%d vs. %d] \n", nonce, sess.incomingMsgCnt)
 		}
 		sess.incomingMsgCnt = nonce
@@ -766,8 +803,8 @@ func processIncomingInvite(msg []byte) {
 
 	if sess.state >= AckReceived && sess.state < QuitSent {
 		if !bytes.Equal(pub, sess.permPeerHex) {
-			sendProtocolMessage(REJECT | QUIT)
-			fmt.Printf("Warning: rejecting invite from unexpected peer: %x \n", pub)
+			fmt.Printf("Warning: rejecting unexpected invite from [%x] \n", pub)
+			sendReject(pub)
 			return
 		} else {
 			resetSession()
@@ -775,9 +812,9 @@ func processIncomingInvite(msg []byte) {
 	}
 
 	if sess.permPeerHex == nil && !isWhitelisted(pub) {
-		sendProtocolMessage(REJECT | QUIT)
-		fmt.Printf("Warning: rejecting invite from unlisted peer: %x \n", pub)
+		fmt.Printf("Warning: rejecting invite from unlisted peer [%x] \n", pub)
 		fmt.Println("If you trust this key, you should add it to the whitelist (use '\\w' or '\\n' commands)")
+		sendReject(pub)
 		return
 	}
 
@@ -831,44 +868,50 @@ func sendProtocolMessage(t byte) error {
 }
 
 func processUserMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
+	prefix := "\n\t\t\t\t\t\t\t\t\t"
+	if verbose {
+		prefix += fmt.Sprintf("[%03d]", nonce)
+	}
+
 	if t == FILE {
 		if !ephemeral {
-			fmt.Println("Warning: rejecting a user msg encrypted with permanent key")
+			if verbose {
+				fmt.Println("Warning: rejecting a user msg encrypted with permanent key")
+			}
 			return
 		}
-
 		if filesEnabled {
 			h := crutils.Sha2(raw)
 			name := fmt.Sprintf("%x", h[:6])
 			name = common.GetFullFileName(name)
 			common.SaveData(name, raw)
-			fmt.Printf("[%03d]<file received, saved as %s>\n", nonce, name)
+			fmt.Printf("%s<file received, saved as %s>\n", prefix, name)
 		} else {
-			fmt.Printf("[%03d]<file received, but not saved - file transfer is not enabled for this session>\n", nonce)
+			fmt.Printf("%s<file received, but not saved - file transfer is not enabled for this session>\n", prefix)
 		}
 	} else if t == TEXT {
 		raw = removePadding(raw)
 		if !ephemeral {
-			fmt.Printf("[%03d]<WRONG KEY>[%s] \n", nonce, string(raw))
+			fmt.Printf("%s<errkey>[ %s ]\n", prefix, string(raw))
 		} else if common.IsAscii(raw) {
-			fmt.Printf("[%03d][%s] \n", nonce, string(raw))
+			fmt.Printf("\t%s[ %s ]\n", prefix, string(raw))
 		} else {
-			fmt.Printf("[%03d]<hex>[%x] \n", nonce, raw)
+			fmt.Printf("%s   <hex>[ %x ]\n", prefix, raw)
 		}
 	} else {
-		fmt.Printf("[%03d]: unknown message type %d \n", nonce, int(t))
+		fmt.Printf("%s<unknown message type %d>\n", prefix, int(t))
 	}
 
 	beep()
 }
 
 func processProtocolMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
-	if DebugMode {
-		fmt.Printf("[%03d]<msg received: type = %s, size = %d> \n", nonce, typeName(t), len(raw))
-	}
-
-	if t >= ProtoThreshold {
-		fmt.Printf("unknown protocol message type: %d \n", int(t))
+	if verbose {
+		if t >= ProtoThreshold {
+			fmt.Printf("[%03d]<unknown protocol message type: %d>\n", nonce, int(t))
+		} else {
+			fmt.Printf("[%03d]<msg received: type = %s, size = %d>\n", nonce, typeName(t), len(raw))
+		}
 	}
 
 	if (t & INVITE) != 0 {
@@ -878,18 +921,18 @@ func processProtocolMessage(raw []byte, t byte, nonce uint32, ephemeral bool) {
 	if (t & ACK) != 0 {
 		sess.state |= AckReceived
 		if sess.state&AckSent != 0 {
-			sess.state |= Active
+			commenceSession()
 		}
 	}
 
 	if (t & REJECT) != 0 {
 		sess.state |= Closed
-		fmt.Println("Remote peer rejected your invitation")
+		fmt.Println("<Remote peer rejected your invitation>")
 	}
 
 	if (t & QUIT) != 0 {
 		sess.state |= Closed
-		fmt.Println("Remote peer closed the session")
+		fmt.Println("<Remote peer closed the session>")
 	}
 }
 
@@ -913,15 +956,17 @@ func processPacket(packet []byte) {
 			if sess.symKey != nil {
 				crutils.DecryptInplaceRCX(sess.symKey, decrypted)
 			}
-		} else {
-			fmt.Printf("Failed to decrypt a packet with eph key: %s \n", err.Error()) // todo: delete after tests
+		} else if verbose {
+			fmt.Printf("Failed to decrypt a packet [%x] with eph key: %s \n", keccak.Digest(packet, 5), err.Error()) // todo: delete after tests
 		}
 	}
 
 	if !ephemeral {
 		decrypted, err = asym.Decrypt(clientKey, packet)
 		if err != nil {
-			fmt.Printf("Failed to decrypt a packet: %s \n", err.Error()) // todo: delete after tests
+			if verbose {
+				fmt.Printf("Failed to decrypt a packet [%x]: %s \n", keccak.Digest(packet, 5), err.Error()) // todo: delete after tests
+			}
 			return
 		}
 	}
@@ -931,7 +976,9 @@ func processPacket(packet []byte) {
 	sig := decrypted[threshold:]
 
 	if !validateMac(raw) {
-		fmt.Println("Warning: received a msg with invalid MAC (may be encrypted with different sym key)") // todo: delete after tests
+		if verbose {
+			fmt.Println("Warning: received a msg with invalid MAC (may be encrypted with different sym key)") // todo: delete after tests
+		}
 		return
 	}
 
@@ -991,10 +1038,9 @@ func validateMessageSignature(msg []byte, sig []byte, ty byte) bool {
 }
 
 func printDiagnosticInfo() {
-	p := (sess.permPeerKey != nil)
-	e := (sess.ephPeerKey != nil)
-	fmt.Printf("eph: %v, perm: %v, in = %d, out = %d, state = %d \n", e, p, sess.incomingMsgCnt, sess.outgoingMsgCnt, sess.state)
 	fmt.Printf("Your IP: %s\n", getLocalIP())
+	printKeys()
+	fmt.Printf("state = %d, in = %d, out = %d \n", sess.state, sess.incomingMsgCnt, sess.outgoingMsgCnt)
 }
 
 func getPeersFileName() (string, error) {

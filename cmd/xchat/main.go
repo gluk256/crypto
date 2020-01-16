@@ -82,7 +82,7 @@ func loadEncryptionKeys(flags string) (err error) {
 	}
 
 	if strings.Contains(flags, "T") {
-		fmt.Println("======================> WARNING: test mode (without password), not safe to use for any other purposes!")
+		fmt.Println("====================> WARNING: test mode (without password), not safe to use for any other purposes!")
 		masterKey[0]++
 	} else {
 		pass := common.GetPassword(flags)
@@ -146,8 +146,12 @@ func sendPacket(conn net.Conn, msg []byte) error {
 	}
 
 	n, err = conn.Write(msg)
-	if n != len(msg) {
+	if err == nil && n != len(msg) {
 		err = errors.New("message not sent")
+	}
+
+	if err != nil {
+		exiting = true
 	}
 
 	return err
@@ -191,10 +195,11 @@ func help() {
 	fmt.Println("\t -l localhost (server-related params are not required)")
 	fmt.Println("\t -s secure password")
 	fmt.Println("\t -T test mode (without password)")
-	fmt.Println("\t -i initiate chat session")
 	fmt.Println("\t -y restart previous session")
+	fmt.Println("\t -i initiate new chat session")
 	fmt.Println("\t -F allow to receive files")
 	fmt.Println("\t -b beep on incoming message")
+	fmt.Println("\t -v verbose")
 	fmt.Println("\t -h help")
 }
 
@@ -211,9 +216,9 @@ func helpInternal() {
 	fmt.Println("\\D: delete current peer form whitelist")
 	fmt.Println("\\k: add session key for additional symmetric encryption")
 	fmt.Println("\\K: add session key (secure mode)")
+	fmt.Println("\\b: beep on incoming message (on/off)")
+	fmt.Println("\\v: verbode mode on/off")
 	fmt.Println("\\o: output debug info")
-	fmt.Println("\\b: beep on incoming message")
-	fmt.Println("\\B: disable beeping")
 	fmt.Println("\\h: help")
 	fmt.Println("\\e: exit current session")
 	fmt.Println("\\q: quit")
