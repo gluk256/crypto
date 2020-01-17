@@ -23,6 +23,7 @@ const (
 )
 
 var (
+	MaxFileSize        uint32
 	masterKey          []byte
 	serverKey          *ecdsa.PrivateKey
 	clientKey          *ecdsa.PrivateKey
@@ -169,20 +170,28 @@ func readNBytes(c net.Conn, sz uint32) ([]byte, error) {
 	return msg, nil
 }
 
-func receivePacket(conn net.Conn) (msg []byte, err error) {
-	var prefix []byte
-	const limit = 20 * 1024 * 1024
-
-	prefix, err = readNBytes(conn, PrefixSize)
+func receivePacket(conn net.Conn) ([]byte, error) {
+	var msg []byte
+	prefix, err := readNBytes(conn, PrefixSize)
 	if err == nil {
 		sz := binary.LittleEndian.Uint32(prefix)
-		if sz > limit {
+		if sz > MaxFileSize {
 			return nil, errors.New("huge message")
 		} else {
 			msg, err = readNBytes(conn, sz)
 		}
 	}
 	return msg, err
+}
+
+func changeMaxFileSize() {
+	i, err := common.GetUint("new file size")
+	if err == nil {
+		MaxFileSize = i
+		fmt.Printf("MaxFileSize = %d \n", MaxFileSize)
+	} else {
+		fmt.Printf("Error: %s \n", err.Error())
+	}
 }
 
 func help() {
@@ -207,6 +216,7 @@ func helpInternal() {
 	fmt.Println("COMMANDS")
 	fmt.Println("\\f: send file")
 	fmt.Println("\\F: allow to receive files")
+	fmt.Println("\\z: change max file size")
 	fmt.Println("\\w: whitelist another peer")
 	fmt.Println("\\W: print whitelist")
 	fmt.Println("\\y: restart last session")
@@ -225,6 +235,7 @@ func helpInternal() {
 }
 
 func main() {
+	MaxFileSize = 20 * 1024 * 1024
 	var flags string
 	if len(os.Args) > 1 {
 		flags = os.Args[1]

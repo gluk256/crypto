@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/gluk256/crypto/algo/keccak"
@@ -195,6 +196,13 @@ func GetText(cmd string, legend string) (text []byte) {
 		}
 	}
 	return text
+}
+
+func GetUint(legend string) (uint32, error) {
+	fmt.Printf("please enter %s: ", legend)
+	t := terminal.PlainTextInput()
+	res, err := strconv.ParseUint(string(t), 0, 32)
+	return uint32(res), err
 }
 
 func GetHexData(legend string) (res []byte) {

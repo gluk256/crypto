@@ -156,8 +156,10 @@ func runServer() {
 		cmd := terminal.PlainTextInput()
 		if strings.Contains(string(cmd), "q") {
 			break
-		} else if strings.Contains(string(cmd), "i") {
+		} else if strings.Contains(string(cmd), "o") {
 			printServerInfo()
+		} else if strings.Contains(string(cmd), "z") {
+			changeMaxFileSize()
 		}
 	}
 

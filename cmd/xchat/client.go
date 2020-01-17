@@ -404,6 +404,8 @@ func runClientCmdLoop() {
 				}
 			} else if strings.Contains(string(s), "F") {
 				enableFiles()
+			} else if strings.Contains(string(s), "z") {
+				changeMaxFileSize()
 			} else if strings.Contains(string(s), "w") {
 				changeWhitelist(true)
 			} else if strings.Contains(string(s), "W") {
