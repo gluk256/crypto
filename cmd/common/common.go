@@ -25,8 +25,10 @@ func GetPassword(flags string) (res []byte) {
 			return res
 		}
 	} else if strings.Contains(flags, "x") {
+		fmt.Println()
 		res = terminal.SecureInput(true)
 	} else if strings.Contains(flags, "s") {
+		fmt.Println()
 		res = terminal.SecureInput(false)
 	} else {
 		for len(res) == 0 {
@@ -35,10 +37,12 @@ func GetPassword(flags string) (res []byte) {
 		}
 	}
 
-	if len(res) == 0 {
-		panic("empty password")
-	} else if len(res) < 8 {
-		//fmt.Println("====================> WARNING: the password is too short, not safe to use!") // todo: uncomment this line
+	// if len(res) == 0 {
+	// 	panic("empty password")
+	// }
+
+	if len(res) < 4 {
+		fmt.Println("====================> WARNING: the password is too short, not safe to use!")
 	}
 
 	res = keccak.Digest(res, 256) // the keys for all crypto apps must always be 256 bytes

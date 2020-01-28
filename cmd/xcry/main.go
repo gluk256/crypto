@@ -31,8 +31,7 @@ func help() {
 	fmt.Println("\t\t -g interactive grep (print specific text lines only)")
 	fmt.Println("\t\t -G interactive grep with secure input")
 
-	fmt.Println("\t -l load file")
-	fmt.Println("\t\t -i insert file content into another file as steganographic content")
+	fmt.Println("\t -i insert file content into another file as steganographic content")
 
 	fmt.Println("\t -t enter text (password mode)")
 	fmt.Println("\t -T enter text (plain text mode)")
@@ -144,13 +143,24 @@ func main() {
 		return
 	}
 
-	if strings.Contains(flags, "d") {
+	if strings.Contains(flags, "i") {
+		insertSteg(flags, dstFile, data)
+	} else if strings.Contains(flags, "d") {
 		processDecryption(flags, dstFile, data, false)
 	} else {
 		processEncryption(flags, dstFile, data, nil)
 	}
 
 	crutils.AnnihilateData(data)
+}
+
+func insertSteg(flags string, dstFile string, steg []byte) {
+	fmt.Print("loading face content, ")
+	name := common.GetFileName()
+	face := getData("", name)
+	if len(face) != 0 {
+		processEncryption(flags, dstFile, face, steg)
+	}
 }
 
 func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, steg []byte, err error) {
@@ -200,7 +210,7 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 			fmt.Print("Please enter the command: ")
 			flags = string(terminal.PlainTextInput())
 			if strings.Contains(flags, "p") {
-				fmt.Printf("Decrypted:\n[%s]\n", string(decrypted))
+				fmt.Printf("%s\n%s\n%s\n", Delimiter, string(decrypted), Delimiter)
 			} else if strings.Contains(flags, "q") {
 				return
 			} else {
