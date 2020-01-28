@@ -165,12 +165,19 @@ func main() {
 	defer cleanup()
 
 	if len(os.Args) > 2 {
-		if FileLoad(os.Args[1:], false) {
-			contentDecrypt(os.Args[1:])
-		}
+		LoadAndDecrypt()
 	}
 
 	run()
+}
+
+func LoadAndDecrypt() {
+	if FileLoad(os.Args[1:], false) {
+		flags := os.Args[1]
+		secure := !strings.Contains(flags, "p")
+		mute := strings.Contains(flags, "m")
+		contentDecrypt(secure, mute)
+	}
 }
 
 func run() {
@@ -188,14 +195,6 @@ func run() {
 			}
 		}
 	}
-}
-
-func parcseSecondaryFlags(args []string) (secure bool, mute bool) {
-	if len(args) > 1 {
-		secure = strings.Contains(args[1], "s")
-		mute = strings.Contains(args[1], "m")
-	}
-	return secure, mute
 }
 
 func FileLoad(args []string, show bool) bool {
@@ -256,9 +255,9 @@ func saveData(data []byte) {
 // 	}
 // }
 
-func FileSave(args []string) {
+func FileSave(secure bool) {
 	b := content2raw(cur, 0)
-	x := encryptData(args, b)
+	x := encryptData(secure, b)
 	if b != nil {
 		saveData(x)
 		crutils.AnnihilateData(x)
@@ -266,13 +265,12 @@ func FileSave(args []string) {
 	}
 }
 
-func FileSaveSteg(args []string, secureSteg bool) {
+func FileSaveSteg(secureFace bool, secureSteg bool) {
 	if steg < 0 || items[steg].console.Len() == 0 {
 		fmt.Println(">>> Error: steganographic content does not exist")
 		return
 	}
 
-	secureFace, _ := parcseSecondaryFlags(args)
 	plainContent := content2raw(face, 0)
 	stegContent := content2raw(steg, len(plainContent)*4)
 	defer crutils.AnnihilateData(plainContent)
@@ -318,8 +316,7 @@ func FileSaveSteg(args []string, secureSteg bool) {
 	}
 }
 
-func encryptData(args []string, d []byte) []byte {
-	secure, _ := parcseSecondaryFlags(args)
+func encryptData(secure bool, d []byte) []byte {
 	key := getKey(face, secure, true)
 	if len(key) == 0 {
 		fmt.Println(">>> Error: wrong key")
@@ -333,8 +330,7 @@ func encryptData(args []string, d []byte) []byte {
 	return res
 }
 
-func contentDecrypt(args []string) bool {
-	secure, mute := parcseSecondaryFlags(args)
+func contentDecrypt(secure bool, mute bool) bool {
 	content := make([]byte, len(items[cur].src))
 	copy(content, items[cur].src)
 
@@ -359,8 +355,7 @@ func contentDecrypt(args []string) bool {
 	return true
 }
 
-func stegDecrypt(args []string) bool {
-	secure, mute := parcseSecondaryFlags(args)
+func stegDecrypt(secure bool, mute bool) bool {
 	stegContent := make([]byte, len(items[face].pad))
 	copy(stegContent, items[face].pad)
 

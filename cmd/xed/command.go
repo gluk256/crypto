@@ -50,22 +50,50 @@ func processCommand(cmd string) {
 		cat()
 	case "fd": // file decrypt
 		if FileLoad(args, false) {
-			contentDecrypt(args)
+			contentDecrypt(true, false)
+		}
+	case "fdp": // file decrypt
+		if FileLoad(args, false) {
+			contentDecrypt(false, false)
+		}
+	case "fD": // file decrypt
+		if FileLoad(args, false) {
+			contentDecrypt(true, true)
+		}
+	case "fDp": // file decrypt
+		if FileLoad(args, false) {
+			contentDecrypt(false, true)
 		}
 	case "fl": // file load
 		FileLoad(args, false)
 	case "fo": // file open (print text without decrypting)
 		FileLoad(args, true)
-	case "fs": // file save (encrypted)
-		FileSave(args)
+	case "fs": // file encrypt & save
+		FileSave(true)
+	case "fp": // file encrypt & save
+		FileSave(false)
 	case "fx": // file save steg
-		FileSaveSteg(args, true)
-	case "fxi": // file save steg (insecure)
-		FileSaveSteg(args, false)
+		FileSaveSteg(true, true)
+	case "fpx": // file save steg
+		FileSaveSteg(false, true)
+	case "fpp": // file save steg
+		FileSaveSteg(false, false)
 	case "dc":
-		contentDecrypt(args)
+		contentDecrypt(true, false)
+	case "dcp":
+		contentDecrypt(false, false)
+	case "Dc":
+		contentDecrypt(true, true)
+	case "Dcp":
+		contentDecrypt(false, true)
 	case "dx":
-		stegDecrypt(args)
+		stegDecrypt(true, false)
+	case "dxp":
+		stegDecrypt(false, false)
+	case "Dx":
+		stegDecrypt(true, true)
+	case "Dxp":
+		stegDecrypt(false, true)
 	case "grep":
 		grep(args, false, false)
 	case "g":
@@ -113,12 +141,23 @@ func helpInternal() {
 	fmt.Println("cat:\t print content")
 	fmt.Println("fl:\t file load")
 	fmt.Println("fo:\t file load and print content without decrypting")
-	fmt.Println("fd:\t file load and decrypt (options: [sm])")
-	fmt.Println("fs:\t file save face (options: [sm])")
-	fmt.Println("fx:\t file save steg (options: [smi])")
-	fmt.Println("fxi:\t file save steg (insecure)")
-	fmt.Println("dc:\t decrypt loaded content (options: [sm])")
-	fmt.Println("dx:\t decrypt steg content (options: [sm])")
+	fmt.Println("fd:\t file load and decrypt")
+	fmt.Println("fdp:\t file load and decrypt (password mode)")
+	fmt.Println("fD:\t file load and decrypt (silent)")
+	fmt.Println("fDp:\t file load and decrypt (silent, password mode)")
+	fmt.Println("fs:\t file encrypt & save (face)")
+	fmt.Println("fp:\t file encrypt & save (password mode)")
+	fmt.Println("fx:\t file encrypt & save steg")
+	fmt.Println("fpx:\t file encrypt & save steg (face: password mode)")
+	fmt.Println("fpp:\t file encrypt & save steg (password mode)")
+	fmt.Println("dc:\t decrypt loaded content")
+	fmt.Println("dcp:\t decrypt loaded content (password mode)")
+	fmt.Println("Dc:\t decrypt loaded content (silent)")
+	fmt.Println("Dcp:\t decrypt loaded content (silent, password mode)")
+	fmt.Println("dx:\t decrypt steg content")
+	fmt.Println("dxp:\t decrypt steg content (password mode)")
+	fmt.Println("Dx:\t decrypt steg content (silent)")
+	fmt.Println("Dxp:\t decrypt steg content (silent, password mode)")
 	fmt.Println("grep:\t normal grep")
 	fmt.Println("g:\t grep in password mode")
 	fmt.Println("G:\t grep in secure mode")
@@ -139,7 +178,11 @@ func helpInternal() {
 func help() {
 	fmt.Printf("xed v.2.%d \n", crutils.CipherVersion)
 	fmt.Println("editor for encrypted files and/or steganographic content")
-	fmt.Println("USAGE: xed [flags] [srcFile] [dstFile]")
+	fmt.Println("USAGE: xed [decrytpion_flags] [srcFile] [dstFile]")
+	fmt.Println("\td default decryption")
+	fmt.Println("\tp password mode")
+	fmt.Println("\tD mute")
+	fmt.Println("\th help")
 }
 
 func info() {
