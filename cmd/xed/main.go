@@ -52,6 +52,7 @@ func deleteAll() {
 func deleteLine(i int, e *list.Element) {
 	crutils.AnnihilateData(e.Value.([]byte))
 	items[i].console.Remove(e)
+	items[i].changed = true
 }
 
 func deleteContent(i int) {
@@ -181,6 +182,7 @@ func LoadAndDecrypt() {
 }
 
 func run() {
+	var prev string
 	for {
 		fmt.Print("Enter command: ")
 		s := terminal.PlainTextInput()
@@ -191,7 +193,7 @@ func run() {
 					return
 				}
 			} else {
-				processCommand(cmd)
+				prev = processCommand(cmd, prev)
 			}
 		}
 	}
@@ -271,15 +273,19 @@ func FileSaveSteg(secureFace bool, secureSteg bool) {
 		return
 	}
 
-	plainContent := content2raw(face, 0)
-	stegContent := content2raw(steg, len(plainContent)*4)
-	defer crutils.AnnihilateData(plainContent)
+	faceContent := content2raw(face, 0)
+	stegContent := content2raw(steg, len(faceContent)*4)
+	defer crutils.AnnihilateData(faceContent)
 	defer crutils.AnnihilateData(stegContent)
+	if faceContent == nil {
+		return
+	}
+
 	encrypedStegSize := len(stegContent) + crutils.EncryptedSizeDiff
-	allowedStegSize := primitives.FindNextPowerOfTwo(len(plainContent))
+	allowedStegSize := primitives.FindNextPowerOfTwo(len(faceContent))
 	if encrypedStegSize > allowedStegSize {
 		fmt.Printf(">>> Error: plain text is too small in comparison with steganographic content ")
-		fmt.Printf("[%d vs. %d] \n", len(plainContent), len(stegContent))
+		fmt.Printf("[%d vs. %d] \n", len(faceContent), len(stegContent))
 		return
 	}
 
@@ -291,8 +297,8 @@ func FileSaveSteg(secureFace bool, secureSteg bool) {
 	}
 
 	fmt.Print("face content encryption: ")
-	keyPlain := getKey(face, secureFace, true)
-	if len(keyPlain) == 0 {
+	keyFace := getKey(face, secureFace, true)
+	if len(keyFace) == 0 {
 		crutils.AnnihilateData(keySteg)
 		fmt.Println(">>> Error: wrong key")
 		return
@@ -304,7 +310,7 @@ func FileSaveSteg(secureFace bool, secureSteg bool) {
 		return
 	}
 
-	res, err := crutils.EncryptSteg(keyPlain, plainContent, encryptedSteg)
+	res, err := crutils.EncryptSteg(keyFace, faceContent, encryptedSteg)
 	if err != nil {
 		fmt.Printf(">>> Error encrypting cur: %s\n", err)
 		return

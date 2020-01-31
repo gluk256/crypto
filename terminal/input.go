@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"syscall"
 
 	shell "golang.org/x/crypto/ssh/terminal"
@@ -15,8 +16,8 @@ import (
 )
 
 // you can arbitrary extend the alphabet with additional ASCII characters
-var alphabetStandard = []byte("abcdefghijklmnopqrstuvwxyz 0123456789,.")
-var alphabetExt = []byte("abcdefghijklmnopqrstuvwxyz 0123456789!@#$%^&*()_+-=[];'\\,./:\"|<>?~`")
+var AlphabetStandard = []byte("abcdefghijklmnopqrstuvwxyz 0123456789,.")
+var AlphabetExt = []byte("abcdefghijklmnopqrstuvwxyz 0123456789!@#$%^&*()_+-=[];'\\,./:\"|<>?~`")
 var alphabet []byte
 var scrambledAlphabet []byte
 var sz = 0
@@ -29,7 +30,7 @@ func printSpaced(s []byte) {
 		x += string(c)
 		x += delim
 	}
-	fmt.Print(x)
+	fmt.Print(strings.ToUpper(x))
 }
 
 func shiftAlphabet() {
@@ -61,9 +62,9 @@ func randomizeAlphabet() {
 
 func initParams(ext bool) {
 	if ext {
-		alphabet = alphabetExt
+		alphabet = AlphabetExt
 	} else {
-		alphabet = alphabetStandard
+		alphabet = AlphabetStandard
 	}
 
 	sz = len(alphabet)

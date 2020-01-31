@@ -14,7 +14,7 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
-func GetPassword(flags string) (res []byte) {
+func GetPasswordRaw(flags string) (res []byte) {
 	if strings.Contains(flags, "r") {
 		var err error
 		res, err = crutils.GenerateRandomPassword(20)
@@ -37,14 +37,16 @@ func GetPassword(flags string) (res []byte) {
 		}
 	}
 
-	// if len(res) == 0 {
-	// 	panic("empty password")
-	// }
-
 	if len(res) < 4 {
 		fmt.Println("====================> WARNING: the password is too short, not safe to use!")
 	}
 
+	//res = keccak.Digest(res, 256) // moved to GetPassword; todo: delete
+	return res
+}
+
+func GetPassword(flags string) (res []byte) {
+	res = GetPasswordRaw(flags)
 	res = keccak.Digest(res, 256) // the keys for all crypto apps must always be 256 bytes
 	return res
 }

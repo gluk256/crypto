@@ -167,7 +167,7 @@ func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, ste
 	var key []byte
 	defer crutils.AnnihilateData(key) // in case of panic
 
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < 256; i++ {
 		key = common.GetPassword(flags)
 		if unknownSize {
 			decrypted, steg, err = crutils.DecryptStegContentOfUnknownSize(key, data)

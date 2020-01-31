@@ -182,6 +182,25 @@ func LineInsert(arg []string, cryptic bool) {
 	}
 }
 
+func DeleteEmptyLines() {
+	var found bool
+	i := items[cur].console.Front()
+	for i != nil {
+		p := i
+		i = i.Next()
+		if len(p.Value.([]byte)) == 0 {
+			deleteLine(cur, p)
+			found = true
+		}
+	}
+
+	if found {
+		cat()
+	} else {
+		fmt.Println("Empty lines not found")
+	}
+}
+
 func LinesDelete(arg []string) {
 	indexes := parseAndSortIntArgs(arg)
 	if indexes != nil {
@@ -193,24 +212,41 @@ func LinesDelete(arg []string) {
 	}
 }
 
+func LinesDeleteRange(arg []string) {
+	indexes := parseAndSortIntArgs(arg)
+	if len(indexes) == 2 {
+		beg := indexes[0]
+		end := indexes[1]
+		primitives.ReverseInt(indexes)
+		for i := end; i >= beg; i-- {
+			deleteLineAtIndex(i)
+		}
+		cat()
+	}
+}
+
 func deleteLineAtIndex(ln int) {
 	i := 0
 	for x := items[cur].console.Front(); x != nil; x = x.Next() {
 		if i == ln {
 			deleteLine(cur, x)
-			items[cur].changed = true
+			return
+		} else {
+			i++
 		}
-		i++
 	}
 }
 
 func LinesPrint(arg []string) {
-	deriveConsoleFromSrc()
+	if len(items[cur].src) != 0 && items[cur].console.Len() == 0 {
+		deriveConsoleFromSrc()
+	}
 
 	indexes := parseAndSortIntArgs(arg)
 	total := len(indexes)
 	if total == 0 {
-		fmt.Println("Nothing to print")
+		fmt.Println("Error: wrong index")
+		return
 	}
 
 	var ln, i int
@@ -219,6 +255,27 @@ func LinesPrint(arg []string) {
 		if indexes[i] == ln {
 			fmt.Printf("%03d│ %s\n", ln, x.Value.([]byte))
 			i++
+		}
+		ln++
+	}
+	fmt.Println(Bar)
+}
+
+func LinesPrintRange(arg []string) {
+	indexes := parseAndSortIntArgs(arg)
+	if len(indexes) != 2 {
+		fmt.Println("Error: wrong indexes")
+		return
+	}
+
+	beg := indexes[0]
+	end := indexes[1]
+	var ln int
+
+	fmt.Println(Bar)
+	for x := items[cur].console.Front(); x != nil; x = x.Next() {
+		if ln >= beg && ln <= end {
+			fmt.Printf("%03d│ %s\n", ln, x.Value.([]byte))
 		}
 		ln++
 	}
@@ -262,7 +319,6 @@ func mergeLines(ln int) bool {
 			items[cur].console.InsertBefore(res, x)
 			deleteLine(cur, y)
 			deleteLine(cur, x)
-			items[cur].changed = true
 			return true
 		}
 		i++
@@ -401,7 +457,6 @@ func extendLine(ln int, ext []byte) bool {
 			copy(n[len(prev):], ext)
 			items[cur].console.InsertAfter(n, x)
 			deleteLine(cur, x)
-			items[cur].changed = true
 			return true
 		}
 		i++
