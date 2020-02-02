@@ -165,14 +165,19 @@ func insertSteg(flags string, dstFile string, steg []byte) {
 
 func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, steg []byte, err error) {
 	var key []byte
-	defer crutils.AnnihilateData(key) // in case of panic
+	defer crutils.AnnihilateData(key)
 
 	for i := 0; i < 256; i++ {
-		key = common.GetPassword(flags)
+		key, err = common.GetPassword(flags)
+		if err != nil {
+			return nil, nil, err
+		}
 		if unknownSize {
 			decrypted, steg, err = crutils.DecryptStegContentOfUnknownSize(key, data)
 		} else {
-			decrypted, steg, err = crutils.Decrypt(key, data)
+			d := make([]byte, len(data))
+			copy(d, data)
+			decrypted, steg, err = crutils.Decrypt(key, d)
 		}
 		if err == nil {
 			return decrypted, steg, err
@@ -195,22 +200,23 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 	decrypted, steg, err := decrypt(flags, data, unknownSize)
 	defer crutils.AnnihilateData(decrypted)
 	defer crutils.AnnihilateData(steg)
-	if err != nil {
-		return
-	}
 
-	if strings.Contains(flags, "p") {
+	if err != nil {
+		fmt.Printf("Error: %s \n", err.Error())
+	} else if strings.Contains(flags, "p") {
 		fmt.Printf("%s\n%s\n%s\n", Delimiter, string(decrypted), Delimiter)
 	}
 
 	if !strings.Contains(flags, "f") {
 		for {
-			fmt.Println("What do you want to do with decrypted content?")
-			fmt.Println("options: save_File, Grep, Print, Decrypt, Secure_pass, eXtra_secure, Quit")
-			fmt.Print("Please enter the command: ")
+			fmt.Print("Please enter the command [save_File, G/grep, Print, Decrypt_steg, Secure_pass, eXtra_secure, retrY, Quit]: ")
 			flags = string(terminal.PlainTextInput())
 			if strings.Contains(flags, "p") {
 				fmt.Printf("%s\n%s\n%s\n", Delimiter, string(decrypted), Delimiter)
+			} else if strings.Contains(flags, "G") {
+				runGrep(flags, decrypted)
+			} else if strings.Contains(flags, "g") {
+				runGrep(flags, decrypted)
 			} else if strings.Contains(flags, "q") {
 				return
 			} else {
@@ -221,10 +227,8 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 
 	if strings.Contains(flags, "f") {
 		common.SaveData(dstFile, decrypted)
-	} else if strings.Contains(flags, "G") {
-		runGrep(flags, decrypted)
-	} else if strings.Contains(flags, "g") {
-		runGrep(flags, decrypted)
+	} else if strings.Contains(flags, "Y") {
+		processDecryption(flags, dstFile, data, unknownSize) // retry
 	} else {
 		processDecryption(flags, dstFile, steg, true) // recursively decrypt steg content
 	}
@@ -240,38 +244,47 @@ func encrypt(key []byte, data []byte, steg []byte) (res []byte, err error) {
 }
 
 func processEncryption(flags string, dstFile string, data []byte, steg []byte) {
-	key := common.GetPassword(flags)
-	defer crutils.AnnihilateData(key) // in case of panic
-
-	encrypted, err := encrypt(key, data, steg)
+	var err error
+	var key, encrypted []byte
+	defer crutils.AnnihilateData(key)
 	defer crutils.AnnihilateData(encrypted)
-	if err != nil {
-		fmt.Printf("Failed to encrypt data: %s\nFATAL ERROR\n", err.Error())
-		return
+
+	key, err = common.GetPassword(flags)
+	if err == nil {
+		encrypted, err = encrypt(key, data, steg)
+		if err != nil {
+			fmt.Printf("ERROR: %s\n", err.Error())
+			fmt.Println("This error is very unusual, further research is required")
+			return // at this time data is already destoryed by encyption
+		}
 	}
 	crutils.AnnihilateData(key)
-
-	if !strings.Contains(flags, "f") {
-		fmt.Println("What do you want to do with encrypted content?")
-		fmt.Println("options: save_File, Encrypt, Rand_pass, Secure_pass, eXtra_secure, Quit")
-		fmt.Print("Please enter the command: ")
-		flags = string(terminal.PlainTextInput())
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+	} else if strings.Contains(flags, "f") {
+		common.SaveData(dstFile, encrypted)
+		return
 	}
 
-	if strings.Contains(flags, "f") {
-		err = common.SaveData(dstFile, encrypted)
-	} else if strings.Contains(flags, "q") {
-		return
-	} else {
-		for i := 0; i < 3; i++ {
+	for {
+		fmt.Print("Please enter the command [save_File, Encrypt, Rand_pass, Secure_pass, eXtra_secure, retrY, Quit]: ")
+		flags = string(terminal.PlainTextInput())
+		if strings.Contains(flags, "f") {
+			common.SaveData(dstFile, encrypted)
+			return
+		} else if strings.Contains(flags, "q") {
+			return
+		} else if strings.Contains(flags, "Y") {
+			// data is still intact, we can retry
+			processEncryption(flags, dstFile, data, steg)
+		} else {
 			buf := getData(flags, "")
 			if len(buf) == 0 {
-				fmt.Println("no data, please try again")
+				return
 			} else if len(buf) < len(encrypted)+4 {
 				fmt.Printf("File size in insufficiant for steg encryption [%d vs. %d]. Please try again.\n", len(buf), len(encrypted)+4)
 			} else {
 				processEncryption(flags, dstFile, buf, encrypted) // recursively encrypt steg content
-				break
 			}
 		}
 	}

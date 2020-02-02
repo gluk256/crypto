@@ -2,6 +2,7 @@ package main
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -99,24 +100,26 @@ func ls() {
 	fmt.Println()
 }
 
-func getKey(index int, cryptic bool, checkExisting bool) (res []byte) {
+func getKey(index int, cryptic bool, checkExisting bool) (res []byte, err error) {
 	if len(items[index].key) > 0 {
 		if checkExisting {
 			if common.Confirm("Do you want to use existing key?") {
-				return items[index].key
+				return items[index].key, nil
 			}
 		}
 	}
 
+	flag := "p"
 	if cryptic {
-		res = common.GetPassword("s")
-	} else {
-		res = common.GetPassword("p")
+		flag = "s"
 	}
 
-	crutils.AnnihilateData(items[index].key)
-	items[index].key = res
-	return res
+	res, err = common.GetPassword(flag)
+	if err == nil {
+		crutils.AnnihilateData(items[index].key)
+		items[index].key = res
+	}
+	return res, err
 }
 
 func getFileName() string {
@@ -259,8 +262,13 @@ func saveData(data []byte) {
 
 func FileSave(secure bool) {
 	b := content2raw(cur, 0)
-	x := encryptData(secure, b)
-	if b != nil {
+	if len(b) == 0 {
+		fmt.Println(">>> Error: empty content")
+		return
+	}
+
+	x, err := encryptData(secure, b)
+	if err == nil {
 		saveData(x)
 		crutils.AnnihilateData(x)
 		crutils.AnnihilateData(b)
@@ -290,14 +298,22 @@ func FileSaveSteg(secureFace bool, secureSteg bool) {
 	}
 
 	fmt.Print("steganographic content encryption: ")
-	keySteg := getKey(steg, secureSteg, true)
+	keySteg, err := getKey(steg, secureSteg, true)
+	if err != nil {
+		fmt.Printf(">>> Error:%s", err.Error())
+		return
+	}
 	if len(keySteg) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return
 	}
 
 	fmt.Print("face content encryption: ")
-	keyFace := getKey(face, secureFace, true)
+	keyFace, err := getKey(face, secureFace, true)
+	if err != nil {
+		fmt.Printf(">>> Error:%s", err.Error())
+		return
+	}
 	if len(keyFace) == 0 {
 		crutils.AnnihilateData(keySteg)
 		fmt.Println(">>> Error: wrong key")
@@ -322,25 +338,32 @@ func FileSaveSteg(secureFace bool, secureSteg bool) {
 	}
 }
 
-func encryptData(secure bool, d []byte) []byte {
-	key := getKey(face, secure, true)
+func encryptData(secure bool, d []byte) ([]byte, error) {
+	key, err := getKey(face, secure, true)
+	if err != nil {
+		fmt.Printf(">>> Error: %s \n", err.Error())
+		return nil, err
+	}
 	if len(key) == 0 {
-		fmt.Println(">>> Error: wrong key")
-		return nil
+		fmt.Println(">>> Error: empty key")
+		return nil, errors.New("empty key")
 	}
 	res, err := crutils.Encrypt(key, d)
 	if err != nil {
 		fmt.Printf(">>> Error: %s\n", err)
-		return nil
 	}
-	return res
+	return res, err
 }
 
 func contentDecrypt(secure bool, mute bool) bool {
 	content := make([]byte, len(items[cur].src))
 	copy(content, items[cur].src)
 
-	key := getKey(face, secure, true)
+	key, err := getKey(face, secure, true)
+	if err != nil {
+		fmt.Printf(">>> Error: %s \n", err.Error())
+		return false
+	}
 	if len(key) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return false
@@ -365,7 +388,11 @@ func stegDecrypt(secure bool, mute bool) bool {
 	stegContent := make([]byte, len(items[face].pad))
 	copy(stegContent, items[face].pad)
 
-	key := getKey(steg, secure, false)
+	key, err := getKey(steg, secure, false)
+	if err != nil {
+		fmt.Printf(">>> Error: %s \n", err.Error())
+		return false
+	}
 	if len(key) == 0 {
 		fmt.Println(">>> Error: wrong key")
 		return false

@@ -119,25 +119,25 @@ func main() {
 func run(flags string, data []byte) {
 	var err error
 	var res, key, spacing []byte
-	if data == nil {
-		data, err = getData(flags)
-		if err != nil {
-			return
-		}
-	}
-
 	defer crutils.AnnihilateData(data)
 	defer crutils.AnnihilateData(res)
 	defer crutils.AnnihilateData(spacing)
-	defer crutils.AnnihilateData(key) // in case of panic
+	defer crutils.AnnihilateData(key)
 
-	data, err = convertData(flags, data)
-	if err == nil {
-		key = common.GetPassword(flags)
-		res, spacing, err = process(flags, key, data)
-		crutils.AnnihilateData(key)
-		outputResult(flags, err, res, spacing)
+	if data == nil {
+		data, err = getData(flags)
 	}
+	if err == nil {
+		data, err = convertData(flags, data)
+	}
+	if err == nil {
+		key, err = common.GetPassword(flags)
+	}
+	if err == nil {
+		res, spacing, err = process(flags, key, data)
+	}
+	crutils.AnnihilateData(key)
+	reportResult(flags, err, res, spacing)
 }
 
 func process(flags string, key []byte, data []byte) (res []byte, spacing []byte, err error) {
@@ -163,7 +163,7 @@ func process(flags string, key []byte, data []byte) (res []byte, spacing []byte,
 	return res, spacing, err
 }
 
-func outputResult(flags string, err error, res []byte, spacing []byte) {
+func reportResult(flags string, err error, res []byte, spacing []byte) {
 	if err != nil {
 		fmt.Printf("ERROR: %s\n", err.Error())
 		return

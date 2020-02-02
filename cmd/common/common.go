@@ -14,16 +14,10 @@ import (
 	"github.com/gluk256/crypto/terminal"
 )
 
-func GetPasswordRaw(flags string) (res []byte) {
+func GetPasswordRaw(flags string) (res []byte, err error) {
 	if strings.Contains(flags, "r") {
-		var err error
 		res, err = crutils.GenerateRandomPassword(20)
 		fmt.Println(string(res))
-		if err != nil {
-			fmt.Println("====================> WARNING: the data is not entirely random, not safe to use!")
-			fmt.Printf("Error: %s\n", err.Error())
-			return res
-		}
 	} else if strings.Contains(flags, "x") {
 		fmt.Println()
 		res = terminal.SecureInput(true)
@@ -31,24 +25,20 @@ func GetPasswordRaw(flags string) (res []byte) {
 		fmt.Println()
 		res = terminal.SecureInput(false)
 	} else {
-		for len(res) == 0 {
-			fmt.Print("please enter the password: ")
-			res = terminal.PasswordModeInput()
-		}
+		fmt.Print("please enter the password: ")
+		res = terminal.PasswordModeInput()
 	}
-
-	if len(res) < 4 {
-		fmt.Println("====================> WARNING: the password is too short, not safe to use!")
+	if len(res) < 2 {
+		err = errors.New("password is too short")
 	}
-
 	//res = keccak.Digest(res, 256) // moved to GetPassword; todo: delete
-	return res
+	return res, err
 }
 
-func GetPassword(flags string) (res []byte) {
-	res = GetPasswordRaw(flags)
+func GetPassword(flags string) (res []byte, err error) {
+	res, err = GetPasswordRaw(flags)
 	res = keccak.Digest(res, 256) // the keys for all crypto apps must always be 256 bytes
-	return res
+	return res, err
 }
 
 func IsAscii(data []byte) bool {

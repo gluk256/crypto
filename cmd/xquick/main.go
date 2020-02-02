@@ -64,22 +64,23 @@ func main() {
 }
 
 func run(flags string, srcFile string, dstFile string) {
-	var err error
 	data := loadDataFromFile(flags, srcFile)
 	if len(data) == 0 {
 		return
 	}
 
-	key := common.GetPassword(flags)
-	defer crutils.AnnihilateData(key) // in case of panic
+	key, err := common.GetPassword(flags)
+	defer crutils.AnnihilateData(key)
 
-	if strings.Contains(flags, "e") {
-		data, err = crutils.EncryptQuick(key, data)
-	} else {
-		data, err = crutils.DecryptQuick(key, data)
+	if err == nil {
+		if strings.Contains(flags, "e") {
+			data, err = crutils.EncryptQuick(key, data)
+		} else {
+			data, err = crutils.DecryptQuick(key, data)
+		}
 	}
-	crutils.AnnihilateData(key)
 
+	crutils.AnnihilateData(key)
 	if err == nil {
 		common.SaveData(dstFile, data)
 	} else {
