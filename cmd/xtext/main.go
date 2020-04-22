@@ -12,13 +12,13 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtxt v.2.%d \n", crutils.CipherVersion)
+	fmt.Printf("xtext v.2.%d \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt short messages in console")
-	fmt.Println("USAGE: xtxt flags [src]")
+	fmt.Println("USAGE: xtext flags [src]")
 	fmt.Println("\t -e encrypt")
 	fmt.Println("\t -d decrypt")
 	fmt.Println("\t -a reveal all decrypted data, including spacing")
-	fmt.Println("\t -w use weaker encryption (block cipher without AES, MAC, salt and spacing)")
+	fmt.Println("\t -w use weaker encryption (rcx + keccak without AES, MAC, salt and spacing)")
 	fmt.Println("\t -r random password")
 	fmt.Println("\t -s secure password input")
 	fmt.Println("\t -S secure data input")

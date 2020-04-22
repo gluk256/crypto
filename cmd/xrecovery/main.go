@@ -16,7 +16,7 @@ import (
 var Delimiter = "————————————————————————————————————————————————————————————————————————————————————————————————————"
 
 func help() {
-	fmt.Printf("xrecovery v.0.%d \n", crutils.CipherVersion)
+	fmt.Printf("xrecovery v.0.%d.1 \n", crutils.CipherVersion)
 	fmt.Println("recovers content in case of corrupted password (assuming only one char is corrupted)")
 	fmt.Println("USAGE: xrecovery flags srcFile")
 	fmt.Println("\t -s secure password/text input")

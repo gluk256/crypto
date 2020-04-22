@@ -11,7 +11,7 @@ import (
 )
 
 func help() {
-	fmt.Printf("xquick v.0.%d \n", crutils.CipherVersion)
+	fmt.Printf("xquick v.0.%d.1 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a [big] file with stream cipher (xor only)")
 	fmt.Println("USAGE: xquick flags srcFile dstFile")
 	fmt.Println("\t -e encrypt (default mode)")

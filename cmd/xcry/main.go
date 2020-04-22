@@ -15,7 +15,7 @@ import (
 var Delimiter = "————————————————————————————————————————————————————————————————————————————————————————————————————"
 
 func help() {
-	fmt.Printf("xcry v.1.%d \n", crutils.CipherVersion)
+	fmt.Printf("xcry v.1.%d.1 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
 	fmt.Println("USAGE: xcry flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")

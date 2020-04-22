@@ -190,7 +190,7 @@ func helpInternal() {
 }
 
 func help() {
-	fmt.Printf("xed v.2.%d \n", crutils.CipherVersion)
+	fmt.Printf("xed v.2.%d.1 \n", crutils.CipherVersion)
 	fmt.Println("editor for encrypted files and/or steganographic content")
 	fmt.Println("USAGE: xed [decrytpion_flags] [srcFile] [dstFile]")
 	fmt.Println("\td default decryption")

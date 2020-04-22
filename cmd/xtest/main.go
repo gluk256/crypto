@@ -12,8 +12,8 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtest v.2.%d \n", crutils.CipherVersion)
-	fmt.Println("USAGE: xtxt flag // flag must be a single char")
+	fmt.Printf("xtest v.2.%d.1 \n", crutils.CipherVersion)
+	fmt.Println("USAGE: xtest flag")
 	fmt.Println("\t -c create a huge file")
 	fmt.Println("\t -i run SecureInput")
 	fmt.Println("\t -j run SecureInputTest")
@@ -42,9 +42,21 @@ func main() {
 		return
 	}
 
+	process()
+}
+
+func process() {
+	var f rune
+	for _, c := range os.Args[1] {
+		if c != '-' {
+			f = c
+			break
+		}
+	}
+
 	// don't remove any functionality from here.
 	// for simple ad hoc tests use tst() function.
-	switch os.Args[1][0] {
+	switch f {
 	case '?':
 		help()
 	case 'c':
@@ -66,11 +78,7 @@ func main() {
 	case 'X':
 		crypticExe(true)
 	default:
-		if strings.Contains(os.Args[1], "-") {
-			fmt.Println("Error: dash is not a valid flag")
-		} else {
-			fmt.Println("Error: wrong flag")
-		}
+		fmt.Println("Error: wrong flag")
 	}
 }
 
