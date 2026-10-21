@@ -12,7 +12,7 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtest v.2.%d.1 \n", crutils.CipherVersion)
+	fmt.Printf("xtest v.3.%d.0 build #3 \n", crutils.CipherVersion)
 	fmt.Println("USAGE: xtest flag")
 	fmt.Println("\t -c create a huge file")
 	fmt.Println("\t -i run SecureInput")
@@ -94,7 +94,7 @@ func createFile() {
 
 func generateRandomPasswords() {
 	for x := 0; x < 8; x++ {
-		s, err := crutils.GenerateRandomPassword(16)
+		s, err := crutils.GenerateRandomPassword(18)
 		if err == nil {
 			fmt.Println(string(s))
 		} else {

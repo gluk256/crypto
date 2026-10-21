@@ -109,8 +109,9 @@ func ProveDataDestruction() {
 }
 
 func GenerateRandomPassword(sz int) (res []byte, err error) {
-	var arr = []byte("abcdefghijklmnopqrstuvwxyz0123456789") // you can add arbitrary ASCII characters
+	var arr = []byte("abcdefghijklmnopqrstuvwxyz") // you can add arbitrary ASCII characters
 	res = make([]byte, 0, sz)
+
 	for i := 0; i < sz; i++ {
 		rnd, errX := StochasticUint64()
 		c := arr[rnd%uint64(len(arr))]
