@@ -379,7 +379,7 @@ func BenchmarkSmallSize(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -391,7 +391,7 @@ func BenchmarkL1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -403,7 +403,7 @@ func BenchmarkL5(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -415,7 +415,7 @@ func BenchmarkL15(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -427,7 +427,7 @@ func BenchmarkL20(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -439,7 +439,7 @@ func BenchmarkL32(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -451,7 +451,7 @@ func BenchmarkL40(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -463,7 +463,7 @@ func BenchmarkL50(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -475,7 +475,7 @@ func BenchmarkL64(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -487,7 +487,7 @@ func BenchmarkL90(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
@@ -499,7 +499,7 @@ func BenchmarkL128(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Encrypt(key, data)
 		if err != nil {
-			b.Fatalf(err.Error())
+			b.Fatal(err.Error())
 		}
 	}
 }
