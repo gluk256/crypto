@@ -3,7 +3,7 @@ package terminal
 import (
 	"bufio"
 	"fmt"
-	"math/rand"
+
 	"os"
 	"os/exec"
 	"runtime"
@@ -27,31 +27,41 @@ func printSpaced(s []byte) {
 	var x string
 	delim := string("│")
 	for _, c := range s {
-		x += string(c)
+		glyph := string(c)
+		if 98 != c && 105 != c && 111 != c { // b, i, o
+			glyph = strings.ToUpper(glyph)
+		}
+		x += glyph
 		x += delim
 	}
-	fmt.Print(strings.ToUpper(x))
+	fmt.Print(x)
 }
 
 func shiftAlphabet() {
 	rnd, err := crutils.StochasticUint64()
 	if err != nil {
-		panic("Error in randomizeAlphabet(): " + err.Error())
+		panic("Error in shiftAlphabet(): " + err.Error())
 	}
 	off := int(rnd % uint64(sz))
-	for i, c := range alphabet {
+	twin := make([]byte, sz)
+	defer crutils.AnnihilateData(twin)
+	n := copy(twin, scrambledAlphabet)
+	if n != sz {
+		panic("Error in shiftAlphabet(): failed to copy scrambled alphabet")
+	}
+
+	for i, c := range twin {
 		j := (i + off) % sz
 		scrambledAlphabet[j] = c
 	}
 }
 
 func shuffleAlphabet() {
-	rnd := crutils.PseudorandomUint64()
-	generator := rand.New(rand.NewSource(int64(rnd)))
-	permutation := generator.Perm(sz)
 	x := scrambledAlphabet
-	for j, v := range permutation {
-		x[j], x[v] = x[v], x[j]
+	sz := len(x)
+	for i := range sz {
+		r := crutils.PseudorandomUint64() % uint64(sz)
+		x[i], x[r] = x[r], x[i]
 	}
 }
 
@@ -69,9 +79,11 @@ func initParams(ext bool) {
 
 	sz = len(alphabet)
 	scrambledAlphabet = make([]byte, sz)
+	copy(scrambledAlphabet, alphabet)
 }
 
 func resetParams() {
+	crutils.AnnihilateData(scrambledAlphabet)
 	sz = 0
 	alphabet = nil
 	scrambledAlphabet = nil
@@ -138,7 +150,7 @@ func SecureInputLinux(ext bool) []byte {
 }
 
 func SecureInputTest() []byte {
-	fmt.Println("test is running")
+	fmt.Println("test is running, to exit press ctrl+a")
 	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
 	exec.Command("stty", "-F", "/dev/tty", "-echo").Run()
 	defer exec.Command("stty", "-F", "/dev/tty", "echo").Run()
