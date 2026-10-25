@@ -12,8 +12,8 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtext v.2.%d \n", crutils.CipherVersion)
-	fmt.Println("encrypt/decrypt short messages in console")
+	fmt.Printf("xtext v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Println("encrypt/decrypt single-line text in console")
 	fmt.Println("USAGE: xtext flags [src]")
 	fmt.Println("\t -e encrypt")
 	fmt.Println("\t -d decrypt")

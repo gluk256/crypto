@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -15,7 +14,7 @@ import (
 var Delimiter = "————————————————————————————————————————————————————————————————————————————————————————————————————"
 
 func help() {
-	fmt.Printf("xcry v.1.%d.1 \n", crutils.CipherVersion)
+	fmt.Printf("xcry v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
 	fmt.Println("USAGE: xcry flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
@@ -118,7 +117,7 @@ func loadDataFromFile(filename string) []byte {
 				return nil
 			}
 		}
-		data, err := ioutil.ReadFile(filename)
+		data, err := os.ReadFile(filename)
 		if err != nil {
 			fmt.Printf("Failed to load data: %s\n", err.Error())
 			fmt.Println("Please try again.")

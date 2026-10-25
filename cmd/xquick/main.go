@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -11,7 +10,7 @@ import (
 )
 
 func help() {
-	fmt.Printf("xquick v.0.%d.1 \n", crutils.CipherVersion)
+	fmt.Printf("xquick v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a [big] file with stream cipher (xor only)")
 	fmt.Println("USAGE: xquick flags srcFile dstFile")
 	fmt.Println("\t -e encrypt (default mode)")
@@ -89,7 +88,7 @@ func run(flags string, srcFile string, dstFile string) {
 }
 
 func loadDataFromFile(flags string, filename string) []byte {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Printf("Failed to load data: %s\n", err.Error())
 		return nil

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -20,7 +19,7 @@ var (
 )
 
 func help() {
-	fmt.Println("xash v.1.0")
+	fmt.Println("xash v.3.0 (C) 2026")
 	fmt.Println("USAGE: xash [flags]")
 	fmt.Println("\t -s secure input standard (default)")
 	fmt.Println("\t -x secure input extended")
@@ -32,7 +31,7 @@ func help() {
 }
 
 func readFile(name string) []byte {
-	b, err := ioutil.ReadFile(name)
+	b, err := os.ReadFile(name)
 	if err != nil {
 		fmt.Printf("Error: can not read file [%s]\n", name)
 		os.Exit(0)

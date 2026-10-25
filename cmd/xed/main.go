@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -90,7 +89,7 @@ func reset(all bool) {
 }
 
 func ls() {
-	files, err := ioutil.ReadDir("./")
+	files, err := os.ReadDir("./")
 	if err != nil {
 		fmt.Printf(">>> Error: %s\n", err)
 	}
@@ -216,7 +215,7 @@ func FileLoad(args []string, show bool) bool {
 		}
 	}
 
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Printf(">>> Error: %s \n", err)
 		return false
@@ -242,7 +241,7 @@ func saveData(data []byte) {
 		return
 	}
 
-	err := ioutil.WriteFile(filename, data, 0666)
+	err := os.WriteFile(filename, data, 0666)
 	if err != nil {
 		fmt.Printf(">>> Error: %s \n", err)
 	} else {

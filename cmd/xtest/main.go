@@ -11,7 +11,7 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtest v.3.%d.0 build #1 \n", crutils.CipherVersion)
+	fmt.Printf("xtest v.3.%d.1 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("This is a helper tool for manual i/o tests")
 	fmt.Println("USAGE: xtest flag")
 	fmt.Println("\t -e SecureInput echo")

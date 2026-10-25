@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -89,7 +88,7 @@ func SaveData(filename string, data []byte) error {
 			}
 		}
 
-		err := ioutil.WriteFile(filename, data, 0666)
+		err := os.WriteFile(filename, data, 0666)
 		if err == nil {
 			return nil
 		} else {
@@ -118,7 +117,7 @@ func GetFullFileName(name string) string {
 
 func LoadCertificate(retry bool) ([]byte, error) {
 	fullname := GetFullFileName("certificate")
-	data, err := ioutil.ReadFile(fullname)
+	data, err := os.ReadFile(fullname)
 	if err != nil && !retry {
 		fmt.Printf("Failed to load data: %s\n", err.Error())
 		fmt.Printf("If file [%s] does not exist, please create it with random data.\n", fullname)
@@ -131,7 +130,7 @@ func LoadCertificate(retry bool) ([]byte, error) {
 		if filename == "q" {
 			return nil, errors.New("quit cmd received")
 		}
-		data, err = ioutil.ReadFile(filename)
+		data, err = os.ReadFile(filename)
 		if err != nil {
 			fmt.Printf("Failed to load data: %s\n", err.Error())
 		}

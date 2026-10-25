@@ -190,8 +190,8 @@ func helpInternal() {
 }
 
 func help() {
-	fmt.Printf("xed v.2.%d.1 \n", crutils.CipherVersion)
-	fmt.Println("editor for encrypted files and/or steganographic content")
+	fmt.Printf("xed v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Println("Editor for encrypted files")
 	fmt.Println("USAGE: xed [decrytpion_flags] [srcFile] [dstFile]")
 	fmt.Println("\td default decryption")
 	fmt.Println("\tp password mode")
@@ -201,7 +201,6 @@ func help() {
 
 func info() {
 	pos := [2]string{"face", "steg"}
-	fmt.Printf("xed v.2.%d.102 \n", crutils.CipherVersion)
 	fmt.Printf("You are currently at %s \n", pos[cur])
 	fmt.Printf("face: %d lines, steg: %d lines \n", items[0].console.Len(), items[1].console.Len())
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -16,7 +15,7 @@ import (
 var Delimiter = "————————————————————————————————————————————————————————————————————————————————————————————————————"
 
 func help() {
-	fmt.Printf("xrecovery v.0.%d.1 \n", crutils.CipherVersion)
+	fmt.Printf("xrecovery v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("recovers content in case of corrupted password (assuming only one char is corrupted)")
 	fmt.Println("USAGE: xrecovery flags srcFile")
 	fmt.Println("\t -s secure password/text input")
@@ -36,7 +35,7 @@ func main() {
 
 	flags := os.Args[1]
 	srcFile := os.Args[2]
-	data, err := ioutil.ReadFile(srcFile)
+	data, err := os.ReadFile(srcFile)
 	if err != nil || len(data) == 0 {
 		fmt.Printf("Failed to load data: %s\n", err.Error())
 		return
