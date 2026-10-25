@@ -28,7 +28,7 @@ func printSpaced(s []byte) {
 	delim := string("│")
 	for _, c := range s {
 		glyph := string(c)
-		if 98 != c && 105 != c && 111 != c { // b, i, o
+		if 98 != c && 100 != c && 105 != c && 111 != c && 113 != c { // b, d, i, o, q
 			glyph = strings.ToUpper(glyph)
 		}
 		x += glyph
@@ -42,18 +42,17 @@ func shiftAlphabet() {
 	if err != nil {
 		panic("Error in shiftAlphabet(): " + err.Error())
 	}
+
 	off := int(rnd % uint64(sz))
-	twin := make([]byte, sz)
-	defer crutils.AnnihilateData(twin)
-	n := copy(twin, scrambledAlphabet)
-	if n != sz {
-		panic("Error in shiftAlphabet(): failed to copy scrambled alphabet")
+	shifted := make([]byte, sz)
+
+	for i, c := range scrambledAlphabet {
+		j := (i + off) % sz
+		shifted[j] = c
 	}
 
-	for i, c := range twin {
-		j := (i + off) % sz
-		scrambledAlphabet[j] = c
-	}
+	crutils.AnnihilateData(scrambledAlphabet)
+	scrambledAlphabet = shifted
 }
 
 func shuffleAlphabet() {
