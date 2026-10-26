@@ -14,13 +14,16 @@ import (
 var Delimiter = "————————————————————————————————————————————————————————————————————————————————————————————————————"
 
 func help() {
-	fmt.Printf("xcry v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xcry v.3.%d.0.2 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
 	fmt.Println("USAGE: xcry flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
+	fmt.Println("\t -f save to file")
 	fmt.Println("\t -s secure password/text input")
 	fmt.Println("\t -x extra secure password/text input")
-	fmt.Println("\t -f save to file")
+	fmt.Println("\t -t enter text (password mode)")
+	fmt.Println("\t -T enter text (plain text mode)")
+	fmt.Println("\t -i insert encrypted file or text into another file as steg content (other params are ignored)")
 
 	fmt.Println("\t -e encrypt (default mode)")
 	fmt.Println("\t\t -r random password")
@@ -29,11 +32,6 @@ func help() {
 	fmt.Println("\t\t -p output decrypted content as text, don't save")
 	fmt.Println("\t\t -g interactive grep (print specific text lines only)")
 	fmt.Println("\t\t -G interactive grep with secure input")
-
-	fmt.Println("\t -i insert file content into another file as steganographic content")
-
-	fmt.Println("\t -t enter text (password mode)")
-	fmt.Println("\t -T enter text (plain text mode)")
 }
 
 func processCommandArgs() (flags string, srcFile string, dstFile string) {
@@ -137,14 +135,18 @@ func main() {
 	}
 
 	defer crutils.ProveDataDestruction()
+
+	if strings.Contains(flags, "i") {
+		insert(flags)
+		return
+	}
+
 	data := getData(flags, srcFile)
 	if len(data) == 0 {
 		return
 	}
 
-	if strings.Contains(flags, "i") {
-		insertSteg(flags, dstFile, data)
-	} else if strings.Contains(flags, "d") {
+	if strings.Contains(flags, "d") {
 		processDecryption(flags, dstFile, data, false)
 	} else {
 		processEncryption(flags, dstFile, data, nil)
@@ -153,20 +155,48 @@ func main() {
 	crutils.AnnihilateData(data)
 }
 
-func insertSteg(flags string, dstFile string, steg []byte) {
-	fmt.Print("loading face content, ")
+func insert(flags string) {
+	fmt.Println("Loading steg content to insert. ")
+	data := getData(flags, "")
+	if len(data) == 0 {
+		fmt.Println("Error: data is empty, nothing to insert")
+		return
+	}
+
+	var err error
+	defer crutils.AnnihilateData(data)
+
+	if strings.Contains(flags, "t") || strings.Contains(flags, "T") {
+		data, err = encryptText(flags, data)
+		if err != nil {
+			return
+		}
+	}
+
+	fmt.Print("Loading face content. ")
 	name := common.GetFileName()
 	face := getData("", name)
 	if len(face) != 0 {
-		processEncryption(flags, dstFile, face, steg)
+		processEncryption(flags, "", face, data)
 	}
+}
+
+func encryptText(flags string, data []byte) (res []byte, err error) {
+	key, err := common.GetPassword(flags)
+	if err == nil {
+		res, err = crutils.Encrypt(key, data)
+		if err != nil {
+			fmt.Printf("ERROR: failed to encrypt plain text: %s\n", err.Error())
+		}
+	}
+	return res, err
 }
 
 func decrypt(flags string, data []byte, unknownSize bool) (decrypted []byte, steg []byte, err error) {
 	var key []byte
 	defer crutils.AnnihilateData(key)
 
-	for i := 0; i < 256; i++ {
+	for range 256 {
 		key, err = common.GetPassword(flags)
 		if err != nil {
 			return nil, nil, err
@@ -253,7 +283,6 @@ func processEncryption(flags string, dstFile string, data []byte, steg []byte) {
 		encrypted, err = encrypt(key, data, steg)
 		if err != nil {
 			fmt.Printf("ERROR: %s\n", err.Error())
-			fmt.Println("This error is very unusual, further research is required")
 			return // at this time data is already destoryed by encyption
 		}
 	}

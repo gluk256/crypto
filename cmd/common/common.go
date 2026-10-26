@@ -27,10 +27,12 @@ func GetPasswordRaw(flags string) (res []byte, err error) {
 		fmt.Print("please enter the password: ")
 		res = terminal.PasswordModeInput()
 	}
-	if len(res) < 2 {
+
+	if len(res) == 0 {
+		err = errors.New("empty")
+	} else if len(res) < 2 {
 		err = errors.New("password is too short")
 	}
-	//res = keccak.Digest(res, 256) // moved to GetPassword; todo: delete
 	return res, err
 }
 
