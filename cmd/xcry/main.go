@@ -22,6 +22,7 @@ func help() {
 	fmt.Println("USAGE: xcry flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
 	fmt.Println("\t -f save to file")
+	fmt.Println("\t -a standard linux-style password input")
 	fmt.Println("\t -s secure password input")
 	fmt.Println("\t -x extra secure password input")
 
