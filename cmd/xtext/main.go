@@ -12,12 +12,12 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtext v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xtext v.3.%d.0.1 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt single-line text in console")
 	fmt.Println("USAGE: xtext flags [src]")
 	fmt.Println("\t -e encrypt")
 	fmt.Println("\t -d decrypt")
-	fmt.Println("\t -a reveal all decrypted data, including spacing")
+	fmt.Println("\t -o output all decrypted data, including spacing")
 	fmt.Println("\t -w use weaker encryption (rcx + keccak without AES, MAC, salt and spacing)")
 	fmt.Println("\t -r random password")
 	fmt.Println("\t -s secure password input")
@@ -44,7 +44,7 @@ func processParams() (flags string, data []byte) {
 	if !strings.Contains(flags, "e") && !strings.Contains(flags, "d") {
 		if strings.Contains(flags, "r") {
 			flags += "e"
-		} else if strings.Contains(flags, "a") {
+		} else if strings.Contains(flags, "o") {
 			flags += "d"
 		} else {
 			fmt.Println("Flags are not clear: encryption or decryption?")
@@ -119,6 +119,7 @@ func main() {
 func run(flags string, data []byte) {
 	var err error
 	var res, key, spacing []byte
+
 	defer crutils.AnnihilateData(data)
 	defer crutils.AnnihilateData(res)
 	defer crutils.AnnihilateData(spacing)
@@ -174,7 +175,7 @@ func reportResult(flags string, err error, res []byte, spacing []byte) {
 		return
 	}
 
-	if strings.Contains(flags, "a") && spacing != nil {
+	if strings.Contains(flags, "o") && spacing != nil {
 		fmt.Println("Spacing in hex format:")
 		fmt.Printf("%x\n\n", spacing)
 	}
