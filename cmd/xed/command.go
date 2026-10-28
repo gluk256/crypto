@@ -27,13 +27,24 @@ func processCommand(cmd string, prev string) string {
 	switch args[0] {
 	case "rr":
 		return processCommand(prev, prev)
-	case "h":
-		helpInternal()
 	case "help":
 		helpInternal()
+	case "H":
+		helpInternal()
+	case "he":
+		helpEditor()
+	case "h":
+		helpEditor()
+	case "hm":
+		helpMisc()
+	case "hh":
+		helpMisc()
 	case "clear":
 		clear()
-	case "frame":
+	case "/":
+		ChangeFrameStyle()
+		cat()
+	case "\\":
 		ChangeFrameStyle()
 		cat()
 	case "reset":
@@ -139,13 +150,34 @@ func processCommand(cmd string, prev string) string {
 	return cmd
 }
 
-func helpInternal() {
-	fmt.Println("COMMANDS")
-	fmt.Println("help:\t display this help")
+func helpEditor() {
+	fmt.Println("EDITOR COMMANDS --------------------------------------")
+	fmt.Println("a:\t append line to the end of file")
+	fmt.Println("A:\t append line (secure input)")
+	fmt.Println("i:\t insert line at certain index")
+	fmt.Println("I:\t insert line (secure input)")
+	fmt.Println("e:\t extend line (append to the end of certain line)")
+	fmt.Println("E:\t extend line (secure input)")
+	fmt.Println("c:\t cut line (delete from the end)")
+	fmt.Println("b:\t insert empty line")
+	fmt.Println("d:\t delete lines")
+	fmt.Println("D:\t delete lines range")
+	fmt.Println("L:\t delete all empty lines")
+	fmt.Println("m:\t merge lines")
+	fmt.Println("s:\t split a line")
+	fmt.Println("p:\t print lines")
+	fmt.Println("P:\t print lines range")
+}
+
+func helpMisc() {
+	fmt.Println("MISC COMMANDS ----------------------------------------")
+	fmt.Println("H/help:\t display help (all commands)")
+	fmt.Println("he/h:\t display help (editor)")
+	fmt.Println("hm/hh:\t display help (misc)")
 	fmt.Println("rr:\t repeat the previous command")
 	fmt.Println("info:\t display diagnostic info")
 	fmt.Println("clear:\t wipe the screen")
-	fmt.Println("frame:\t change frame style")
+	fmt.Println("\\ or /:\t change frame style")
 	fmt.Println("reset:\t reset current content")
 	fmt.Println("sw:\t switch content")
 	fmt.Println("ls:\t list current directory contents")
@@ -172,35 +204,27 @@ func helpInternal() {
 	fmt.Println("grep:\t normal grep")
 	fmt.Println("g:\t grep in password mode")
 	fmt.Println("G:\t grep in secure mode")
-	fmt.Println("a:\t append line to the end of file")
-	fmt.Println("A:\t append line (secure input)")
-	fmt.Println("i:\t insert line at certain index")
-	fmt.Println("I:\t insert line (secure input)")
-	fmt.Println("e:\t extend line (append to the end of certain line)")
-	fmt.Println("E:\t extend line (secure input)")
-	fmt.Println("c:\t cut line (delete from the end)")
-	fmt.Println("b:\t insert empty line")
-	fmt.Println("d:\t delete lines")
-	fmt.Println("D:\t delete lines range")
-	fmt.Println("L:\t delete all empty lines")
-	fmt.Println("m:\t merge lines")
-	fmt.Println("s:\t split a line")
-	fmt.Println("p:\t print lines")
-	fmt.Println("P:\t print lines range")
+}
+
+func helpInternal() {
+	helpMisc()
+	helpEditor()
 }
 
 func help() {
-	fmt.Printf("xed v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xed v.3.%d.0.1 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("Editor for encrypted files")
 	fmt.Println("USAGE: xed [decrytpion_flags] [srcFile] [dstFile]")
-	fmt.Println("\td default decryption")
+	fmt.Println("\td decryption (default)")
+	fmt.Println("\tD decryption mute")
 	fmt.Println("\tp password mode")
-	fmt.Println("\tD mute")
 	fmt.Println("\th help")
 }
 
 func info() {
 	pos := [2]string{"face", "steg"}
 	fmt.Printf("You are currently at %s \n", pos[cur])
-	fmt.Printf("face: %d lines, steg: %d lines \n", items[0].console.Len(), items[1].console.Len())
+	for i := range 2 {
+		fmt.Printf("%s: %d lines, %d bytes \n", pos[i], items[i].console.Len(), getConsoleSizeInBytes(i))
+	}
 }

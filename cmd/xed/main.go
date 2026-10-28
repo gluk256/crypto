@@ -156,7 +156,7 @@ func content2raw(index int, capacity int) []byte {
 }
 
 func main() {
-	if len(os.Args) == 2 {
+	if len(os.Args) > 1 {
 		if !strings.Contains(os.Args[1], "h") {
 			fmt.Println("ERROR: not enough args")
 		}
@@ -178,7 +178,7 @@ func LoadAndDecrypt() {
 	if FileLoad(os.Args[1:], false) {
 		flags := os.Args[1]
 		secure := !strings.Contains(flags, "p")
-		mute := strings.Contains(flags, "m")
+		mute := strings.Contains(flags, "D")
 		contentDecrypt(secure, mute)
 	}
 }
