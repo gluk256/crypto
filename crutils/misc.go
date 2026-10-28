@@ -86,7 +86,7 @@ func removePadding(data []byte) ([]byte, error) {
 	a := rcx.Bytes2uint(data[sz-4], data[sz-3])
 	newSize := int(a) + int(b)<<16
 	if newSize > sz {
-		return data, errors.New(fmt.Sprintf("error removing padding: wrong sizes [%d vs. %d]", newSize, sz))
+		return data, fmt.Errorf("error removing padding: wrong sizes [%d vs. %d]", newSize, sz)
 	}
 	return data[:newSize], nil
 }
@@ -95,7 +95,7 @@ func GenerateSalt() ([]byte, error) {
 	salt := make([]byte, SaltSize)
 	err := StochasticRand(salt)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Stochastic rand failed: %s", err.Error()))
+		return nil, fmt.Errorf("Stochastic rand failed: %s", err.Error())
 	}
 	return salt, err
 }

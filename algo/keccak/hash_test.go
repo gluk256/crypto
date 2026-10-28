@@ -108,12 +108,12 @@ func digestXor(in []byte, out []byte) {
 
 func TestReadXor(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 	var zeroCnt int
 
 	for i := 0; i < 64; i++ {
-		key := generateRandomBytes(t)
-		x := generateRandomBytes(t)
+		key := generateRandomBytes(t, rng)
+		x := generateRandomBytes(t, rng)
 		sz := len(x)
 		y := make([]byte, sz)
 		z := make([]byte, sz)
@@ -148,11 +148,11 @@ func TestReadXor(t *testing.T) {
 	}
 }
 
-func generateRandomBytes(t *testing.T) []byte {
+func generateRandomBytes(t *testing.T, rng *mrand.Rand) []byte {
 	sz := mrand.Intn(256) + 256
 	b := make([]byte, sz)
-	_, err := mrand.Read(b)
-	if err != nil {
+	i, _ := rng.Read(b)
+	if i != sz {
 		t.Fatal("failed to generate random bytes")
 	}
 	return b
@@ -190,10 +190,10 @@ func TestXorIn(t *testing.T) {
 
 func TestReadSequence(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 16; i++ {
-		key := generateRandomBytes(t)
+		key := generateRandomBytes(t, rng)
 		sz := mrand.Intn(200)
 		sz += 16
 		x := make([]byte, sz*2)

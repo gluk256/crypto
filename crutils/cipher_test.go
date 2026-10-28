@@ -47,11 +47,11 @@ func TestKeyholder(t *testing.T) {
 
 func TestPadding(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	var b, s, r, zero []byte
 	zero = make([]byte, 1024*8)
-	b = generateRandomBytes(t, false)
+	b = generateRandomBytes(t, rng, false)
 	r = make([]byte, len(b))
 	Randomize(r)
 	b = addSpacing(b, r)
@@ -74,14 +74,14 @@ func TestPadding(t *testing.T) {
 
 func TestAes(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 16; i++ {
-		key := generateRandomBytes(t, false)
+		key := generateRandomBytes(t, rng, false)
 		key = key[:AesKeySize]
-		salt := generateRandomBytes(t, false)
+		salt := generateRandomBytes(t, rng, false)
 		salt = salt[:AesSaltSize]
-		data := generateRandomBytes(t, true)
+		data := generateRandomBytes(t, rng, true)
 		sz := len(data)
 		expected := make([]byte, sz)
 		copy(expected, data)
@@ -146,13 +146,13 @@ func TestAes(t *testing.T) {
 
 func TestEncryptionQuick(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 3; i++ {
 		keysz := (mrand.Int() % 64) + 7
-		key := generateRandomBytes(t, false)
+		key := generateRandomBytes(t, rng, false)
 		key = key[:keysz]
-		data := generateRandomBytes(t, true)
+		data := generateRandomBytes(t, rng, true)
 		sz := len(data)
 		orig := make([]byte, sz)
 		copy(orig, data)
@@ -177,12 +177,12 @@ func TestEncryptionQuick(t *testing.T) {
 
 func TestEncryptionMain(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	keysz := (mrand.Int() % 64) + 7
-	key := generateRandomBytes(t, false)
+	key := generateRandomBytes(t, rng, false)
 	key = key[:keysz]
-	data := generateRandomBytes(t, true)
+	data := generateRandomBytes(t, rng, true)
 	sz := len(data)
 	orig := make([]byte, sz)
 	copy(orig, data)
@@ -224,15 +224,15 @@ func TestEncryptionMain(t *testing.T) {
 
 func TestEncryptionSteg(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	keysz := (mrand.Int() % 64) + 13
-	key := generateRandomBytes(t, false)
+	key := generateRandomBytes(t, rng, false)
 	key = key[:keysz]
-	keySteg := generateRandomBytes(t, false)
+	keySteg := generateRandomBytes(t, rng, false)
 	keySteg = keySteg[:keysz]
 
-	steg := generateRandomBytes(t, true)
+	steg := generateRandomBytes(t, rng, true)
 	origSteg := make([]byte, len(steg))
 	copy(origSteg, steg)
 
@@ -243,7 +243,7 @@ func TestEncryptionSteg(t *testing.T) {
 	origEncryptedSteg := make([]byte, len(encyprtedSteg))
 	copy(origEncryptedSteg, encyprtedSteg)
 
-	data := generateRandomBytesMinSize(t, len(encyprtedSteg)+37)
+	data := generateRandomBytesMinSize(t, rng, len(encyprtedSteg)+37)
 	origData := make([]byte, len(data))
 	copy(origData, data)
 

@@ -44,17 +44,21 @@ func RandXor(dst []byte) {
 
 // collect entropy from three independent sources
 func StochasticRand(dst []byte) error {
+	sz := len(dst)
 	n, err := crand.Read(dst)
-	if err == nil && n != len(dst) {
+	if err == nil && n != sz {
 		err = errors.New("failed to read from crand")
 	}
-	// even in case of errors, do your best
-	mathrand := make([]byte, len(dst))
-	_, err2 := mrand.Read(mathrand)
-	if err == nil {
-		err = err2
+
+	// even in case of vulnerabilities in crand, do your best
+	seed := time.Now().Unix()
+	rng := mrand.New(mrand.NewSource(seed))
+	mathrand := make([]byte, sz)
+	i, _ := rng.Read(mathrand)
+	if err == nil && i != sz {
+		err = errors.New("failed to read from crand")
 	}
-	primitives.XorInplace(dst, mathrand, len(dst))
+	primitives.XorInplace(dst, mathrand, sz)
 	RandXor(dst)
 	AnnihilateData(mathrand)
 	return err

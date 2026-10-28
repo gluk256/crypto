@@ -53,24 +53,24 @@ func TestRand(t *testing.T) {
 	}
 }
 
-func generateRandomBytes(t *testing.T, big bool) []byte {
+func generateRandomBytes(t *testing.T, rng *mrand.Rand, big bool) []byte {
 	sz := mrand.Intn(256) + 256
 	if big {
 		sz += mrand.Intn(1024 * 32)
 	}
 	b := make([]byte, sz)
-	_, err := mrand.Read(b)
-	if err != nil {
+	i, _ := rng.Read(b)
+	if i != sz {
 		t.Fatal("failed to generate random bytes")
 	}
 	return b
 }
 
-func generateRandomBytesMinSize(t *testing.T, minsize int) []byte {
+func generateRandomBytesMinSize(t *testing.T, rng *mrand.Rand, minsize int) []byte {
 	sz := mrand.Intn(256) + minsize
 	b := make([]byte, sz)
-	_, err := mrand.Read(b)
-	if err != nil {
+	i, _ := rng.Read(b)
+	if i != sz {
 		t.Fatal("failed to generate random bytes")
 	}
 	return b
@@ -78,11 +78,11 @@ func generateRandomBytesMinSize(t *testing.T, minsize int) []byte {
 
 func TestEncryptKeccak(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 16; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, true)
+		key := generateRandomBytes(t, rng, false)
+		x := generateRandomBytes(t, rng, true)
 		y := make([]byte, len(x))
 		copy(y, x)
 
@@ -104,11 +104,11 @@ func TestEncryptKeccak(t *testing.T) {
 
 func TestEncryptSimplest(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 3; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, true)
+		key := generateRandomBytes(t, rng, false)
+		x := generateRandomBytes(t, rng, true)
 		y := make([]byte, len(x))
 		copy(y, x)
 

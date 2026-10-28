@@ -56,7 +56,7 @@ func testSingleEncrypt(t *testing.T, key string, data string, expected string) {
 	}
 }
 
-func generateRandomBytes(t *testing.T, align bool) []byte {
+func generateRandomBytes(t *testing.T, rng *mrand.Rand, align bool) []byte {
 	sz := mrand.Intn(256) + 256
 	if align {
 		for sz%4 != 0 {
@@ -64,8 +64,8 @@ func generateRandomBytes(t *testing.T, align bool) []byte {
 		}
 	}
 	b := make([]byte, sz)
-	_, err := mrand.Read(b)
-	if err != nil {
+	i, _ := rng.Read(b)
+	if i != sz {
 		t.Fatal("failed to generate random bytes")
 	}
 	return b
@@ -73,11 +73,11 @@ func generateRandomBytes(t *testing.T, align bool) []byte {
 
 func TestEncryptionRC4(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 64; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, false)
+		key := generateRandomBytes(t, rng, false)
+		x := generateRandomBytes(t, rng, false)
 		y := make([]byte, len(x))
 		copy(y, x)
 
@@ -103,10 +103,10 @@ func TestEncryptionRC4(t *testing.T) {
 
 func TestEncryptionMix(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
-	key := generateRandomBytes(t, false)
-	orig := generateRandomBytes(t, false)
+	key := generateRandomBytes(t, rng, false)
+	orig := generateRandomBytes(t, rng, false)
 	buf := make([]byte, len(orig))
 	encrypted := make([]byte, len(orig))
 	copy(buf, orig)
@@ -159,11 +159,11 @@ func TestConversion(t *testing.T) {
 
 func TestSingleRunRCX(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 4; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, true)
+		key := generateRandomBytes(t, rng, false)
+		x := generateRandomBytes(t, rng, true)
 		y := make([]byte, len(x))
 		copy(y, x)
 
@@ -189,11 +189,11 @@ func TestSingleRunRCX(t *testing.T) {
 // encrypt array containing zeros
 func TestSingleRunRcxZero(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 	const sz = 1024 * 64
 
 	for i := 0; i < 3; i++ {
-		key := generateRandomBytes(t, false)
+		key := generateRandomBytes(t, rng, false)
 		x := make([]byte, sz)
 		zero := make([]byte, sz)
 
@@ -215,11 +215,11 @@ func TestSingleRunRcxZero(t *testing.T) {
 
 func TestCascade(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 3; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, true)
+		key := generateRandomBytes(t, rng, false)
+		x := generateRandomBytes(t, rng, true)
 		y := make([]byte, len(x))
 		copy(y, x)
 
@@ -244,11 +244,11 @@ func TestCascade(t *testing.T) {
 
 func TestAvalancheRcx(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 3; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, true)
+		key := generateRandomBytes(t, rng, false)
+		x := generateRandomBytes(t, rng, true)
 		y := make([]byte, len(x))
 		z := make([]byte, len(x))
 		copy(y, x)
@@ -276,10 +276,10 @@ func TestAvalancheRcx(t *testing.T) {
 
 func TestAvalancheRC4(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 128; i++ {
-		key := generateRandomBytes(t, false)
+		key := generateRandomBytes(t, rng, false)
 		var a, b RC4
 		a.InitKey(key)
 		b.InitKey(key)
@@ -302,11 +302,11 @@ func TestAvalancheRC4(t *testing.T) {
 
 func TestEncryptionRCX(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 3; i++ {
-		key := generateRandomBytes(t, false)
-		x := generateRandomBytes(t, false)
+		key := generateRandomBytes(t, rng, false)
+		x := generateRandomBytes(t, rng, false)
 		y := make([]byte, len(x))
 		copy(y, x)
 
@@ -329,10 +329,10 @@ func TestEncryptionRCX(t *testing.T) {
 // tests the ability to generate consistent gamma
 func TestConsistencyRC4(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 	b := make([]byte, 1024)
 	for i := 0; i < 16; i++ {
-		key := generateRandomBytes(t, false)
+		key := generateRandomBytes(t, rng, false)
 		sz := Bytes2uint(key[0], key[1])
 		x := make([]byte, sz)
 		y := make([]byte, sz)
@@ -358,10 +358,10 @@ func TestConsistencyRC4(t *testing.T) {
 
 func TestCleanupRcx(t *testing.T) {
 	seed := time.Now().Unix()
-	mrand.Seed(seed)
+	rng := mrand.New(mrand.NewSource(seed))
 
 	for i := 0; i < 3; i++ {
-		key := generateRandomBytes(t, false)
+		key := generateRandomBytes(t, rng, false)
 		var x RCX
 		x.InitKey(key)
 		prev := make([]byte, 256)
