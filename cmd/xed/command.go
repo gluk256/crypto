@@ -13,7 +13,7 @@ func switchContent() {
 }
 
 func clear() {
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		fmt.Println()
 	}
 }
@@ -54,6 +54,8 @@ func processCommand(cmd string, prev string) string {
 	case "sw":
 		switchContent()
 	case "info":
+		info()
+	case "iii":
 		info()
 	case "ls":
 		ls()
@@ -218,7 +220,7 @@ func helpInternal() {
 }
 
 func help() {
-	fmt.Printf("xed v.3.%d.0.1 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xed v.3.%d.0.2 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("Editor for encrypted files")
 	fmt.Println("USAGE: xed [decrytpion_flags] [srcFile] [dstFile]")
 	fmt.Println("\td decryption (default)")
