@@ -129,6 +129,10 @@ func processCommand(cmd string, prev string) string {
 		LineCut(args)
 	case "b": // editor: insert empty line
 		LineInsertSpace(args)
+	case "B": // editor: append empty line
+		LineAppendEmptyLine()
+	case "bb": // editor: append empty line
+		LineAppendEmptyLine()
 	case "d": // editor: delete lines
 		LinesDelete(args)
 	case "D": // editor: delete lines range
@@ -160,6 +164,8 @@ func helpEditor() {
 	fmt.Println("E:\t extend line (secure input)")
 	fmt.Println("c:\t cut line (delete from the end)")
 	fmt.Println("b:\t insert empty line")
+	fmt.Println("bb:\t append empty line")
+	fmt.Println("B:\t append empty line")
 	fmt.Println("d:\t delete lines")
 	fmt.Println("D:\t delete lines range")
 	fmt.Println("L:\t delete all empty lines")

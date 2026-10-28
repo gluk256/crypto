@@ -105,6 +105,12 @@ func grep(arg []string, cryptic bool, scramble bool) {
 	crutils.AnnihilateData(pattern)
 }
 
+func LineAppendEmptyLine() {
+	items[cur].console.PushBack([]byte(""))
+	items[cur].changed = true
+	cat()
+}
+
 func LineAppend(cryptic bool) {
 	var s []byte
 	fmt.Println(defaultPrompt)
