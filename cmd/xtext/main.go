@@ -12,7 +12,7 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtext v.3.%d.0.1 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xtext v.3.%d.0.2 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt single-line text in console")
 	fmt.Println("USAGE: xtext flags [src]")
 	fmt.Println("\t -e encrypt")
@@ -20,6 +20,7 @@ func help() {
 	fmt.Println("\t -o output all decrypted data, including spacing")
 	fmt.Println("\t -w use weaker encryption (rcx + keccak without AES, MAC, salt and spacing)")
 	fmt.Println("\t -r random password")
+	fmt.Println("\t -p linux-style password input")
 	fmt.Println("\t -s secure password input")
 	fmt.Println("\t -S secure data input")
 	fmt.Println("\t -h help")

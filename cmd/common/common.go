@@ -23,7 +23,7 @@ func GetPasswordRaw(flags string) (res []byte, err error) {
 	} else if strings.Contains(flags, "s") {
 		fmt.Println()
 		res = terminal.SecureInput(false)
-	} else if strings.Contains(flags, "a") {
+	} else if strings.Contains(flags, "p") {
 		fmt.Print("please enter the password: ")
 		res = terminal.PasswordModeInput()
 	} else {

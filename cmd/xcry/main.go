@@ -15,14 +15,12 @@ var Delimiter = "—————————————————————
 var passwordMode string
 
 func help() {
-	fmt.Printf("xcry v.3.%d.0.8 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xcry v.3.%d.0.9 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
-	fmt.Println("recursive encryption only works with plain-text files")
-	fmt.Println("specify insert flag if you want to use already encrypted file as steg")
 	fmt.Println("USAGE: xcry flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
 	fmt.Println("\t -f save to file")
-	fmt.Println("\t -a standard linux-style password input")
+	fmt.Println("\t -p linux-style password input")
 	fmt.Println("\t -s secure password input")
 	fmt.Println("\t -x extra secure password input")
 
@@ -30,7 +28,7 @@ func help() {
 	fmt.Println("\t\t -r random password")
 
 	fmt.Println("\t -d decrypt")
-	fmt.Println("\t\t -p output decrypted content as text, don't save")
+	fmt.Println("\t\t -c [linux-style 'cat' cmd] output decrypted content as text")
 	fmt.Println("\t\t -g interactive grep (print specific text lines only)")
 	fmt.Println("\t\t -G interactive grep with secure input")
 
@@ -111,7 +109,7 @@ func enterText(flags string) (res []byte) {
 }
 
 func getData(flags string, srcFile string) (data []byte) {
-	if strings.Contains(flags, "t") || strings.Contains(flags, "T") {
+	if strings.ContainsAny(flags, "tTSX") {
 		data = enterText(flags)
 	} else {
 		data = loadDataFromFile(srcFile)
@@ -253,7 +251,7 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 
 	if err != nil {
 		fmt.Printf("Error: %s \n", err.Error())
-	} else if strings.Contains(flags, "p") {
+	} else if strings.Contains(flags, "c") {
 		fmt.Printf("%s\n%s\n%s\n", Delimiter, string(decrypted), Delimiter)
 	} else if strings.Contains(flags, "f") {
 		common.SaveData(dstFile, decrypted)
@@ -263,14 +261,14 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 	}
 
 	for !quit {
-		fmt.Printf("[save_File, G/grep, Print, Decrypt_steg, Secure_pass, eXtra_secure, retrY_decr, chMode, Quit] PM: %s\n", passwordMode)
+		fmt.Printf("[save_File, G/grep, Cat, Decrypt_steg, linux_Pass, Secure_pass, eXtra_secure, retrY_decr, chMode, Quit] PM: %s\n", passwordMode)
 		fmt.Print("Please enter the command: ")
 		flags = string(terminal.PlainTextInput())
 		flags += updatePasswordMode(flags)
 
 		if strings.Contains(flags, "m") {
 			continue // password mode is already updated
-		} else if strings.Contains(flags, "p") {
+		} else if strings.Contains(flags, "c") {
 			fmt.Printf("%s\n%s\n%s\n", Delimiter, string(decrypted), Delimiter)
 		} else if strings.Contains(flags, "G") {
 			runGrep(flags, decrypted)
@@ -322,7 +320,7 @@ func processEncryption(flags string, dstFile string, data []byte, steg []byte) (
 	}
 
 	for !quitCmd {
-		fmt.Printf("[save_File, Encrypt /recurs./, Rand_pass_encr, linux_pAss, Secure_pass, eXtra_secure, retrY_encr, chMode, Quit] PM: %s\n", passwordMode)
+		fmt.Printf("[save_File, Encrypt, Rand_pass_encr, linux_Pass, Secure_pass, eXtra_secure, retrY_encr, chMode, Quit] PM: %s\n", passwordMode)
 		fmt.Print("Please enter the command: ")
 		flags = string(terminal.PlainTextInput())
 		flags += updatePasswordMode(flags)
@@ -350,9 +348,9 @@ func processEncryption(flags string, dstFile string, data []byte, steg []byte) (
 }
 
 func updatePasswordMode(flags string) string {
-	if strings.ContainsAny(flags, "asx") {
-		if strings.Contains(flags, "a") {
-			passwordMode = "a"
+	if strings.ContainsAny(flags, "psx") {
+		if strings.Contains(flags, "p") {
+			passwordMode = "p"
 		} else if strings.Contains(flags, "s") {
 			passwordMode = "s"
 		} else if strings.Contains(flags, "x") {

@@ -10,12 +10,13 @@ import (
 )
 
 func help() {
-	fmt.Printf("xquick v.3.%d.0 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xquick v.3.%d.0.1 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a [big] file with stream cipher (xor only)")
 	fmt.Println("USAGE: xquick flags srcFile dstFile")
 	fmt.Println("\t -e encrypt (default mode)")
 	fmt.Println("\t -d decrypt")
 	fmt.Println("\t -r random password")
+	fmt.Println("\t -p linux-style password input")
 	fmt.Println("\t -s secure password input")
 	fmt.Println("\t -x extra secure password input")
 	fmt.Println("\t -h help")
