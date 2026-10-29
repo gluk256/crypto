@@ -15,7 +15,7 @@ var Delimiter = "—————————————————————
 var passwordMode string
 
 func help() {
-	fmt.Printf("xcry v.3.%d.0.9 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xcry v.3.%d.0.10 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
 	fmt.Println("USAGE: xcry flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
@@ -32,8 +32,8 @@ func help() {
 	fmt.Println("\t\t -g interactive grep (print specific text lines only)")
 	fmt.Println("\t\t -G interactive grep with secure input")
 
-	fmt.Println("\t -i insert encrypted file or text content into another file as steg content")
-	fmt.Println("\t\t NB: if you insert UNencrypted file, you will not be able to access its contents later")
+	fmt.Println("\t -i insert encrypted file or text into another file as steg content")
+	fmt.Println("\t\t NB: if you insert UNencrypted content, you might not be able to access it later")
 	fmt.Println("\t\t insert: only flags are used, other parameters are ignored")
 	fmt.Println("\t\t insert: if you want to type and encrypt text, add text flags")
 
@@ -261,7 +261,7 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 	}
 
 	for !quit {
-		fmt.Printf("[save_File, G/grep, Cat, Decrypt_steg, linux_Pass, Secure_pass, eXtra_secure, retrY_decr, chMode, Quit] PM: %s\n", passwordMode)
+		fmt.Printf("[save_File, G/grep, Cat, Decrypt_steg, linux_Pass, Secure_pass, eXtra_secure, retrY_decr, chMode, o, Quit] PM: %s\n", passwordMode)
 		fmt.Print("Please enter the command: ")
 		flags = string(terminal.PlainTextInput())
 		flags += updatePasswordMode(flags)
@@ -270,6 +270,8 @@ func processDecryption(flags string, dstFile string, data []byte, unknownSize bo
 			continue // password mode is already updated
 		} else if strings.Contains(flags, "c") {
 			fmt.Printf("%s\n%s\n%s\n", Delimiter, string(decrypted), Delimiter)
+		} else if strings.Contains(flags, "o") {
+			fmt.Printf("%s\n%s\n%s\n", Delimiter, string(steg), Delimiter)
 		} else if strings.Contains(flags, "G") {
 			runGrep(flags, decrypted)
 		} else if strings.Contains(flags, "g") {

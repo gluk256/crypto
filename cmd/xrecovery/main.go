@@ -23,7 +23,7 @@ func help() {
 	fmt.Println("\t -x extra secure password/text input")
 	fmt.Println("\t -u unknown size")
 	fmt.Println("\t -q quick encryption mode")
-	fmt.Println("\t -o output decrypted content")
+	fmt.Println("\t -c [linux-style 'cat' cmd] output decrypted content")
 	fmt.Println("\t -f save face to file")
 	fmt.Println("\t -F save encrypted steg to file")
 }
@@ -66,7 +66,7 @@ func recover(flags string, data []byte, quick bool, unknownSize bool) {
 		return
 	}
 
-	if strings.Contains(flags, "o") {
+	if strings.Contains(flags, "c") {
 		fmt.Printf("%s\n%s\n%s\n", Delimiter, string(decrypted), Delimiter)
 	}
 
