@@ -12,14 +12,15 @@ import (
 )
 
 func help() {
-	fmt.Printf("xtext v.3.%d.0.2 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xtext v.3.%d.0.3 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt single-line text in console")
 	fmt.Println("USAGE: xtext flags [src]")
 	fmt.Println("\t -e encrypt")
+	fmt.Println("\t\t -r random password")
 	fmt.Println("\t -d decrypt")
-	fmt.Println("\t -o output all decrypted data, including spacing")
+	fmt.Println("\t\t -u output decrypted data in hex")
+	fmt.Println("\t\t -o output all decrypted data, including spacing")
 	fmt.Println("\t -w use weaker encryption (RCX + Keccak, without AES, MAC, salt and spacing)")
-	fmt.Println("\t -r random password")
 	fmt.Println("\t -p linux-style password input")
 	fmt.Println("\t -s secure password input")
 	fmt.Println("\t -S secure data input")
@@ -93,20 +94,15 @@ func getData(flags string) (data []byte, err error) {
 	return data, err
 }
 
-func convertData(flags string, data []byte) (res []byte, err error) {
+func convertData(flags string, data []byte) []byte {
 	if strings.Contains(flags, "d") || common.IsHexData(data) {
 		h := make([]byte, len(data)/2)
-		_, err = hex.Decode(h, data)
-		if err != nil {
-			fmt.Printf("Error decoding hex data [%d characters]: %s\n", len(data), err.Error())
-			return nil, err
-		} else {
-			res = h
+		_, err := hex.Decode(h, data)
+		if err == nil {
+			return h
 		}
-	} else {
-		res = data
 	}
-	return res, nil
+	return data
 }
 
 func main() {
@@ -130,9 +126,7 @@ func run(flags string, data []byte) {
 		data, err = getData(flags)
 	}
 	if err == nil {
-		data, err = convertData(flags, data)
-	}
-	if err == nil {
+		data = convertData(flags, data)
 		key, err = common.GetPassword(flags)
 	}
 	if err == nil {
@@ -181,7 +175,9 @@ func reportResult(flags string, err error, res []byte, spacing []byte) {
 		fmt.Printf("%x\n\n", spacing)
 	}
 
-	if common.IsAscii(res) {
+	if strings.Contains(flags, "u") {
+		fmt.Printf("Decrypted data in hex format:\n%x\n", res)
+	} else if common.IsAscii(res) {
 		fmt.Printf("Decrypted:\n[%s]\n", string(res))
 	} else {
 		fmt.Printf("Decrypted data in hex format:\n%x\n", res)
