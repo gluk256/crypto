@@ -15,7 +15,7 @@ var Delimiter = "—————————————————————
 var passwordMode string
 
 func help() {
-	fmt.Printf("xcry v.3.%d.0.10 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xcry v.3.%d.0.11 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("encrypt/decrypt a file")
 	fmt.Println("USAGE: xcry flags [srcFile] [dstFile]")
 	fmt.Println("\t -h help")
@@ -368,11 +368,14 @@ func runGrep(flags string, content []byte) {
 	var s []byte
 	secure := strings.Contains(flags, "G")
 	for {
-		fmt.Print("please enter text: ")
 		if secure {
 			s = terminal.SecureInput(false)
 		} else {
-			s = terminal.PasswordModeInput()
+			fmt.Print("please enter text [or 'q' for exit]: ")
+			s = terminal.PlainTextInput()
+		}
+		if len(s) == 0 {
+			continue
 		}
 		if string(s) == "q" {
 			break
