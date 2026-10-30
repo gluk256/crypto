@@ -15,7 +15,7 @@ import (
 var Delimiter = "————————————————————————————————————————————————————————————————————————————————————————————————————"
 
 func help() {
-	fmt.Printf("xrecovery v.3.%d.0.1 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Printf("xrecovery v.3.%d.0.2 (C) 2026 \n", crutils.CipherVersion)
 	fmt.Println("recovers content in case of corrupted password (assuming only one char is corrupted)")
 	fmt.Println("USAGE: xrecovery flags srcFile")
 	fmt.Println("\t -p linux-style password input")
@@ -37,8 +37,17 @@ func main() {
 	flags := os.Args[1]
 	srcFile := os.Args[2]
 	data, err := os.ReadFile(srcFile)
-	if err != nil || len(data) == 0 {
+	if err != nil {
 		fmt.Printf("Failed to load data: %s\n", err.Error())
+		return
+	}
+	if len(data) == 0 {
+		fmt.Println("Failed to load data: the file is empty")
+		return
+	}
+	if len(data) <= crutils.SaltSize {
+		// we need this check here because decryption errors are ignored in recovery mode
+		fmt.Printf("data size (%d bytes), less than salt size (%d bytes)", len(data), crutils.SaltSize)
 		return
 	}
 

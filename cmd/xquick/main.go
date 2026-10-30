@@ -10,8 +10,8 @@ import (
 )
 
 func help() {
-	fmt.Printf("xquick v.3.%d.0.1 (C) 2026 \n", crutils.CipherVersion)
-	fmt.Println("encrypt/decrypt a [big] file with stream cipher (xor only)")
+	fmt.Printf("xquick v.3.%d.0.2 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Println("encrypt/decrypt a [big] file with stream cipher (RC4+Keccak+AES)")
 	fmt.Println("USAGE: xquick flags srcFile dstFile")
 	fmt.Println("\t -e encrypt (default mode)")
 	fmt.Println("\t -d decrypt")
@@ -92,6 +92,11 @@ func loadDataFromFile(flags string, filename string) []byte {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Printf("Failed to load data: %s\n", err.Error())
+		return nil
+	}
+
+	if len(data) == 0 {
+		fmt.Println("Failed to load data: the file is empty")
 		return nil
 	}
 

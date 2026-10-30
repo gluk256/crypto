@@ -18,7 +18,7 @@ func help() {
 	fmt.Println("\t -e encrypt")
 	fmt.Println("\t -d decrypt")
 	fmt.Println("\t -o output all decrypted data, including spacing")
-	fmt.Println("\t -w use weaker encryption (rcx + keccak without AES, MAC, salt and spacing)")
+	fmt.Println("\t -w use weaker encryption (RCX + Keccak, without AES, MAC, salt and spacing)")
 	fmt.Println("\t -r random password")
 	fmt.Println("\t -p linux-style password input")
 	fmt.Println("\t -s secure password input")

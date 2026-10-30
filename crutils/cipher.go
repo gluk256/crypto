@@ -208,7 +208,7 @@ func encrypt(key []byte, data []byte) ([]byte, error) {
 // don't forget to annihilate the key!
 func Decrypt(key []byte, data []byte) (res []byte, spacing []byte, err error) {
 	if len(data) <= SaltSize {
-		return nil, nil, fmt.Errorf("data size %d, less than salt size %d", len(data), SaltSize)
+		return nil, nil, fmt.Errorf("data size (%d bytes), less than salt size (%d bytes)", len(data), SaltSize)
 	}
 	res = data[:len(data)-SaltSize]
 	salt := data[len(data)-SaltSize:]
@@ -264,8 +264,12 @@ func EncryptQuick(key []byte, data []byte) ([]byte, error) {
 }
 
 func DecryptQuick(key []byte, data []byte) ([]byte, error) {
-	var err error
 	split := len(data) - SaltSize
+	if split <= 0 {
+		return nil, fmt.Errorf("Data size (%d bytes) less than salt size (%d bytes)", SaltSize, len(data))
+	}
+
+	var err error
 	salt := data[split:]
 	data = data[:split]
 	keyholder := GenerateKeys(key, salt)
