@@ -94,15 +94,19 @@ func getData(flags string) (data []byte, err error) {
 	return data, err
 }
 
-func convertData(flags string, data []byte) []byte {
-	if strings.Contains(flags, "d") || common.IsHexData(data) {
+func convertData(flags string, data []byte) (res []byte, err error) {
+	res = data
+	decr := strings.Contains(flags, "d")
+	if decr || common.IsHexData(data) { // in decryption mode data is always is hex format
 		h := make([]byte, len(data)/2)
-		_, err := hex.Decode(h, data)
+		_, err = hex.Decode(h, data)
 		if err == nil {
-			return h
+			res = h
+		} else if !decr { // in encryption mode conversion is otional, error is not reported
+			err = nil
 		}
 	}
-	return data
+	return res, nil
 }
 
 func main() {
@@ -126,7 +130,9 @@ func run(flags string, data []byte) {
 		data, err = getData(flags)
 	}
 	if err == nil {
-		data = convertData(flags, data)
+		data, err = convertData(flags, data)
+	}
+	if err == nil {
 		key, err = common.GetPassword(flags)
 	}
 	if err == nil {
