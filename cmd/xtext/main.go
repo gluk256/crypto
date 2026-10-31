@@ -97,12 +97,14 @@ func getData(flags string) (data []byte, err error) {
 func convertData(flags string, data []byte) (res []byte, err error) {
 	res = data
 	decr := strings.Contains(flags, "d")
-	if decr || common.IsHexData(data) { // in decryption mode data is always is hex format
+	if decr || common.IsHexData(data) { // in decryption mode data MUST be in hex format
 		h := make([]byte, len(data)/2)
 		_, err = hex.Decode(h, data)
 		if err == nil {
 			res = h
-		} else if !decr { // in encryption mode conversion is otional, error is not reported
+		} else if decr {
+			fmt.Printf("Error decoding hex data [%d characters]: %s\n", len(data), err.Error())
+		} else { // in encryption mode hex conversion is optional, error is not reported
 			err = nil
 		}
 	}
