@@ -8,8 +8,8 @@ import (
 )
 
 func help() {
-	fmt.Printf("xed v.3.%d.0.2 (C) 2026 \n", crutils.CipherVersion)
-	fmt.Println("Editor for encrypted files")
+	fmt.Printf("xed v.3.%d.0.3 (C) 2026 \n", crutils.CipherVersion)
+	fmt.Println("Editor for encrypted files (only works with text file format)")
 	fmt.Println("USAGE: xed [decrytpion_flags] [srcFile] [dstFile]")
 	fmt.Println("\td decryption (default)")
 	fmt.Println("\tD decryption mute")
