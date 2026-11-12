@@ -249,15 +249,15 @@ func saveData(data []byte) {
 	}
 }
 
-// func FileSavePlainText(arg []string) {
-// 	if confirm("Do you really want to save plain text?") {
-// 		b := content2raw(cur, 0)
-// 		if b != nil {
-// 			saveData(arg, b)
-// 			crutils.AnnihilateData(b)
-// 		}
-// 	}
-// }
+func FileSaveUnencrypted() {
+	if common.Confirm("Do you really want to save plain text?") {
+		b := content2raw(cur, 0)
+		if b != nil {
+			saveData(b)
+			crutils.AnnihilateData(b)
+		}
+	}
+}
 
 func FileSave(secure bool) {
 	b := content2raw(cur, 0)

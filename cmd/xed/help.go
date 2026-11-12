@@ -29,18 +29,21 @@ func helpMisc() {
 	fmt.Println("hm/hh:\t display help (misc)")
 	fmt.Println("rr:\t repeat the previous command")
 	fmt.Println("info:\t display diagnostic info")
+	fmt.Println("ii:\t display diagnostic info")
 	fmt.Println("clear:\t wipe the screen")
 	fmt.Println("\\ or /:\t change frame style")
 	fmt.Println("reset:\t reset current content")
 	fmt.Println("sw:\t switch content")
 	fmt.Println("ls:\t list current directory contents")
 	fmt.Println("cat:\t print content")
+	fmt.Println("cc:\t print content")
 	fmt.Println("fl:\t file load")
 	fmt.Println("fo:\t file load and print content without decrypting")
 	fmt.Println("fd:\t file load and decrypt")
 	fmt.Println("fdp:\t file load and decrypt (password mode)")
 	fmt.Println("fD:\t file load and decrypt (silent)")
 	fmt.Println("fDp:\t file load and decrypt (silent, password mode)")
+	fmt.Println("fccu:\t file save current content unencrypted")
 	fmt.Println("fs:\t file encrypt & save (face)")
 	fmt.Println("fp:\t file encrypt & save (password mode)")
 	fmt.Println("fx:\t file encrypt & save steg")
@@ -73,7 +76,7 @@ func helpEditor() {
 	fmt.Println("B:\t append empty line")
 	fmt.Println("d:\t delete lines")
 	fmt.Println("D:\t delete lines range")
-	fmt.Println("L:\t delete all empty lines")
+	fmt.Println("LL:\t delete all empty lines")
 	fmt.Println("m:\t merge lines")
 	fmt.Println("s:\t split a line")
 	fmt.Println("p:\t print lines")
@@ -117,7 +120,7 @@ func processCommand(cmd string, prev string) string {
 		switchContent()
 	case "info":
 		info()
-	case "iii":
+	case "ii":
 		info()
 	case "ls":
 		ls()
@@ -145,6 +148,8 @@ func processCommand(cmd string, prev string) string {
 		FileLoad(args, false)
 	case "fo": // file open (print text without decrypting)
 		FileLoad(args, true)
+	case "fccu": // save current content unencrypted
+		FileSaveUnencrypted()
 	case "fs": // file encrypt & save
 		FileSave(true)
 	case "fp": // file encrypt & save
@@ -201,7 +206,7 @@ func processCommand(cmd string, prev string) string {
 		LinesDelete(args)
 	case "D": // editor: delete lines range
 		LinesDeleteRange(args)
-	case "L": // editor: delete all empty lines
+	case "LL": // editor: delete all empty lines
 		DeleteEmptyLines()
 	case "m": // editor: merge lines
 		LinesMerge(args)
