@@ -494,3 +494,22 @@ func getConsoleSizeInBytes(i int) (res int) {
 	}
 	return res
 }
+
+func info() {
+	pos := [2]string{"face", "steg"}
+	fmt.Printf("You are currently at %s \n", pos[cur])
+	for i := range 2 {
+		fmt.Printf("%s: %d lines, %d bytes \n", pos[i], items[i].console.Len(), getConsoleSizeInBytes(i))
+	}
+}
+
+func switchContent() {
+	cur = (cur + 1) % 2
+	cat()
+}
+
+func clear() {
+	for range 50 {
+		fmt.Println()
+	}
+}
