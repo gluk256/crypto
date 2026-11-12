@@ -33,7 +33,7 @@ var (
 )
 
 func initialize() {
-	for i := 0; i < NumItems; i++ {
+	for i := range NumItems {
 		items[i].console = list.New()
 	}
 }
@@ -44,7 +44,7 @@ func cleanup() {
 }
 
 func deleteAll() {
-	for i := 0; i < NumItems; i++ {
+	for i := range NumItems {
 		deleteContent(i)
 	}
 }
