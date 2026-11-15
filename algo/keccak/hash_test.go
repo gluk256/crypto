@@ -11,8 +11,12 @@ import (
 	"github.com/gluk256/crypto/algo/primitives"
 )
 
+// the first 4 are the test vectors from [https://hawkynt.github.io/Cipher/docs/algorithms/hash-functions/keccak-512.html]
 var input = []string{
 	"",
+	"abc",
+	"The quick brown fox jumps over the lazy dog",
+	"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
 	"zxcv",
 	" The supply of government exceeds the demand by huge margin. ",
 	"Ineptocracy - a system of government where the least capable to lead are elected by the least capable to produce, and where the members of society least likely to sustain themselves or succeed, are rewarded with goods and services paid for by the confiscated wealth of a diminishing number of producers.",
@@ -21,6 +25,9 @@ var input = []string{
 
 var expected = []string{
 	"0eab42de4c3ceb9235fc91acffe746b29c29a8c366b7c60e4e67c466f36a4304c00fa9caf9d87976ba469bcbe06713b435f091ef2769fb160cdab33d3670680e",
+	"18587dc2ea106b9a1563e32b3312421ca164c7f1f07bc922a9c83d77cea3a1e5d0c69910739025372dc14ac9642629379540c17e2a65b19d77aa511a9d00bb96",
+	"d135bb84d0439dbac432247ee573a23ea7d3c9deb2a968eb31d47c4fb45f1ef4422d6c531b5b9bd6f449ebcc449ea94d0a8f05f62130fda612da53c79659f609",
+	"6aa6d3669597df6d5a007b00d09c20795b5c4218234e1698a944757a488ecdc09965435d97ca32c3cfed7201ff30e070cd947f1fc12b9d9214c467d342bcba5d",
 	"e7ff11ec516b91fa7feb61ebf19c89487b78bf49a077824efd08e392549522817b24ca65776341dddd91ce499951bca6bf267d00cf1e81629441e32eb70e2111",
 	"1e737292b0b2d00227eb29b851ffd92c00908e44a51ef866fe7a934421b54191bafb86f4b46adf4252d2e6c5f3c7d04954045fdcea04b7d1e5057e94a2e7b1f6",
 	"3d0f32465f276ca3b9b78832e2deaff4ae4c75d09db9ab98bcef68869d65c7e7f0c19807d791d5ffe4f4dcc7700397a590325bf8bf78b3b7bef7af64574e572c",
